@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <title>Trainer App</title>
+  <!-- PWA / Home screen -->
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="Trainer"/>
+  <meta name="theme-color" content="#f5f3ef"/>
+  <link rel="apple-touch-icon" sizes="180x180" href="icon.png"/>
+  <link rel="icon" type="image/png" href="icon.png"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <!-- Firebase 9.x compat builds (stable gstatic CDN) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script>
+    (function() {
+      var config = {
+        apiKey: "AIzaSyAt5Pe3_mi6KAD5w4nSqeKiUKCrJjOFJhY",
+        authDomain: "trainer-app-b4dd1.firebaseapp.com",
+        projectId: "trainer-app-b4dd1",
+        storageBucket: "trainer-app-b4dd1.firebasestorage.app",
+        messagingSenderId: "376018012060",
+        appId: "1:376018012060:web:5fe266522a06f76f816a59"
+      };
+
+      firebase.initializeApp(config);
+
+      var db   = firebase.firestore();
+      var auth = firebase.auth();
+      var ref  = db.collection("app").doc("data");
+
+      // Single-subscriber auth listener
+      var _authResolved = false;
+      var _authUser     = null;
+      var _authCb       = null;
+
+      auth.onAuthStateChanged(function(user) {
+        _authResolved = true;
+        _authUser = user || null;
+        if (_authCb) { _authCb(_authUser); }
+      });
+
+      window._fbOnAuth = function(cb) {
+        _authCb = cb;
+        if (_authResolved) { cb(_authUser); }
+      };
+
+      window._fbLogin = function(email, pw) {
+        return auth.signInWithEmailAndPassword(email, pw);
+      };
+
+      window._fbLogout = function() {
+        return auth.signOut();
+      };
+
+      window._fbLoad = async function() {
+        try {
+          var snap = await ref.get();
+          return snap.exists ? snap.data().payload : null;
+        } catch(e) { console.error("load error", e); return null; }
+      };
+
+      window._fbSave = async function(data) {
+        try { await ref.set({ payload: data }); }
+        catch(e) { console.error("save error", e); }
+      };
+    })();
+  </script>
+</head>
+<body style="margin:0;padding:0;background:#f5f3ef;overflow-x:hidden;">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // ── Storage via Firebase ───────────────────────────────────────────────────
+    const EMPTY = { clients:[], sessions:[], exerciseLibrary:[], templates:[] };
+
+    async function loadData() {
+      try {
+        var result = await window._fbLoad();
+        return result || EMPTY;
+      } catch(e) { return EMPTY; }
+    }
+
+    async function saveData(d) {
+      if (!window._fbSave) { return; }
+      try { await window._fbSave(d); }
+      catch(e) { console.error(e); }
+    }
+
+    // ── Constants ──────────────────────────────────────────────────────────────
+    const PATTERNS = ["Push","Pull","Hinge","Squat","Carry","Core","Isolatie","Overig"];
+    const PC = {
+      Push:"#dc4f2a", Pull:"#2563eb", Hinge:"#d97706", Squat:"#059669",
+      Carry:"#7c3aed", Core:"#db2777", Isolatie:"#0891b2", Overig:"#64748b"
+    };
+    const T = {
+      bg:"#f5f3ef", surface:"#ffffff", surfaceAlt:"#faf9f7",
+      border:"#e5e1da", borderStrong:"#d0cbc2",
+      text:"#1c1917", textMid:"#57534e", textMuted:"#a8a29e",
+      accent:"#dc4f2a", accentBg:"#fef2ee", danger:"#dc2626",
+    };
+
+    // ── Utils ──────────────────────────────────────────────────────────────────
+    function uid() { return Math.random().toString(36).slice(2,10); }
+    function fmtDate(iso) {
+      return new Date(iso).toLocaleDateString("nl-NL", {day:"2-digit", month:"short", year:"numeric"});
+    }
+    function toLocalISO(iso) {
+      const d = new Date(iso);
+      return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,10);
+    }
+
+    // ── Confirm dialog ─────────────────────────────────────────────────────────
+    function ConfirmDialog(props) {
+      return (
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.45)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+          <div style={{background:T.surface,borderRadius:6,padding:24,maxWidth:320,width:"100%",boxShadow:"0 8px 32px rgba(0,0,0,0.18)"}}>
+            <div style={{fontSize:14,color:T.text,lineHeight:1.6,marginBottom:20}}>{props.msg}</div>
+            <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+              <button onClick={props.onCancel} style={{padding:"8px 16px",fontSize:12,background:"none",border:"1px solid "+T.border,color:T.textMid,borderRadius:3,cursor:"pointer",textTransform:"uppercase",letterSpacing:0.4}}>Annuleer</button>
+              <button onClick={props.onConfirm} style={{padding:"8px 16px",fontSize:12,background:T.danger,border:"none",color:"#fff",borderRadius:3,cursor:"pointer",textTransform:"uppercase",letterSpacing:0.4}}>Verwijderen</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── App ────────────────────────────────────────────────────────────────────
+    function App(props) {
+      var [data, setData]                     = useState(null);
+      var [view, setView]                     = useState("clients");
+      var [activeClientId, setActiveClientId] = useState(null);
+      var [activeSession, setActiveSession]   = useState(null);
+      var [viewSessionId, setViewSessionId]   = useState(null);
+      var [editingTpl, setEditingTpl]         = useState(null);
+      var [exHistoryName, setExHistoryName]   = useState(null);
+      var [prevView, setPrevView]             = useState("client");
+      var [toast, setToast]                   = useState(null);
+      var [dlg, setDlg]                       = useState(null);
+      var [saving, setSaving]                 = useState(false);
+
+      useEffect(function() { loadData().then(setData); }, []);
+
+      // Seed on first load
+      useEffect(function() {
+        if (!data) { return; }
+        if ((data.exerciseLibrary||[]).length === 0 && data.clients.length === 0) {
+          var seeded = buildSeed();
+          setData(seeded);
+          saveData(seeded);
+        }
+      }, [!!data]);
+
+      if (!data) { return <Loader />; }
+
+      function persist(d) {
+        setData(d);
+        setSaving(true);
+        saveData(d).then(function(){ setSaving(false); });
+      }
+
+      function buildSeed() {
+        var defaultLib = [
+          {id:uid(),name:"Goblet squat",         pattern:"Squat",    unilateral:false},
+          {id:uid(),name:"Split squat",          pattern:"Squat",    unilateral:false},
+          {id:uid(),name:"Romanian deadlift",    pattern:"Hinge",    unilateral:false},
+          {id:uid(),name:"Hip thrust",           pattern:"Hinge",    unilateral:false},
+          {id:uid(),name:"Push up",              pattern:"Push",     unilateral:false},
+          {id:uid(),name:"DB bench press",       pattern:"Push",     unilateral:false},
+          {id:uid(),name:"Chin up",              pattern:"Pull",     unilateral:false},
+          {id:uid(),name:"Lat pulldown",         pattern:"Pull",     unilateral:false},
+          {id:uid(),name:"High to low cable row",pattern:"Pull",     unilateral:false},
+          {id:uid(),name:"Leg extension",        pattern:"Isolatie", unilateral:true},
+          {id:uid(),name:"Leg curl",             pattern:"Isolatie", unilateral:false},
+        ];
+        var markId = uid();
+        var mark = {id:markId, name:"Mark", createdAt:"2026-04-01T09:00:00.000Z"};
+        function sets3(w,r){return [{weight:String(w),reps:String(r)},{weight:String(w),reps:String(r)},{weight:String(w),reps:String(r)}];}
+        var s1={id:uid(),clientId:markId,date:"2026-04-07T10:00:00.000Z",notes:"Eerste sessie, lekker bewogen.",exercises:[
+          {id:uid(),name:"Goblet squat",      pattern:"Squat",unilateral:false,sets:sets3(16,10),notes:""},
+          {id:uid(),name:"Romanian deadlift", pattern:"Hinge", unilateral:false,sets:sets3(30,10),notes:""},
+          {id:uid(),name:"DB bench press",    pattern:"Push",  unilateral:false,sets:sets3(14,10),notes:""},
+          {id:uid(),name:"Lat pulldown",      pattern:"Pull",  unilateral:false,sets:sets3(35,10),notes:""},
+        ]};
+        var s2={id:uid(),clientId:markId,date:"2026-05-05T10:00:00.000Z",notes:"Goede progressie op squat.",exercises:[
+          {id:uid(),name:"Goblet squat",      pattern:"Squat",unilateral:false,sets:sets3(18,10),notes:""},
+          {id:uid(),name:"Romanian deadlift", pattern:"Hinge", unilateral:false,sets:sets3(32,10),notes:""},
+          {id:uid(),name:"DB bench press",    pattern:"Push",  unilateral:false,sets:sets3(16,10),notes:""},
+          {id:uid(),name:"Lat pulldown",      pattern:"Pull",  unilateral:false,sets:sets3(37,10),notes:""},
+        ]};
+        var s3={id:uid(),clientId:markId,date:"2026-06-02T10:00:00.000Z",notes:"PR op bench press!",exercises:[
+          {id:uid(),name:"Goblet squat",      pattern:"Squat",unilateral:false,sets:sets3(20,10),notes:""},
+          {id:uid(),name:"Romanian deadlift", pattern:"Hinge", unilateral:false,sets:sets3(35,10),notes:"Voelde zwaar maar goed"},
+          {id:uid(),name:"DB bench press",    pattern:"Push",  unilateral:false,sets:sets3(18,10),notes:"PR!"},
+          {id:uid(),name:"Lat pulldown",      pattern:"Pull",  unilateral:false,sets:sets3(40,10),notes:""},
+        ]};
+        return {clients:[mark],sessions:[s1,s2,s3],exerciseLibrary:defaultLib,templates:[]};
+      }
+
+      function showToast(msg) {
+        setToast(msg);
+        setTimeout(function() { setToast(null); }, 2500);
+      }
+
+      function ask(msg) {
+        return new Promise(function(resolve) { setDlg({msg:msg, resolve:resolve}); });
+      }
+      function handleConfirm() { if (dlg) { dlg.resolve(true); } setDlg(null); }
+      function handleCancel()  { if (dlg) { dlg.resolve(false); } setDlg(null); }
+      function goView(v) { setView(v); }
+
+      var client = null, vSession = null, clientSessions = [];
+      for (var ci=0; ci<data.clients.length; ci++) {
+        if (data.clients[ci].id === activeClientId) { client = data.clients[ci]; break; }
+      }
+      for (var si=0; si<data.sessions.length; si++) {
+        if (data.sessions[si].id === viewSessionId) { vSession = data.sessions[si]; break; }
+      }
+      if (client) {
+        clientSessions = data.sessions
+          .filter(function(s){ return s.clientId === client.id; })
+          .sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
+      }
+
+      function saveSession(session) {
+        var library = data.exerciseLibrary || [];
+        var newExs = [];
+        session.exercises.forEach(function(ex) {
+          var found = false;
+          library.forEach(function(l){ if (l.name.toLowerCase()===ex.name.toLowerCase()){found=true;} });
+          if (!found) { newExs.push({id:uid(),name:ex.name,pattern:ex.pattern,unilateral:ex.unilateral||false}); }
+        });
+        var newSessions = data.sessions.filter(function(s){ return s.id !== session.id; });
+        newSessions.push(session);
+        persist({...data, sessions:newSessions, exerciseLibrary:library.concat(newExs)});
+        goView("client");
+        showToast(newExs.length>0 ? "Opgeslagen · "+newExs.length+" oef. aan bibliotheek toegevoegd ✓" : "Sessie opgeslagen ✓");
+      }
+
+      function saveTpl(tpl) {
+        var templates = data.templates || [];
+        var exists = false;
+        templates.forEach(function(t){ if(t.id===tpl.id){exists=true;} });
+        var newTemplates = exists
+          ? templates.map(function(t){ return t.id===tpl.id?tpl:t; })
+          : templates.concat([tpl]);
+        persist({...data, templates:newTemplates});
+        setEditingTpl(null);
+        showToast('"'+tpl.name+'" opgeslagen ✓');
+      }
+
+      async function deleteClient(id) {
+        var c = data.clients.find(function(x){ return x.id===id; });
+        var ok = await ask('Cliënt "' + (c?c.name:"") + '" en alle sessies verwijderen?');
+        if (!ok) { return; }
+        persist({...data, clients:data.clients.filter(function(x){return x.id!==id;}), sessions:data.sessions.filter(function(s){return s.clientId!==id;})});
+        showToast("Cliënt verwijderd");
+      }
+      async function deleteSession(id) {
+        var s = data.sessions.find(function(x){ return x.id===id; });
+        var ok = await ask("Sessie van "+(s?fmtDate(s.date):"?")+" verwijderen?");
+        if (!ok) { return; }
+        persist({...data, sessions:data.sessions.filter(function(x){return x.id!==id;})});
+        showToast("Sessie verwijderd");
+      }
+      async function deleteExercise(id) {
+        var lib = data.exerciseLibrary || [];
+        var ex = lib.find(function(e){ return e.id===id; });
+        var ok = await ask('Oefening "' + (ex?ex.name:"") + '" verwijderen?');
+        if (!ok) { return; }
+        persist({...data, exerciseLibrary:lib.filter(function(e){return e.id!==id;})});
+        showToast("Oefening verwijderd");
+      }
+      async function deleteTemplate(id) {
+        var templates = data.templates || [];
+        var tpl = templates.find(function(t){ return t.id===id; });
+        var ok = await ask('Schema "' + (tpl?tpl.name:"") + '" verwijderen?');
+        if (!ok) { return; }
+        persist({...data, templates:templates.filter(function(t){return t.id!==id;})});
+        showToast("Schema verwijderd");
+      }
+
+      var prevByName = {};
+      clientSessions.forEach(function(s){
+        s.exercises.forEach(function(ex){
+          if (!prevByName[ex.name]) { prevByName[ex.name]={sets:ex.sets,date:s.date}; }
+        });
+      });
+
+      var allEntriesByName = {};
+      clientSessions.forEach(function(s){
+        s.exercises.forEach(function(ex){
+          var performed = ex.performedUnilateral||false;
+          var key = performed ? ex.name+"__uni" : ex.name;
+          if (!allEntriesByName[key]) { allEntriesByName[key]=[]; }
+          allEntriesByName[key].push({
+            date:s.date, sets:ex.sets,
+            maxWeight:Math.max.apply(null,ex.sets.map(function(st){return parseFloat(st.weight)||0;})),
+            totalVol:ex.sets.reduce(function(sum,st){return sum+(parseFloat(st.weight)||0)*(parseInt(st.reps)||0);},0),
+          });
+        });
+      });
+
+      var library   = data.exerciseLibrary || [];
+      var templates = data.templates || [];
+
+      return (
+        <Shell saving={saving}>
+          {view==="clients" && (
+            <div>
+              <Header title="Cliënten"
+                rightAction2={{label:"Schema's",   fn:function(){goView("templates");}}}
+                rightAction= {{label:"Bibliotheek",fn:function(){goView("library");}}}
+              />
+
+              <ClientList data={data} onSelect={function(id){setActiveClientId(id);goView("client");}} onDelete={deleteClient}
+                onRename={function(updatedClients){ persist({...data, clients:updatedClients}); showToast("Naam opgeslagen ✓"); }}
+              />
+              <AddClientInline data={data} persist={persist} showToast={showToast}/>
+              <LogoutBar/>
+            </div>
+          )}
+
+          {view==="library" && (
+            <div>
+              <Header title="Oefeningen" back={function(){goView("clients");}}/>
+              <ExerciseLibrary data={data} persist={persist} showToast={showToast} onDelete={deleteExercise}/>
+            </div>
+          )}
+
+          {view==="templates" && !editingTpl && (
+            <div>
+              <Header title="Trainingsschema's" back={function(){goView("clients");}}/>
+              <TemplateList data={data}
+                onNew={function(){ setEditingTpl({id:uid(),name:"",exercises:[]}); }}
+                onEdit={function(tpl){ setEditingTpl({...tpl,exercises:(tpl.exercises||[]).map(function(e){return {...e,sets:e.sets||[{weight:"",reps:""}]};})}); }}
+                onDelete={deleteTemplate}
+              />
+            </div>
+          )}
+
+          {view==="templates" && editingTpl && (
+            <div>
+              <Header title={editingTpl.name||"Nieuw schema"} back={function(){setEditingTpl(null);}}
+                rightAction={{label:"Opslaan", fn:function(){ if(editingTpl.name.trim()){ saveTpl(editingTpl); } }}}
+              />
+              <TemplateEditor template={editingTpl} onChange={setEditingTpl} library={library}/>
+            </div>
+          )}
+
+          {view==="client" && client && (
+            <div>
+              <Header title={client.name} back={function(){goView("clients");}}/>
+              <ClientDetail client={client} sessions={clientSessions} data={data}
+                onStartSession={function(s){setActiveSession(s);goView("session");}}
+                onViewSession={function(id){setViewSessionId(id);goView("viewSession");}}
+                onExport={function(){goView("export");}}
+                onDeleteSession={deleteSession}
+                onExHistory={function(name){setExHistoryName(name);setPrevView("client");goView("exHistory");}}
+              />
+            </div>
+          )}
+
+          {(view==="session"||view==="editSession") && activeSession && (
+            <div>
+              <Header title={view==="session"?"Sessie bezig":"Sessie bewerken"} back={function(){goView("client");}}
+                rightAction={{label:"Opslaan", fn:function(){saveSession(activeSession);}}}
+              />
+              <SessionEditor session={activeSession} onChange={setActiveSession}
+                library={library} templates={templates} showToast={showToast} prevByName={prevByName}
+                onViewExHistory={function(name){setExHistoryName(name);setPrevView(view);goView("exHistory");}}
+              />
+            </div>
+          )}
+
+          {view==="viewSession" && vSession && (
+            <div>
+              <Header title={"Sessie "+fmtDate(vSession.date)} back={function(){goView("client");}}
+                rightAction={{label:"Bewerk", fn:function(){setActiveSession({...vSession});goView("editSession");}}}
+              />
+              <SessionView session={vSession} client={client} allEntriesByName={allEntriesByName}/>
+            </div>
+          )}
+
+          {view==="exHistory" && exHistoryName && (
+            <div>
+              <Header title={exHistoryName.replace("__uni"," (uni)")} back={function(){goView(prevView);}}/>
+              <ExerciseHistoryPage entries={(allEntriesByName[exHistoryName]||[]).sort(function(a,b){return new Date(b.date)-new Date(a.date);})}/>
+            </div>
+          )}
+
+          {view==="export" && client && (
+            <div>
+              <Header title="Exporteren" back={function(){goView("client");}}/>
+              <ExportView client={client} sessions={clientSessions}/>
+            </div>
+          )}
+
+          {dlg && <ConfirmDialog msg={dlg.msg} onConfirm={handleConfirm} onCancel={handleCancel}/>}
+          {toast && <Toast msg={toast}/>}
+        </Shell>
+      );
+    }
+
+    // ── Shell ──────────────────────────────────────────────────────────────────
+    function Shell(props) {
+      return (
+        <div style={{minHeight:"100vh",background:T.bg,color:T.text,fontFamily:"'DM Mono','Courier New',monospace",maxWidth:480,margin:"0 auto"}}>
+          <style dangerouslySetInnerHTML={{__html:`
+            @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Barlow+Condensed:wght@400;600;700;800&display=swap');
+            *{box-sizing:border-box;margin:0;padding:0}
+            input,textarea,select,button{font-family:inherit}
+            button{cursor:pointer}
+            ::-webkit-scrollbar{width:4px}
+            ::-webkit-scrollbar-track{background:#f5f3ef}
+            ::-webkit-scrollbar-thumb{background:#d0cbc2;border-radius:2px}
+            .rh:hover{background:#faf9f7!important}
+            @keyframes slideUp{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+            .ai{animation:slideUp 0.18s ease}
+            input:focus,textarea:focus{outline:none;border-color:#dc4f2a!important}
+            input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#dc4f2a}
+          `}}/>
+          {props.saving && (
+            <div style={{position:"fixed",top:0,left:0,right:0,height:2,background:T.accent,zIndex:999,animation:"slideUp 0s"}}/>
+          )}
+          {props.children}
+        </div>
+      );
+    }
+
+    function Header(props) {
+      return (
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:0,zIndex:10}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
+            {props.back && <button onClick={props.back} style={{background:"none",border:"none",color:T.textMuted,fontSize:18,lineHeight:1,padding:"0 4px 0 0",flexShrink:0}}>←</button>}
+            <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:22,letterSpacing:0.5,textTransform:"uppercase",color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{props.title}</span>
+          </div>
+          <div style={{display:"flex",gap:6,flexShrink:0,marginLeft:8}}>
+            {props.rightAction2 && <button onClick={props.rightAction2.fn} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"6px 12px",fontSize:11,letterSpacing:0.5,textTransform:"uppercase",borderRadius:2}}>{props.rightAction2.label}</button>}
+            {props.rightAction  && <button onClick={props.rightAction.fn}  style={{background:T.accent,border:"none",color:"#fff",padding:"6px 14px",fontSize:11,fontWeight:500,letterSpacing:0.5,textTransform:"uppercase",borderRadius:2}}>{props.rightAction.label}</button>}
+          </div>
+        </div>
+      );
+    }
+
+    function Loader() { return <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:T.textMuted,fontSize:13}}>laden...</span></div>; }
+    function Toast(props) { return <div style={{position:"fixed",bottom:28,left:"50%",transform:"translateX(-50%)",background:T.text,color:T.bg,padding:"10px 20px",fontSize:12,zIndex:100,animation:"slideUp 0.2s ease",letterSpacing:0.3,whiteSpace:"nowrap",maxWidth:"90vw",textAlign:"center"}}>{props.msg}</div>; }
+    function Label(props) { return <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.6}}>{props.children}</div>; }
+    function UniTag() { return <span style={{fontSize:9,marginLeft:7,padding:"1px 5px",background:T.accentBg,color:T.accent,borderRadius:2,textTransform:"uppercase",letterSpacing:0.3}}>uni</span>; }
+    function Btn(props) {
+      var bg = props.accent?T.accent:props.danger?T.danger:"none";
+      var border = props.accent?"1px solid "+T.accent:props.danger?"1px solid "+T.danger:"1px solid "+T.border;
+      var color = (props.accent||props.danger)?"#fff":T.textMid;
+      return <button onClick={props.onClick} style={{padding:"9px 16px",fontSize:11,background:bg,border:border,color:color,textTransform:"uppercase",letterSpacing:0.5,fontFamily:"inherit",borderRadius:2,...(props.style||{})}}>{props.children}</button>;
+    }
+
+    var iS = {background:T.bg,border:"1px solid "+T.border,color:T.text,padding:"8px 10px",fontSize:13,outline:"none",borderRadius:2,width:"100%"};
+    var lS = {fontSize:9,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5};
+
+    function PatternPicker(props) {
+      return (
+        <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:6}}>
+          {PATTERNS.map(function(p){
+            return <button key={p} onClick={function(){props.onChange(p);}} style={{padding:"5px 10px",fontSize:11,borderRadius:2,background:props.value===p?PC[p]:T.surface,border:"1px solid "+(props.value===p?PC[p]:T.border),color:props.value===p?"#fff":T.textMid,textTransform:"uppercase",letterSpacing:0.4}}>{p}</button>;
+          })}
+        </div>
+      );
+    }
+
+    function PatternTags(props) {
+      var patterns = [];
+      props.exercises.forEach(function(e){ if(e.pattern&&patterns.indexOf(e.pattern)===-1){patterns.push(e.pattern);} });
+      if (!patterns.length) { return null; }
+      return (
+        <div style={{display:"flex",gap:4,marginTop:5,flexWrap:"wrap"}}>
+          {patterns.map(function(p){ return <span key={p} style={{fontSize:9,padding:"2px 6px",textTransform:"uppercase",letterSpacing:0.4,background:(PC[p]||"#999")+"18",color:PC[p]||"#999",border:"1px solid "+(PC[p]||"#999")+"40",borderRadius:2}}>{p}</span>; })}
+        </div>
+      );
+    }
+
+    function AutocompleteInput(props) {
+      var [open,setOpen] = useState(false);
+      var suggestions = props.suggestions||[];
+      var value = props.value||"";
+      var filtered = value.length>0?suggestions.filter(function(s){return s.toLowerCase().includes(value.toLowerCase())&&s.toLowerCase()!==value.toLowerCase();}).slice(0,6):[];
+      return (
+        <div style={{position:"relative"}}>
+          <input ref={props.inputRef} value={value} onChange={function(e){props.onChange(e.target.value);setOpen(true);}} onBlur={function(){setTimeout(function(){setOpen(false);},150);}} onFocus={function(){setOpen(true);}} placeholder={props.placeholder} style={{...iS,...(props.style||{})}}/>
+          {open&&filtered.length>0&&(
+            <div style={{position:"absolute",top:"100%",left:0,right:0,background:T.surface,border:"1px solid "+T.border,borderTop:"none",zIndex:20,maxHeight:160,overflowY:"auto",borderRadius:"0 0 4px 4px",boxShadow:"0 4px 12px rgba(0,0,0,0.08)"}}>
+              {filtered.map(function(s,i){ return <div key={i} className="rh" onMouseDown={function(){props.onChange(s);}} style={{padding:"9px 12px",fontSize:13,cursor:"pointer",borderBottom:i<filtered.length-1?"1px solid "+T.border:"none"}}>{s}</div>; })}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function ClientList(props) {
+      var data = props.data;
+      var [search,setSearch] = useState("");
+      var [editingId,setEditingId] = useState(null);
+      var [editName,setEditName] = useState("");
+      var filtered = data.clients.filter(function(c){return c.name.toLowerCase().includes(search.toLowerCase());}).sort(function(a,b){return a.name.localeCompare(b.name);});
+
+      function saveEdit(id) {
+        if (!editName.trim()) { setEditingId(null); return; }
+        var updated = data.clients.map(function(c){ return c.id===id ? {...c, name:editName.trim()} : c; });
+        props.onRename(updated);
+        setEditingId(null);
+      }
+
+      return (
+        <div>
+          {data.clients.length>0&&(
+            <div style={{padding:"12px 20px",borderBottom:"1px solid "+T.border,background:T.surface}}>
+              <input value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Zoek cliënt..." style={iS}/>
+            </div>
+          )}
+          {filtered.length===0&&data.clients.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"48px 20px",textAlign:"center"}}>Nog geen cliënten.</div>}
+          {filtered.length===0&&data.clients.length>0&&<div style={{color:T.textMuted,fontSize:13,padding:"32px 20px",textAlign:"center"}}>Geen cliënten gevonden.</div>}
+          {filtered.map(function(c){
+            var cs=data.sessions.filter(function(s){return s.clientId===c.id;});
+            var last=cs.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);})[0];
+            var isEditing = editingId===c.id;
+            return (
+              <div key={c.id} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                {isEditing ? (
+                  <div style={{flex:1,display:"flex",gap:8,marginRight:8}}>
+                    <input autoFocus value={editName}
+                      onChange={function(e){setEditName(e.target.value);}}
+                      onKeyDown={function(e){if(e.key==="Enter"){saveEdit(c.id);}if(e.key==="Escape"){setEditingId(null);}}}
+                      style={{...iS,flex:1,padding:"6px 10px"}}/>
+                    <button onClick={function(){saveEdit(c.id);}} style={{background:T.accent,border:"none",color:"#fff",padding:"6px 12px",fontSize:11,borderRadius:2,cursor:"pointer",textTransform:"uppercase",letterSpacing:0.4}}>Ok</button>
+                    <button onClick={function(){setEditingId(null);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"6px 10px",fontSize:11,borderRadius:2,cursor:"pointer"}}>×</button>
+                  </div>
+                ) : (
+                  <div className="rh" onClick={function(){props.onSelect(c.id);}} style={{flex:1,cursor:"pointer",paddingRight:12}}>
+                    <div style={{fontWeight:500,fontSize:14}}>{c.name}</div>
+                    <div style={{color:T.textMuted,fontSize:11,marginTop:3}}>{cs.length} sessie{cs.length!==1?"s":""}{last?" · "+fmtDate(last.date):""}</div>
+                  </div>
+                )}
+                {!isEditing && (
+                  <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                    <button onClick={function(){setEditingId(c.id);setEditName(c.name);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:13,padding:"4px 6px",cursor:"pointer"}}>✎</button>
+
+                    <button onClick={function(){props.onDelete(c.id);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 4px",lineHeight:1}}>×</button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    function AddClientInline(props) {
+      var [newName,setNewName]=useState(""); var [adding,setAdding]=useState(false);
+      function addClient(){if(!newName.trim()){return;}var c={id:uid(),name:newName.trim(),createdAt:new Date().toISOString()};props.persist({...props.data,clients:props.data.clients.concat([c])});setNewName("");setAdding(false);props.showToast(c.name+" toegevoegd ✓");}
+      return (
+        <div style={{padding:"16px 20px"}}>
+          {adding?(
+            <div style={{display:"flex",gap:8}}>
+              <input autoFocus value={newName} onChange={function(e){setNewName(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter"){addClient();}}} placeholder="Naam cliënt..." style={{...iS,flex:1}}/>
+              <Btn accent onClick={addClient}>Voeg toe</Btn>
+              <Btn onClick={function(){setAdding(false);}}>×</Btn>
+            </div>
+          ):(
+            <Btn accent onClick={function(){setAdding(true);}}>+ Nieuwe cliënt</Btn>
+          )}
+        </div>
+      );
+    }
+
+    function LogoutBar() {
+      return (
+        <div style={{padding:"32px 20px 24px",textAlign:"center"}}>
+          <button onClick={function(){ window._fbLogout(); }} style={{background:"none",border:"none",color:T.textMuted,fontSize:11,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer",opacity:0.6}}>Uitloggen</button>
+        </div>
+      );
+    }
+
+    function ExerciseLibrary(props) {
+      var data=props.data; var library=data.exerciseLibrary||[];
+      var [newName,setNewName]=useState(""); var [newPat,setNewPat]=useState("Push"); var [newUni,setNewUni]=useState(false); var [adding,setAdding]=useState(false); var [search,setSearch]=useState("");
+      var inputRef=useRef(null);
+      function addExercise(){if(!newName.trim()){return;}if(library.some(function(e){return e.name.toLowerCase()===newName.trim().toLowerCase();})){props.showToast("Oefening bestaat al");return;}var ex={id:uid(),name:newName.trim(),pattern:newPat,unilateral:newUni};props.persist({...data,exerciseLibrary:library.concat([ex])});setNewName("");setNewUni(false);props.showToast(ex.name+" toegevoegd ✓");}
+      var filtered=library.filter(function(e){return e.name.toLowerCase().includes(search.toLowerCase());}).sort(function(a,b){return a.name.localeCompare(b.name);});
+      var grouped={};filtered.forEach(function(e){if(!grouped[e.pattern]){grouped[e.pattern]=[];}grouped[e.pattern].push(e);});
+      return (
+        <div className="ai" style={{paddingBottom:32}}>
+          <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface}}><input value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Zoek oefening..." style={iS}/></div>
+          <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}>
+            {!adding?(
+              <Btn accent onClick={function(){setAdding(true);setTimeout(function(){if(inputRef.current){inputRef.current.focus();}},50);}}>+ Oefening toevoegen</Btn>
+            ):(
+              <div>
+                <div style={{marginBottom:10}}><Label>Naam oefening</Label><AutocompleteInput inputRef={inputRef} value={newName} onChange={setNewName} suggestions={library.map(function(e){return e.name;})} placeholder="bijv. Deadlift..." style={{marginTop:5}}/></div>
+                <div style={{marginBottom:10}}><Label>Bewegingspatroon</Label><PatternPicker value={newPat} onChange={setNewPat}/></div>
+                <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,cursor:"pointer",fontSize:13,color:T.textMid}}><input type="checkbox" checked={newUni} onChange={function(e){setNewUni(e.target.checked);}}/>Unilateraal (per kant)</label>
+                <div style={{display:"flex",gap:8}}><Btn accent onClick={addExercise}>Toevoegen</Btn><Btn onClick={function(){setAdding(false);setNewName("");}}>Annuleer</Btn></div>
+              </div>
+            )}
+          </div>
+          {library.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>Nog geen oefeningen.</div>}
+          {PATTERNS.map(function(pattern){
+            var exs=grouped[pattern]; if(!exs||!exs.length){return null;} var color=PC[pattern];
+            return (
+              <div key={pattern}>
+                <div style={{padding:"8px 20px 6px",fontSize:10,textTransform:"uppercase",letterSpacing:0.8,color:color,fontWeight:500,borderBottom:"1px solid "+T.border,background:T.bg}}>{pattern}</div>
+                {exs.map(function(ex){return(
+                  <div key={ex.id} style={{padding:"12px 20px",borderBottom:"1px solid "+T.border,background:T.surface,display:"flex",justifyContent:"space-between",alignItems:"center",borderLeft:"3px solid "+color}}>
+                    <div style={{fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</div>
+                    <button onClick={function(){props.onDelete(ex.id);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 4px",lineHeight:1}}>×</button>
+                  </div>
+                );})}
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    function TemplateList(props) {
+      var templates=props.data.templates||[];
+      return (
+        <div className="ai" style={{paddingBottom:32}}>
+          <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}><Btn accent onClick={props.onNew}>+ Nieuw schema</Btn></div>
+          {templates.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>Nog geen schema's.<br/>Maak een schema met vaste oefeningen, sets, kg en reps.</div>}
+          {templates.map(function(tpl){return(
+            <div key={tpl.id} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:500,fontSize:14}}>{tpl.name}</div>
+                <div style={{fontSize:11,color:T.textMuted,marginTop:3}}>{tpl.exercises.length} oefening{tpl.exercises.length!==1?"en":""}</div>
+                <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>
+                  {tpl.exercises.slice(0,5).map(function(e,i){var col=PC[e.pattern]||"#999";return <span key={i} style={{fontSize:9,padding:"2px 7px",background:col+"18",color:col,border:"1px solid "+col+"40",borderRadius:2}}>{e.name}</span>;})}
+                  {tpl.exercises.length>5&&<span style={{fontSize:9,padding:"2px 6px",color:T.textMuted}}>+{tpl.exercises.length-5}</span>}
+                </div>
+              </div>
+              <div style={{display:"flex",gap:8,marginLeft:12,alignItems:"center"}}>
+                <button onClick={function(){props.onEdit(tpl);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:11,borderRadius:2,textTransform:"uppercase",letterSpacing:0.4}}>Bewerk</button>
+                <button onClick={function(){props.onDelete(tpl.id);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 4px",lineHeight:1}}>×</button>
+              </div>
+            </div>
+          );})}
+        </div>
+      );
+    }
+
+    function TemplateEditor(props) {
+      var library=props.library||[]; var tpl=props.template; var setTpl=props.onChange;
+      var [showAdd,setShowAdd]=useState(false); var [search,setSearch]=useState("");
+      function addFromLib(ex){setTpl({...tpl,exercises:tpl.exercises.concat([{id:uid(),name:ex.name,pattern:ex.pattern,unilateral:ex.unilateral||false,sets:[{weight:"",reps:""}]}])});setSearch("");setShowAdd(false);}
+      function removeEx(idx){setTpl({...tpl,exercises:tpl.exercises.filter(function(_,i){return i!==idx;})});}
+      function addSet(idx){var exs=tpl.exercises.map(function(e,i){if(i!==idx){return e;}var last=e.sets[e.sets.length-1];return {...e,sets:e.sets.concat([{weight:last?last.weight:"",reps:last?last.reps:""}])};});setTpl({...tpl,exercises:exs});}
+      function updateSet(exIdx,sIdx,field,val){var exs=tpl.exercises.map(function(e,i){if(i!==exIdx){return e;}var sets=e.sets.map(function(s,j){return j===sIdx?{...s,[field]:val}:s;});return {...e,sets:sets};});setTpl({...tpl,exercises:exs});}
+      function removeSet(exIdx,sIdx){var exs=tpl.exercises.map(function(e,i){if(i!==exIdx){return e;}return {...e,sets:e.sets.filter(function(_,j){return j!==sIdx;})};});setTpl({...tpl,exercises:exs});}
+      function moveUp(idx){if(idx===0){return;}var exs=tpl.exercises.slice();var tmp=exs[idx-1];exs[idx-1]=exs[idx];exs[idx]=tmp;setTpl({...tpl,exercises:exs});}
+      function moveDown(idx){if(idx===tpl.exercises.length-1){return;}var exs=tpl.exercises.slice();var tmp=exs[idx];exs[idx]=exs[idx+1];exs[idx+1]=tmp;setTpl({...tpl,exercises:exs});}
+      var filtLib=library.filter(function(e){var inTpl=tpl.exercises.some(function(x){return x.name.toLowerCase()===e.name.toLowerCase();});return !inTpl&&e.name.toLowerCase().includes(search.toLowerCase());}).sort(function(a,b){return a.name.localeCompare(b.name);});
+      return (
+        <div className="ai" style={{paddingBottom:40}}>
+          <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}><Label>Naam schema</Label><input autoFocus value={tpl.name} onChange={function(e){setTpl({...tpl,name:e.target.value});}} placeholder="bijv. Kracht A, Push dag..." style={{...iS,marginTop:5}}/></div>
+          {tpl.exercises.length===0&&!showAdd&&<div style={{padding:"28px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Voeg oefeningen toe via de knop hieronder.</div>}
+          {tpl.exercises.map(function(ex,idx){
+            var color=PC[ex.pattern]||T.textMuted;
+            return (
+              <div key={ex.id} style={{borderBottom:"1px solid "+T.border,borderLeft:"3px solid "+color,background:T.surface}}>
+                <div style={{padding:"10px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"1px solid "+T.border}}>
+                  <div><div style={{fontSize:13,fontWeight:500}}>{ex.name}{ex.unilateral&&<UniTag/>}</div><div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:1}}>{ex.pattern}</div></div>
+                  <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                    <button onClick={function(){moveUp(idx);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14,padding:"2px 5px"}}>↑</button>
+                    <button onClick={function(){moveDown(idx);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14,padding:"2px 5px"}}>↓</button>
+                    <button onClick={function(){removeEx(idx);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 5px",lineHeight:1}}>×</button>
+                  </div>
+                </div>
+                <div style={{padding:"10px 20px 14px"}}>
+                  <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:5}}><span style={lS}>#</span><span style={lS}>kg</span><span style={lS}>reps</span><span/></div>
+                  {ex.sets.map(function(s,si){return(
+                    <div key={si} style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:6}}>
+                      <span style={{color:T.textMuted,fontSize:12,paddingTop:8,textAlign:"center"}}>{si+1}</span>
+                      <input type="number" inputMode="decimal" pattern="[0-9.]*" value={s.weight} onChange={function(e){updateSet(idx,si,"weight",e.target.value);}} placeholder="kg" style={{...iS,textAlign:"center"}}/>
+                      <input type="number" inputMode="numeric" pattern="[0-9]*" value={s.reps} onChange={function(e){updateSet(idx,si,"reps",e.target.value);}} placeholder="reps" style={{...iS,textAlign:"center"}}/>
+                      <button onClick={function(){removeSet(idx,si);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14}}>×</button>
+                    </div>
+                  );})}
+                  <button onClick={function(){addSet(idx);}} style={{background:"none",border:"1px dashed "+T.borderStrong,color:T.textMuted,padding:"5px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",width:"100%",borderRadius:2}}>+ Set</button>
+                </div>
+              </div>
+            );
+          })}
+          <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border}}>
+            {!showAdd?(<Btn accent onClick={function(){setShowAdd(true);}}>+ Oefening toevoegen</Btn>):(
+              <div style={{background:T.surface,border:"1px solid "+T.border,borderRadius:4,overflow:"hidden"}}>
+                <input autoFocus value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Zoek in bibliotheek..." style={{...iS,borderRadius:0,borderLeft:"none",borderRight:"none",borderTop:"none"}}/>
+                <div style={{maxHeight:200,overflowY:"auto"}}>
+                  {library.length===0&&<div style={{padding:14,fontSize:12,color:T.textMuted,textAlign:"center"}}>Bibliotheek is leeg.</div>}
+                  {filtLib.length===0&&library.length>0&&<div style={{padding:14,fontSize:12,color:T.textMuted,textAlign:"center"}}>Geen resultaten</div>}
+                  {filtLib.map(function(ex){var color=PC[ex.pattern]||T.textMuted;return(
+                    <div key={ex.id} className="rh" onClick={function(){addFromLib(ex);}} style={{padding:"10px 14px",borderBottom:"1px solid "+T.border,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",borderLeft:"3px solid "+color}}>
+                      <span style={{fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</span>
+                      <span style={{fontSize:9,color:color,textTransform:"uppercase",letterSpacing:0.4}}>{ex.pattern}</span>
+                    </div>
+                  );})}
+                </div>
+                <div style={{padding:10}}><button onClick={function(){setShowAdd(false);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:11,textTransform:"uppercase",letterSpacing:0.5}}>Sluiten</button></div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function ClientDetail(props) {
+      var client=props.client; var sessions=props.sessions;
+      var [tab,setTab]=useState("sessies");
+      function startSession(){props.onStartSession({id:uid(),clientId:client.id,date:new Date().toISOString(),exercises:[],notes:""});}
+      return (
+        <div className="ai">
+          <div style={{padding:"14px 20px",display:"flex",gap:8,borderBottom:"1px solid "+T.border,background:T.surface}}>
+            <Btn accent onClick={startSession}>▶ Nieuwe sessie</Btn>
+            <Btn onClick={props.onExport}>Exporteer</Btn>
+          </div>
+          <div style={{display:"flex",background:T.surface,borderBottom:"1px solid "+T.border}}>
+            {["sessies","progressie"].map(function(t){return <button key={t} onClick={function(){setTab(t);}} style={{flex:1,padding:"11px 0",background:"none",border:"none",color:tab===t?T.text:T.textMuted,borderBottom:tab===t?"2px solid "+T.accent:"2px solid transparent",fontSize:11,textTransform:"uppercase",letterSpacing:0.8}}>{t}</button>;})}
+          </div>
+          {tab==="sessies"&&(
+            <div>
+              {sessions.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>Nog geen sessies.</div>}
+              {sessions.map(function(s){return(
+                <div key={s.id} className="rh" onClick={function(){props.onViewSession(s.id);}} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:500}}>{fmtDate(s.date)}</div>
+                    <div style={{fontSize:11,color:T.textMuted,marginTop:3}}>{s.exercises.length} oefening{s.exercises.length!==1?"en":""}{s.notes?" · notitie":""}</div>
+                    <PatternTags exercises={s.exercises}/>
+                  </div>
+                  <div style={{display:"flex",gap:10,alignItems:"center"}}>
+  
+                    <button onClick={function(e){e.stopPropagation();props.onDeleteSession(s.id);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 4px",lineHeight:1}}>×</button>
+                  </div>
+                </div>
+              );})}
+            </div>
+          )}
+          {tab==="progressie"&&<ProgressView sessions={sessions} onExHistory={props.onExHistory}/>}
+        </div>
+      );
+    }
+
+    function SessionEditor(props) {
+      var session=props.session; var onChange=props.onChange; var library=props.library||[]; var templates=props.templates||[]; var prevByName=props.prevByName||{};
+      var [showAdd,setShowAdd]=useState(false); var [showTemplates,setShowTemplates]=useState(false);
+      function updateEx(idx,upd){var exs=session.exercises.map(function(e,i){return i===idx?{...e,...upd}:e;});onChange({...session,exercises:exs});}
+      function deleteEx(idx){onChange({...session,exercises:session.exercises.filter(function(_,i){return i!==idx;})});}
+      function addEx(ex){onChange({...session,exercises:session.exercises.concat([ex])});setShowAdd(false);props.showToast(ex.name+" toegevoegd");}
+      function moveUp(idx){if(idx===0){return;}var exs=session.exercises.slice();var tmp=exs[idx-1];exs[idx-1]=exs[idx];exs[idx]=tmp;onChange({...session,exercises:exs});}
+      function moveDown(idx){if(idx===session.exercises.length-1){return;}var exs=session.exercises.slice();var tmp=exs[idx];exs[idx]=exs[idx+1];exs[idx+1]=tmp;onChange({...session,exercises:exs});}
+      function loadTemplate(tpl){var exercises=tpl.exercises.map(function(e){return {id:uid(),name:e.name,pattern:e.pattern,unilateral:e.unilateral||false,isUnilateralExercise:e.unilateral||false,performedUnilateral:false,sets:(e.sets||[{weight:"",reps:""}]).map(function(s){return {weight:s.weight||"",reps:s.reps||""};}),notes:""};});onChange({...session,exercises:exercises});setShowTemplates(false);props.showToast('Schema "'+tpl.name+'" geladen ✓');}
+      var localDateValue=session.date?toLocalISO(session.date):"";
+      function handleDateChange(e){if(!e.target.value){return;}var orig=new Date(session.date);var parts=e.target.value.split("-");orig.setFullYear(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));onChange({...session,date:orig.toISOString()});}
+      return (
+        <div className="ai" style={{paddingBottom:80}}>
+          <div style={{padding:"10px 20px",background:T.surfaceAlt,borderBottom:"1px solid "+T.border,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <Label>Datum</Label>
+              <input type="date" value={localDateValue} onChange={handleDateChange} style={{...iS,width:"auto",fontSize:13,padding:"5px 10px",background:T.surface,cursor:"pointer"}}/>
+            </div>
+            {templates.length>0&&<button onClick={function(){setShowTemplates(!showTemplates);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:10,borderRadius:2,textTransform:"uppercase",letterSpacing:0.5}}>{showTemplates?"Sluiten":"Schema laden"}</button>}
+          </div>
+          {showTemplates&&(
+            <div style={{borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}>
+              {templates.map(function(tpl){return <div key={tpl.id} className="rh" onClick={function(){loadTemplate(tpl);}} style={{padding:"12px 20px",borderBottom:"1px solid "+T.border,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><div style={{fontSize:13,fontWeight:500}}>{tpl.name}</div><div style={{fontSize:11,color:T.textMuted,marginTop:2}}>{tpl.exercises.map(function(e){return e.name;}).join(", ")}</div></div><span style={{color:T.accent,fontSize:11,textTransform:"uppercase",letterSpacing:0.4}}>Laden →</span></div>;})}
+            </div>
+          )}
+          {session.exercises.length===0&&!showAdd&&<div style={{padding:"36px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Voeg een oefening toe om te beginnen.</div>}
+          {session.exercises.map(function(ex,idx){return <ExerciseRow key={ex.id} ex={ex} onChange={function(upd){updateEx(idx,upd);}} onDelete={function(){deleteEx(idx);}} onMoveUp={idx>0?function(){moveUp(idx);}:null} onMoveDown={idx<session.exercises.length-1?function(){moveDown(idx);}:null} prevData={prevByName[ex.name]} onViewHistory={function(){var k=(ex.performedUnilateral&&ex.isUnilateralExercise)?ex.name+"__uni":ex.name;props.onViewExHistory(k);}}/>;}) }
+          <div style={{padding:"16px 20px"}}>
+            {showAdd?<AddExerciseForm library={library} onAdd={addEx} onCancel={function(){setShowAdd(false);}}/>:<Btn accent onClick={function(){setShowAdd(true);}}>+ Oefening toevoegen</Btn>}
+          </div>
+          <div style={{padding:"0 20px 20px"}}>
+            <Label>Notities sessie</Label>
+            <textarea value={session.notes} onChange={function(e){onChange({...session,notes:e.target.value});}} placeholder="Opmerkingen over de hele sessie..." rows={3} style={{...iS,marginTop:5,resize:"none"}}/>
+          </div>
+        </div>
+      );
+    }
+
+    function AddExerciseForm(props) {
+      var library=props.library||[];
+      var [search,setSearch]=useState(""); var [pattern,setPattern]=useState("Push"); var [customName,setCustomName]=useState(""); var [unilateral,setUnilateral]=useState(false);
+      var [mode,setMode]=useState(library.length>0?"library":"custom");
+      var [activePatterns,setActivePatterns]=useState({});
+      var inputRef=useRef(null);
+      useEffect(function(){if(inputRef.current){inputRef.current.focus();}}, []);
+      function togglePattern(p){setActivePatterns(function(prev){var next=Object.assign({},prev);var numOff=Object.keys(next).filter(function(k){return next[k]===false;}).length;if(numOff===0){PATTERNS.forEach(function(x){next[x]=false;});next[p]=true;}else if(next[p]===false){next[p]=true;var stillOff=PATTERNS.filter(function(x){return next[x]===false;});if(stillOff.length===0){return{};}}else{next[p]=false;}return next;});}
+      var patternActive=function(p){return Object.keys(activePatterns).length===0||activePatterns[p]!==false;};
+      var filtered=library.filter(function(e){return e.name.toLowerCase().includes(search.toLowerCase())&&patternActive(e.pattern);}).sort(function(a,b){return a.name.localeCompare(b.name);});
+      function selectLib(ex){props.onAdd({id:uid(),name:ex.name,pattern:ex.pattern,unilateral:ex.unilateral||false,isUnilateralExercise:ex.unilateral||false,performedUnilateral:false,sets:[{weight:"",reps:""}],notes:""});}
+      function addCustom(){if(!customName.trim()){return;}props.onAdd({id:uid(),name:customName.trim(),pattern:pattern,unilateral:unilateral,isUnilateralExercise:unilateral,performedUnilateral:false,sets:[{weight:"",reps:""}],notes:""});}
+      return (
+        <div style={{background:T.surface,border:"1px solid "+T.border,borderRadius:4}}>
+          <div style={{display:"flex",borderBottom:"1px solid "+T.border}}>
+            {["library","custom"].map(function(m){return <button key={m} onClick={function(){setMode(m);}} style={{flex:1,padding:"9px 0",background:"none",border:"none",color:mode===m?T.text:T.textMuted,borderBottom:mode===m?"2px solid "+T.accent:"2px solid transparent",fontSize:11,textTransform:"uppercase",letterSpacing:0.6}}>{m==="library"?"Uit bibliotheek":"Nieuwe oefening"}</button>;})}
+          </div>
+          {mode==="library"&&(
+            <div style={{padding:14}}>
+              {library.length===0?<div style={{color:T.textMuted,fontSize:12,padding:"12px 0",textAlign:"center"}}>Geen oefeningen in bibliotheek.</div>:(
+                <div>
+                  <input ref={inputRef} value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Zoek oefening..." style={{...iS,marginBottom:8}}/>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8,alignItems:"center"}}>
+                    {PATTERNS.map(function(p){var on=patternActive(p);var col=PC[p]||"#999";return <button key={p} onClick={function(){togglePattern(p);}} style={{padding:"3px 8px",fontSize:9,borderRadius:2,background:on?col+"18":"none",border:"1px solid "+(on?col:T.border),color:on?col:T.textMuted,textTransform:"uppercase",letterSpacing:0.3}}>{p}</button>;})}
+                    <button onClick={function(){setActivePatterns({});}} style={{padding:"3px 8px",fontSize:9,borderRadius:2,marginLeft:2,background:"none",border:"1px solid "+T.border,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.3,display:PATTERNS.filter(function(p){return activePatterns[p]===false;}).length===0?"none":"inline-block"}}>Alles</button>
+                  </div>
+                  <div style={{maxHeight:200,overflowY:"auto"}}>
+                    {filtered.length===0&&<div style={{color:T.textMuted,fontSize:12,padding:"12px 0",textAlign:"center"}}>Geen resultaten</div>}
+                    {filtered.map(function(ex){var color=PC[ex.pattern]||T.textMuted;return <div key={ex.id} className="rh" onClick={function(){selectLib(ex);}} style={{padding:"10px",borderBottom:"1px solid "+T.border,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",borderLeft:"3px solid "+color}}><span style={{fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</span><span style={{fontSize:9,color:color,textTransform:"uppercase",letterSpacing:0.4}}>{ex.pattern}</span></div>;})}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {mode==="custom"&&(
+            <div style={{padding:14}}>
+              <div style={{marginBottom:10}}><Label>Naam oefening</Label><AutocompleteInput inputRef={inputRef} value={customName} onChange={setCustomName} suggestions={library.map(function(e){return e.name;})} placeholder="bijv. Deadlift..." style={{marginTop:5}}/></div>
+              <div style={{marginBottom:10}}><Label>Bewegingspatroon</Label><PatternPicker value={pattern} onChange={setPattern}/></div>
+              <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,cursor:"pointer",fontSize:13,color:T.textMid}}><input type="checkbox" checked={unilateral} onChange={function(e){setUnilateral(e.target.checked);}}/>Unilateraal</label>
+              <Btn accent onClick={addCustom}>Toevoegen</Btn>
+            </div>
+          )}
+          <div style={{padding:"10px 14px",borderTop:"1px solid "+T.border}}><button onClick={props.onCancel} style={{background:"none",border:"none",color:T.textMuted,fontSize:12,textTransform:"uppercase",letterSpacing:0.5}}>Annuleer</button></div>
+        </div>
+      );
+    }
+
+    function ExerciseRow(props) {
+      var ex=props.ex; var prevData=props.prevData;
+      var [open,setOpen]=useState(true);
+      var color=PC[ex.pattern]||T.textMuted;
+      function addSet(){var last=ex.sets[ex.sets.length-1];props.onChange({...ex,sets:ex.sets.concat([{weight:last?last.weight:"",reps:last?last.reps:""}])});}
+      function updateSet(i,field,val){props.onChange({...ex,sets:ex.sets.map(function(s,idx){return idx===i?{...s,[field]:val}:s;})});}
+      function removeSet(i){props.onChange({...ex,sets:ex.sets.filter(function(_,idx){return idx!==i;})});}
+      return (
+        <div style={{borderBottom:"1px solid "+T.border,borderLeft:"3px solid "+color,background:T.surface}}>
+          <div style={{padding:"12px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={function(){setOpen(!open);}}>
+            <div>
+              <div style={{fontWeight:500,fontSize:14}}>{ex.name}</div>
+              <div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:2,display:"flex",alignItems:"center",gap:8}}>
+                <span>{ex.pattern} · {ex.sets.length} set{ex.sets.length!==1?"s":""}</span>
+                {ex.isUnilateralExercise&&(
+                  <button onClick={function(e){e.stopPropagation();props.onChange({...ex,performedUnilateral:!ex.performedUnilateral});}} style={{padding:"2px 7px",fontSize:9,borderRadius:2,background:ex.performedUnilateral?T.accent+"18":"none",border:"1px solid "+(ex.performedUnilateral?T.accent:T.border),color:ex.performedUnilateral?T.accent:T.textMuted,textTransform:"uppercase",letterSpacing:0.3,cursor:"pointer",fontFamily:"inherit"}}>uni</button>
+                )}
+              </div>
+            </div>
+            <div style={{display:"flex",gap:2,alignItems:"center"}}>
+              {props.onMoveUp&&<button onClick={function(e){e.stopPropagation();props.onMoveUp();}} style={{background:"none",border:"none",color:T.textMuted,fontSize:16,padding:"8px 10px",lineHeight:1}}>↑</button>}
+              {props.onMoveDown&&<button onClick={function(e){e.stopPropagation();props.onMoveDown();}} style={{background:"none",border:"none",color:T.textMuted,fontSize:16,padding:"8px 10px",lineHeight:1}}>↓</button>}
+              <button onClick={function(e){e.stopPropagation();props.onDelete();}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"8px 10px",lineHeight:1}}>×</button>
+            </div>
+          </div>
+          {open&&(
+            <div style={{padding:"0 20px 14px"}}>
+              <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:5}}><span style={lS}>#</span><span style={lS}>kg</span><span style={lS}>reps</span><span/></div>
+              {ex.sets.map(function(s,i){return(
+                <div key={i} style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:6}}>
+                  <span style={{color:T.textMuted,fontSize:12,paddingTop:8,textAlign:"center"}}>{i+1}</span>
+                  <input type="number" inputMode="decimal" pattern="[0-9.]*" value={s.weight} onChange={function(e){updateSet(i,"weight",e.target.value);}} placeholder="kg" style={{...iS,textAlign:"center"}}/>
+                  <input type="number" inputMode="numeric" pattern="[0-9]*" value={s.reps} onChange={function(e){updateSet(i,"reps",e.target.value);}} placeholder="reps" style={{...iS,textAlign:"center"}}/>
+                  <button onClick={function(){removeSet(i);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14}}>×</button>
+                </div>
+              );})}
+              <button onClick={addSet} style={{background:"none",border:"1px dashed "+T.borderStrong,color:T.textMuted,padding:"6px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,marginTop:2,cursor:"pointer",width:"100%",borderRadius:2}}>+ Set toevoegen</button>
+              <div style={{marginTop:10}}><textarea value={ex.notes||""} onChange={function(e){props.onChange({...ex,notes:e.target.value});}} placeholder="Opmerking bij deze oefening..." rows={2} style={{...iS,resize:"none",fontSize:12,color:T.textMid,background:T.surfaceAlt,marginTop:2}}/></div>
+              {prevData&&(
+                <div style={{marginTop:10,padding:"8px 10px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:3}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
+                    <span style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5}}>Vorige · {fmtDate(prevData.date)}</span>
+                    <button onClick={props.onViewHistory} style={{background:"none",border:"none",color:T.accent,fontSize:10,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",padding:0}}>Volledige historie →</button>
+                  </div>
+                  <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                    {prevData.sets.map(function(s,i){return <span key={i} style={{fontSize:11,padding:"3px 7px",background:T.surface,border:"1px solid "+T.border,borderRadius:2,color:T.textMid}}>{i+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function ExerciseHistoryPage(props) {
+      var entries=props.entries||[];
+      if(entries.length===0){return <div style={{padding:"40px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Nog geen data voor deze oefening.</div>;}
+      var sorted=entries.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+      var maxWeight=Math.max.apply(null,sorted.map(function(e){return e.maxWeight;}));
+      if(!maxWeight){maxWeight=1;}
+      return (
+        <div className="ai" style={{paddingBottom:40}}>
+          <div style={{padding:"16px 20px",background:T.surfaceAlt,borderBottom:"1px solid "+T.border}}>
+            <div style={{fontSize:10,color:T.textMuted,marginBottom:10,textTransform:"uppercase",letterSpacing:0.5}}>Max gewicht per sessie (kg)</div>
+            <div style={{display:"flex",alignItems:"flex-end",gap:3,height:80}}>
+              {sorted.map(function(e,i){return(
+                <div key={i} style={{minWidth:24,flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                  <div style={{fontSize:9,color:T.textMuted,whiteSpace:"nowrap"}}>{e.maxWeight>0?e.maxWeight:""}</div>
+                  <div style={{width:"100%",background:T.accent,height:((e.maxWeight/maxWeight)*58)+"px",opacity:0.4+(i/Math.max(sorted.length-1,1))*0.6,minHeight:e.maxWeight>0?4:0,borderRadius:1}}/>
+                  <div style={{fontSize:8,color:T.textMuted,transform:"rotate(-40deg)",transformOrigin:"top left",marginLeft:6,whiteSpace:"nowrap"}}>{new Date(e.date).toLocaleDateString("nl-NL",{day:"2-digit",month:"short"})}</div>
+                </div>
+              );})}
+            </div>
+          </div>
+          {entries.map(function(e,i){return(
+            <div key={i} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                <div style={{fontSize:13,fontWeight:500}}>{fmtDate(e.date)}</div>
+                <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:500}}>{e.maxWeight>0?e.maxWeight+" kg":"—"}</div>{e.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{e.totalVol.toLocaleString("nl-NL")} vol</div>}</div>
+              </div>
+              <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                {e.sets.map(function(s,si){return <span key={si} style={{fontSize:11,padding:"3px 7px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:2,color:T.textMid}}>{si+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
+              </div>
+            </div>
+          );})}
+        </div>
+      );
+    }
+
+    function SessionView(props) {
+      var session=props.session; var client=props.client; var allEntriesByName=props.allEntriesByName||{};
+      return (
+        <div className="ai" style={{paddingBottom:40}}>
+          <div style={{padding:"10px 20px",background:T.surfaceAlt,borderBottom:"1px solid "+T.border,fontSize:11,color:T.textMuted}}>{client?client.name+' · ':''}{fmtDate(session.date)}</div>
+          {session.exercises.map(function(ex){
+            var color=PC[ex.pattern]||T.textMuted;
+            var totalVol=ex.sets.reduce(function(sum,s){return sum+(parseFloat(s.weight)||0)*(parseInt(s.reps)||0);},0);
+            var performed=ex.performedUnilateral||false;
+            var exKey=performed?ex.name+"__uni":ex.name;
+            var prevEntry=null; var allEntries=allEntriesByName[exKey]||[];
+            for(var ei=0;ei<allEntries.length;ei++){if(new Date(allEntries[ei].date)<new Date(session.date)){if(!prevEntry||new Date(allEntries[ei].date)>new Date(prevEntry.date)){prevEntry=allEntries[ei];}}}
+            return (
+              <div key={ex.id} style={{borderBottom:"1px solid "+T.border,borderLeft:"3px solid "+color,background:T.surface}}>
+                <div style={{padding:"12px 20px 6px"}}><div style={{fontWeight:500,fontSize:14}}>{ex.name}{ex.unilateral&&<UniTag/>}</div><div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:2}}>{ex.pattern}{totalVol>0?" · "+totalVol.toLocaleString("nl-NL")+" kg vol":""}</div></div>
+                <div style={{padding:"0 20px 8px"}}>
+                  <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr",gap:6,marginBottom:5}}><span style={lS}>#</span><span style={lS}>kg</span><span style={lS}>reps</span></div>
+                  {ex.sets.map(function(s,i){return(
+                    <div key={i} style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr",gap:6,marginBottom:4}}>
+                      <span style={{color:T.textMuted,fontSize:12,paddingTop:6,textAlign:"center"}}>{i+1}</span>
+                      <div style={{...iS,textAlign:"center",color:T.text,cursor:"default"}}>{s.weight||"—"}</div>
+                      <div style={{...iS,textAlign:"center",color:T.text,cursor:"default"}}>{s.reps||"—"}</div>
+                    </div>
+                  );})}
+                  {ex.notes&&<div style={{marginTop:6,fontSize:12,color:T.textMid,fontStyle:"italic",background:T.surfaceAlt,padding:"6px 10px",borderRadius:2}}>{ex.notes}</div>}
+                  {prevEntry&&(
+                    <div style={{marginTop:8,padding:"8px 10px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:3}}>
+                      <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Vorige sessie · {fmtDate(prevEntry.date)}</div>
+                      <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{prevEntry.sets.map(function(s,i){return <span key={i} style={{fontSize:11,padding:"3px 7px",background:T.surface,border:"1px solid "+T.border,borderRadius:2,color:T.textMid}}>{i+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {session.notes&&<div style={{padding:"16px 20px",background:T.surface}}><Label>Notities sessie</Label><div style={{marginTop:6,fontSize:13,color:T.textMid,lineHeight:1.7}}>{session.notes}</div></div>}
+        </div>
+      );
+    }
+
+    function ProgressView(props) {
+      var sessions=props.sessions;
+      var [period,setPeriod]=useState("all");
+      var now=new Date(); var cutoff=null;
+      if(period==="1m"){cutoff=new Date(now);cutoff.setMonth(cutoff.getMonth()-1);}
+      if(period==="3m"){cutoff=new Date(now);cutoff.setMonth(cutoff.getMonth()-3);}
+      if(period==="6m"){cutoff=new Date(now);cutoff.setMonth(cutoff.getMonth()-6);}
+      if(period==="1y"){cutoff=new Date(now);cutoff.setFullYear(cutoff.getFullYear()-1);}
+      var filteredSessions=cutoff?sessions.filter(function(s){return new Date(s.date)>=cutoff;}):sessions;
+
+      // performed=false → main entry only
+      // performed=true  → sub-entry (uni) only, NOT in main
+      var exerciseMap={};
+      filteredSessions.forEach(function(s){
+        s.exercises.forEach(function(ex){
+          var maxWeight=Math.max.apply(null,ex.sets.map(function(st){return parseFloat(st.weight)||0;}));
+          var maxReps=Math.max.apply(null,ex.sets.map(function(st){return parseInt(st.reps)||0;}));
+          var vol=ex.sets.reduce(function(sum,st){return sum+(parseFloat(st.weight)||0)*(parseInt(st.reps)||0);},0);
+          var entry={date:s.date,maxWeight:maxWeight,maxReps:maxReps,totalVol:vol,sets:ex.sets};
+          var performed=ex.performedUnilateral||false;
+          if(performed){
+            // Uni sessions go only into the (uni) sub-entry
+            var uniKey=ex.name+"__uni";
+            if(!exerciseMap[uniKey]){exerciseMap[uniKey]={key:uniKey,name:ex.name+" (uni)",baseName:ex.name,pattern:ex.pattern,isSubEntry:true,entries:[]};}
+            exerciseMap[uniKey].entries.push(entry);
+          } else {
+            // Non-uni sessions go only into the main entry
+            if(!exerciseMap[ex.name]){exerciseMap[ex.name]={key:ex.name,name:ex.name,baseName:ex.name,pattern:ex.pattern,isSubEntry:false,entries:[]};}
+            exerciseMap[ex.name].entries.push(entry);
+          }
+        });
+      });
+
+      var exercises=Object.values(exerciseMap).sort(function(a,b){return a.name.localeCompare(b.name);});
+      var periods=[["all","Alles"],["1m","1 mnd"],["3m","3 mnd"],["6m","6 mnd"],["1y","1 jaar"]];
+      return (
+        <div>
+          <div style={{display:"flex",gap:5,padding:"12px 20px",borderBottom:"1px solid "+T.border,background:T.surface,flexWrap:"wrap"}}>
+            {periods.map(function(item){var k=item[0],label=item[1],active=period===k;return <button key={k} onClick={function(){setPeriod(k);}} style={{padding:"5px 10px",fontSize:11,borderRadius:2,background:active?T.accent:"none",border:"1px solid "+(active?T.accent:T.border),color:active?"#fff":T.textMid,textTransform:"uppercase",letterSpacing:0.4}}>{label}</button>;})}
+          </div>
+          {exercises.length===0&&<div style={{padding:"40px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Geen data in deze periode.</div>}
+          {exercises.map(function(ex){
+            var sorted=ex.entries.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+            var hasWeight=sorted.some(function(e){return e.maxWeight>0;});
+            var best=sorted.reduce(function(prev,cur){if(hasWeight){return cur.maxWeight>prev.maxWeight?cur:prev;}return cur.maxReps>prev.maxReps?cur:prev;},sorted[0]);
+            var last=sorted[sorted.length-1],first=sorted[0];
+            var diff=null;if(sorted.length>1){if(hasWeight){diff=+(last.maxWeight-first.maxWeight).toFixed(1);}else{diff=last.maxReps-first.maxReps;}}
+            var color=PC[ex.pattern]||T.textMuted;
+            var bestLabel=hasWeight?best.maxWeight+" kg":best.maxReps+" reps";
+            var diffLabel=hasWeight?(diff>0?"+":"")+diff+" kg":(diff>0?"+":"")+diff+" reps";
+            var indent=ex.isSubEntry;
+            return (
+              <div key={ex.key} className="rh" onClick={function(){props.onExHistory(ex.key);}} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,borderLeft:"3px solid "+color,cursor:"pointer",background:indent?T.surfaceAlt:T.surface,display:"flex",justifyContent:"space-between",alignItems:"center",paddingLeft:indent?32:20}}>
+                <div>
+                  <div style={{fontWeight:indent?400:500,fontSize:indent?13:14,color:indent?T.textMid:T.text}}>{ex.name}</div>
+                  <div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:2}}>{ex.pattern} · {ex.entries.length}×</div>
+                </div>
+                <div style={{textAlign:"right"}}><div style={{fontSize:indent?13:15,fontWeight:500}}>{bestLabel}</div>{diff!==null&&diff!==0&&<div style={{fontSize:11,color:diff>0?"#059669":T.accent}}>{diffLabel}</div>}</div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    function ExportView(props) {
+      var client=props.client; var sessions=props.sessions;
+      var [period,setPeriod]=useState("all"); var [copied,setCopied]=useState(false);
+      var sorted=sessions.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+      var filtered=sorted.filter(function(s){if(period==="all"){return true;}var d=new Date(s.date),now=new Date();if(period==="month"){return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}if(period==="3m"){return(now-d)/(1000*60*60*24*30)<=3;}return true;});
+      var bestMap={};
+      filtered.forEach(function(s){s.exercises.forEach(function(ex){var maxWeight=Math.max.apply(null,ex.sets.map(function(st){return parseFloat(st.weight)||0;}));var maxReps=Math.max.apply(null,ex.sets.map(function(st){return parseInt(st.reps)||0;}));var totalVol=ex.sets.reduce(function(sum,st){return sum+(parseFloat(st.weight)||0)*(parseInt(st.reps)||0);},0);var existing=bestMap[ex.name];var isBetter=!existing||(maxWeight>0&&maxWeight>existing.maxWeight)||(maxWeight===0&&existing.maxWeight===0&&maxReps>existing.maxReps);if(isBetter){bestMap[ex.name]={name:ex.name,pattern:ex.pattern,unilateral:ex.unilateral||false,maxWeight:maxWeight,maxReps:maxReps,totalVol:totalVol,sets:ex.sets,date:s.date};}});});
+      var bestList=Object.values(bestMap).sort(function(a,b){return a.name.localeCompare(b.name);});
+      function buildText(){var rangeLabel=period==="all"?"Alles":period==="month"?"Deze maand":"Afgelopen 3 maanden";var txt="BESTE RESULTATEN — "+(client?client.name.toUpperCase():"")+"\n";txt+="Periode: "+rangeLabel+" · "+fmtDate(new Date().toISOString())+"\n";txt+="─".repeat(44)+"\n\n";bestList.forEach(function(ex){var bestVal=ex.maxWeight>0?ex.maxWeight+"kg":(ex.maxReps>0?ex.maxReps+" reps":"—");txt+=ex.name+(ex.unilateral?" [uni]":"")+" ("+ex.pattern+")\n";txt+="  Beste sessie: "+fmtDate(ex.date)+" · best "+bestVal+"\n";ex.sets.forEach(function(s,i){txt+="  Set "+(i+1)+": "+(s.weight?s.weight+"kg":"—")+" × "+(s.reps||"—")+" reps\n";});txt+="\n";});return txt;}
+      async function copy(){await navigator.clipboard.writeText(buildText());setCopied(true);setTimeout(function(){setCopied(false);},2000);}
+      return (
+        <div className="ai" style={{padding:20,paddingBottom:40}}>
+          <div style={{fontSize:12,color:T.textMid,marginBottom:14,lineHeight:1.6}}>Beste resultaat per oefening (hoogste max gewicht) in de geselecteerde periode.</div>
+          <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
+            {[["all","Alles"],["month","Deze maand"],["3m","Afgelopen 3 mnd"]].map(function(item){return <button key={item[0]} onClick={function(){setPeriod(item[0]);}} style={{padding:"6px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,borderRadius:2,background:period===item[0]?T.accent:T.surface,border:"1px solid "+(period===item[0]?T.accent:T.border),color:period===item[0]?"#fff":T.textMid}}>{item[1]}</button>;})}
+          </div>
+          <Btn accent onClick={copy} style={{marginBottom:16}}>{copied?"✓ Gekopieerd!":"Kopieer tekst"}</Btn>
+          {bestList.length===0&&<div style={{color:T.textMuted,fontSize:13,textAlign:"center",padding:"20px 0"}}>Geen sessies in deze periode.</div>}
+          {bestList.map(function(ex,i){var color=PC[ex.pattern]||T.textMuted;return(
+            <div key={i} style={{background:T.surface,border:"1px solid "+T.border,borderLeft:"3px solid "+color,marginBottom:8,padding:"12px 16px",borderRadius:2}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                <div><div style={{fontWeight:500,fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</div><div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:1}}>{ex.pattern}</div><div style={{fontSize:10,color:T.textMuted,marginTop:2}}>Beste sessie: {fmtDate(ex.date)}</div></div>
+                <div style={{textAlign:"right"}}><div style={{fontSize:16,fontWeight:600}}>{ex.maxWeight>0?ex.maxWeight+" kg":(ex.maxReps>0?ex.maxReps+" reps":"—")}</div>{ex.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{ex.totalVol.toLocaleString("nl-NL")} vol</div>}</div>
+              </div>
+              <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:8}}>{ex.sets.map(function(s,si){return <span key={si} style={{fontSize:11,padding:"3px 7px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:2,color:T.textMid}}>{si+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}</div>
+            </div>
+          );})}
+        </div>
+      );
+    }
+
+    // ── Login screen ──────────────────────────────────────────────────────────
+    function LoginScreen(props) {
+      var [email,setEmail]       = useState("");
+      var [password,setPassword] = useState("");
+      var [error,setError]       = useState("");
+      var [loading,setLoading]   = useState(false);
+
+      async function handleLogin(e) {
+        e.preventDefault();
+        if (!email.trim() || !password) { return; }
+        setLoading(true); setError("");
+        try {
+          await window._fbLogin(email.trim(), password);
+        } catch(err) {
+          setError("Verkeerd e-mailadres of wachtwoord.");
+          setLoading(false);
+        }
+      }
+
+      return (
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:24,fontFamily:"'DM Mono','Courier New',monospace",overflow:"hidden"}}>
+          <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Barlow+Condensed:wght@700;800&display=swap');*{box-sizing:border-box;margin:0;padding:0}input:focus{outline:none;border-color:#dc4f2a!important}`}}/>
+          <div style={{width:"100%",maxWidth:360}}>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:32,letterSpacing:1,textTransform:"uppercase",color:T.text,marginBottom:8}}>Trainer App</div>
+            <div style={{fontSize:12,color:T.textMuted,marginBottom:32,letterSpacing:0.3}}>Log in om door te gaan</div>
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.6,marginBottom:5}}>E-mailadres</div>
+              <input type="email" value={email} onChange={function(e){setEmail(e.target.value);}} placeholder="jouw@email.com" style={{...iS}} autoComplete="email"/>
+            </div>
+            <div style={{marginBottom:20}}>
+              <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.6,marginBottom:5}}>Wachtwoord</div>
+              <input type="password" value={password} onChange={function(e){setPassword(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter"){handleLogin(e);}}} placeholder="••••••••" style={{...iS}} autoComplete="current-password"/>
+            </div>
+            {error && <div style={{fontSize:12,color:T.danger,marginBottom:14}}>{error}</div>}
+            <button onClick={handleLogin} disabled={loading} style={{width:"100%",padding:"12px",fontSize:12,background:T.accent,border:"none",color:"#fff",textTransform:"uppercase",letterSpacing:0.8,cursor:"pointer",borderRadius:2,opacity:loading?0.6:1}}>
+              {loading?"Inloggen...":"Inloggen"}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // ── Root — handles auth state ──────────────────────────────────────────────
+    function Root() {
+      var [user, setUser] = useState(undefined);
+
+      useEffect(function() {
+        window._fbOnAuth(function(u) {
+          setUser(u);
+          if (u) { window.scrollTo(0,0); }
+        });
+      }, []);
+
+      // Swipe left = go back (history.back), swipe down from top = reload
+      useEffect(function() {
+        var startX=0, startY=0;
+        function onStart(e){
+          var t=e.touches[0];startX=t.clientX;startY=t.clientY;
+        }
+        function onEnd(e){
+          var t=e.changedTouches[0];
+          var dx=t.clientX-startX, dy=t.clientY-startY;
+          var adx=Math.abs(dx), ady=Math.abs(dy);
+          // swipe left: dx < -60, mostly horizontal
+          if(dx < -60 && adx > ady*1.5){ window.history.back(); }
+          // swipe down from very top: dy > 80, started near top, mostly vertical
+          if(dy > 80 && ady > adx*1.5 && startY < 80){ window.location.reload(); }
+        }
+        document.addEventListener("touchstart",onStart,{passive:true});
+        document.addEventListener("touchend",onEnd,{passive:true});
+        return function(){
+          document.removeEventListener("touchstart",onStart);
+          document.removeEventListener("touchend",onEnd);
+        };
+      }, []);
+
+      if (user === undefined) {
+        return <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:T.textMuted,fontFamily:"DM Mono,monospace",fontSize:13}}>laden...</span></div>;
+      }
+      if (!user) { return <LoginScreen/>; }
+      return <App onLogout={function(){ window._fbLogout(); }}/>;
+    }
+
+    // ── Mount ──────────────────────────────────────────────────────────────────
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<Root/>);
+  </script>
+</body>
+</html>
