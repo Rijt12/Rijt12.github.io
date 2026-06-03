@@ -181,6 +181,32 @@
         return function() { clearTimeout(autoSaveRef.current); };
       }, [activeSession]);
 
+      if (!data) { return <Loader />; }
+
+      function persist(d) {
+        setData(d);
+        setSaving(true);
+        saveData(d).then(function(){ setSaving(false); });
+      }
+
+      // Sla sessie stil op (bij terugknop), voegt ook nieuwe oefeningen toe aan bibliotheek
+      function saveSessionSilent(session) {
+        if (!session) { return; }
+        var d = dataRef.current;
+        if (!d) { return; }
+        var library = d.exerciseLibrary || [];
+        var newExs = [];
+        session.exercises.forEach(function(ex) {
+          var found = library.some(function(l){ return l.name.toLowerCase() === ex.name.toLowerCase(); });
+          if (!found) { newExs.push({id:uid(), name:ex.name, pattern:ex.pattern, unilateral:ex.unilateral||false}); }
+        });
+        var newSessions = d.sessions.filter(function(s){ return s.id !== session.id; });
+        newSessions.push(session);
+        var newData = {...d, sessions: newSessions, exerciseLibrary: library.concat(newExs)};
+        setData(newData);
+        saveData(newData);
+      }
+
       // goBack: navigeer terug op basis van huidige view
       var goBackRef = useRef(null);
       goBackRef.current = function() {
@@ -216,32 +242,6 @@
           document.removeEventListener("touchend",   onEnd);
         };
       }, []);
-
-      if (!data) { return <Loader />; }
-
-      function persist(d) {
-        setData(d);
-        setSaving(true);
-        saveData(d).then(function(){ setSaving(false); });
-      }
-
-      // Sla sessie stil op (bij terugknop), voegt ook nieuwe oefeningen toe aan bibliotheek
-      function saveSessionSilent(session) {
-        if (!session) { return; }
-        var d = dataRef.current;
-        if (!d) { return; }
-        var library = d.exerciseLibrary || [];
-        var newExs = [];
-        session.exercises.forEach(function(ex) {
-          var found = library.some(function(l){ return l.name.toLowerCase() === ex.name.toLowerCase(); });
-          if (!found) { newExs.push({id:uid(), name:ex.name, pattern:ex.pattern, unilateral:ex.unilateral||false}); }
-        });
-        var newSessions = d.sessions.filter(function(s){ return s.id !== session.id; });
-        newSessions.push(session);
-        var newData = {...d, sessions: newSessions, exerciseLibrary: library.concat(newExs)};
-        setData(newData);
-        saveData(newData);
-      }
 
       function buildSeed() {
         var defaultLib = [
