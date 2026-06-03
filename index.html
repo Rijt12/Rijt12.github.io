@@ -860,7 +860,7 @@
       function moveDown(idx){if(idx===session.exercises.length-1){return;}var exs=session.exercises.slice();var tmp=exs[idx];exs[idx]=exs[idx+1];exs[idx+1]=tmp;onChange({...session,exercises:exs});}
       function loadTemplate(tpl){var exercises=tpl.exercises.map(function(e){return {id:uid(),name:e.name,pattern:e.pattern,unilateral:e.unilateral||false,isUnilateralExercise:e.unilateral||false,performedUnilateral:false,sets:(e.sets||[{weight:"",reps:""}]).map(function(s){return {weight:s.weight||"",reps:s.reps||""};}),notes:""};});onChange({...session,exercises:exercises});setShowTemplates(false);props.showToast('Schema "'+tpl.name+'" geladen ✓');}
       var localDateValue=session.date?toLocalISO(session.date):"";
-      function handleDateChange(e){if(!e.target.value){return;}var orig=new Date(session.date);var parts=e.target.value.split("-");orig.setFullYear(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));onChange({...session,date:orig.toISOString()});}
+      function handleDateChange(e){if(!e.target.value||!session.date){return;}var orig=new Date(session.date);var parts=e.target.value.split("-");orig.setFullYear(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));onChange({...session,date:orig.toISOString()});}
 
       // Bouw render-lijst: groepeer superset-oefeningen per ssId
       var renderList=[];
@@ -983,7 +983,7 @@
       var [exA,setExA]=useState(null);
       var [search,setSearch]=useState("");
       var inputRef=useRef(null);
-      useEffect(function(){if(inputRef.current){inputRef.current.focus();}});
+      useEffect(function(){if(inputRef.current){inputRef.current.focus();}}, [step]);
       function makeEx(ex){return {id:uid(),name:ex.name,pattern:ex.pattern,unilateral:ex.unilateral||false,isUnilateralExercise:ex.unilateral||false,performedUnilateral:false,sets:[{weight:"",reps:""}],notes:""};}
       function selectA(ex){setExA(makeEx(ex));setStep(2);setSearch("");}
       function selectB(ex){props.onAdd(exA,makeEx(ex));}
@@ -1380,11 +1380,13 @@
 
       // Swipe down from top = reload
       useEffect(function() {
-        var startY=0;
-        function onStart(e){startY=e.touches[0].clientY;}
+        var startX=0, startY=0;
+        function onStart(e){if(!e.touches||!e.touches[0]){return;}startX=e.touches[0].clientX;startY=e.touches[0].clientY;}
         function onEnd(e){
+          if(!e.changedTouches||!e.changedTouches[0]){return;}
+          var dx=e.changedTouches[0].clientX-startX;
           var dy=e.changedTouches[0].clientY-startY;
-          if(dy>80&&Math.abs(dy)>Math.abs(e.changedTouches[0].clientX-0)*1.5&&startY<80){window.location.reload();}
+          if(dy>80&&Math.abs(dy)>Math.abs(dx)*1.5&&startY<80){window.location.reload();}
         }
         document.addEventListener("touchstart",onStart,{passive:true});
         document.addEventListener("touchend",onEnd,{passive:true});
