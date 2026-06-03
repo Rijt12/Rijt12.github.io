@@ -413,7 +413,7 @@
 
           {(view==="session"||view==="editSession") && activeSession && (
             <div>
-              <Header title={view==="session"?"Sessie bezig":"Sessie bewerken"} back={function(){saveSessionSilent(activeSession);goView("client");}}
+              <Header title={view==="session"?"Sessie bezig":"Sessie bewerken"} back={function(){goView("client");}}
                 rightAction={{label:"Opslaan", fn:function(){saveSession(activeSession);}}}
               />
               <SessionEditor session={activeSession} onChange={setActiveSession}
