@@ -96,10 +96,10 @@
     }
 
     // ── Constants ──────────────────────────────────────────────────────────────
-    const PATTERNS = ["Push","Pull","Hinge","Squat","Carry","Core","Isolatie","Overig"];
+    const PATTERNS = ["Push","Pull","Hinge","Squat","Carry","Core","Isolatie","Mobiliteit"];
     const PC = {
       Push:"#dc4f2a", Pull:"#2563eb", Hinge:"#d97706", Squat:"#059669",
-      Carry:"#7c3aed", Core:"#db2777", Isolatie:"#0891b2", Overig:"#64748b"
+      Carry:"#7c3aed", Core:"#db2777", Isolatie:"#0891b2", Mobiliteit:"#0d9488"
     };
     const T = {
       bg:"#f5f3ef", surface:"#ffffff", surfaceAlt:"#faf9f7",
@@ -158,6 +158,20 @@
           saveData(seeded);
         }
       }, [!!data]);
+
+      // Auto-save active session while editing
+      var autoSaveRef = useRef(null);
+      useEffect(function() {
+        if (!activeSession || !data) { return; }
+        if (view !== "session" && view !== "editSession") { return; }
+        clearTimeout(autoSaveRef.current);
+        autoSaveRef.current = setTimeout(function() {
+          var newSessions = data.sessions.filter(function(s){ return s.id !== activeSession.id; });
+          newSessions.push(activeSession);
+          saveData({...data, sessions: newSessions});
+        }, 1500);
+        return function() { clearTimeout(autoSaveRef.current); };
+      }, [activeSession]);
 
       if (!data) { return <Loader />; }
 
@@ -288,8 +302,10 @@
         showToast("Schema verwijderd");
       }
 
+      var activeSessionDate = activeSession ? toLocalISO(activeSession.date) : null;
       var prevByName = {};
       clientSessions.forEach(function(s){
+        if (activeSessionDate && toLocalISO(s.date) === activeSessionDate) { return; }
         s.exercises.forEach(function(ex){
           if (!prevByName[ex.name]) { prevByName[ex.name]={sets:ex.sets,date:s.date}; }
         });
@@ -918,7 +934,7 @@
             <div key={i} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
                 <div style={{fontSize:13,fontWeight:500}}>{fmtDate(e.date)}</div>
-                <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:500}}>{e.maxWeight>0?e.maxWeight+" kg":"—"}</div>{e.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{e.totalVol.toLocaleString("nl-NL")} vol</div>}</div>
+                <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:500}}>{e.maxWeight>0?e.maxWeight+" kg":"—"}</div>{e.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{e.totalVol.toLocaleString("nl-NL")} vol.</div>}</div>
               </div>
               <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
                 {e.sets.map(function(s,si){return <span key={si} style={{fontSize:11,padding:"3px 7px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:2,color:T.textMid}}>{si+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
@@ -943,7 +959,7 @@
             for(var ei=0;ei<allEntries.length;ei++){if(new Date(allEntries[ei].date)<new Date(session.date)){if(!prevEntry||new Date(allEntries[ei].date)>new Date(prevEntry.date)){prevEntry=allEntries[ei];}}}
             return (
               <div key={ex.id} style={{borderBottom:"1px solid "+T.border,borderLeft:"3px solid "+color,background:T.surface}}>
-                <div style={{padding:"12px 20px 6px"}}><div style={{fontWeight:500,fontSize:14}}>{ex.name}{ex.unilateral&&<UniTag/>}</div><div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:2}}>{ex.pattern}{totalVol>0?" · "+totalVol.toLocaleString("nl-NL")+" kg vol":""}</div></div>
+                <div style={{padding:"12px 20px 6px"}}><div style={{fontWeight:500,fontSize:14}}>{ex.name}{ex.unilateral&&<UniTag/>}</div><div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:2}}>{ex.pattern}{totalVol>0?" · "+totalVol.toLocaleString("nl-NL")+" kg vol.":""}</div></div>
                 <div style={{padding:"0 20px 8px"}}>
                   <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr",gap:6,marginBottom:5}}><span style={lS}>#</span><span style={lS}>kg</span><span style={lS}>reps</span></div>
                   {ex.sets.map(function(s,i){return(
@@ -984,6 +1000,7 @@
       var exerciseMap={};
       filteredSessions.forEach(function(s){
         s.exercises.forEach(function(ex){
+          if(ex.pattern==="Mobiliteit"){return;}
           var maxWeight=Math.max.apply(null,ex.sets.map(function(st){return parseFloat(st.weight)||0;}));
           var maxReps=Math.max.apply(null,ex.sets.map(function(st){return parseInt(st.reps)||0;}));
           var vol=ex.sets.reduce(function(sum,st){return sum+(parseFloat(st.weight)||0)*(parseInt(st.reps)||0);},0);
@@ -1056,7 +1073,7 @@
             <div key={i} style={{background:T.surface,border:"1px solid "+T.border,borderLeft:"3px solid "+color,marginBottom:8,padding:"12px 16px",borderRadius:2}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                 <div><div style={{fontWeight:500,fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</div><div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:1}}>{ex.pattern}</div><div style={{fontSize:10,color:T.textMuted,marginTop:2}}>Beste sessie: {fmtDate(ex.date)}</div></div>
-                <div style={{textAlign:"right"}}><div style={{fontSize:16,fontWeight:600}}>{ex.maxWeight>0?ex.maxWeight+" kg":(ex.maxReps>0?ex.maxReps+" reps":"—")}</div>{ex.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{ex.totalVol.toLocaleString("nl-NL")} vol</div>}</div>
+                <div style={{textAlign:"right"}}><div style={{fontSize:16,fontWeight:600}}>{ex.maxWeight>0?ex.maxWeight+" kg":(ex.maxReps>0?ex.maxReps+" reps":"—")}</div>{ex.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{ex.totalVol.toLocaleString("nl-NL")} vol.</div>}</div>
               </div>
               <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:8}}>{ex.sets.map(function(s,si){return <span key={si} style={{fontSize:11,padding:"3px 7px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:2,color:T.textMid}}>{si+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}</div>
             </div>
