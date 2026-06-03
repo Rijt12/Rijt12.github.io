@@ -984,14 +984,17 @@
       var [step,setStep]=useState(1);
       var [exA,setExA]=useState(null);
       var [search,setSearch]=useState("");
+      var [activePatterns,setActivePatterns]=useState({});
       var inputRef=useRef(null);
       useEffect(function(){if(inputRef.current){inputRef.current.focus();}}, [step]);
+      function togglePattern(p){setActivePatterns(function(prev){var next=Object.assign({},prev);var numOff=Object.keys(next).filter(function(k){return next[k]===false;}).length;if(numOff===0){PATTERNS.forEach(function(x){next[x]=false;});next[p]=true;}else if(next[p]===false){next[p]=true;var stillOff=PATTERNS.filter(function(x){return next[x]===false;});if(stillOff.length===0){return{};}}else{next[p]=false;}return next;});}
+      var patternActive=function(p){return Object.keys(activePatterns).length===0||activePatterns[p]!==false;};
       function makeEx(ex){return {id:uid(),name:ex.name,pattern:ex.pattern,unilateral:ex.unilateral||false,isUnilateralExercise:ex.unilateral||false,performedUnilateral:false,sets:[{weight:"",reps:""}],notes:""};}
-      function selectA(ex){setExA(makeEx(ex));setStep(2);setSearch("");}
+      function selectA(ex){setExA(makeEx(ex));setStep(2);setSearch("");setActivePatterns({});}
       function selectB(ex){props.onAdd(exA,makeEx(ex));}
       var filtered=library.filter(function(e){
         if(step===2&&exA&&e.name.toLowerCase()===exA.name.toLowerCase()){return false;}
-        return e.name.toLowerCase().includes(search.toLowerCase());
+        return e.name.toLowerCase().includes(search.toLowerCase())&&patternActive(e.pattern);
       }).sort(function(a,b){return a.name.localeCompare(b.name);});
       return (
         <div style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:4,overflow:"hidden"}}>
@@ -1004,7 +1007,11 @@
           </div>
           <div style={{padding:14}}>
             <input ref={inputRef} value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Zoek oefening..." style={{...iS,marginBottom:8}}/>
-            <div style={{maxHeight:220,overflowY:"auto"}}>
+            <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8,alignItems:"center"}}>
+              {PATTERNS.map(function(p){var on=patternActive(p);var col=PC[p]||"#999";return <button key={p} onClick={function(){togglePattern(p);}} style={{padding:"3px 8px",fontSize:9,borderRadius:2,background:on?col+"18":"none",border:"1px solid "+(on?col:T.border),color:on?col:T.textMuted,textTransform:"uppercase",letterSpacing:0.3}}>{p}</button>;})}
+              <button onClick={function(){setActivePatterns({});}} style={{padding:"3px 8px",fontSize:9,borderRadius:2,marginLeft:2,background:"none",border:"1px solid "+T.border,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.3,display:PATTERNS.filter(function(p){return activePatterns[p]===false;}).length===0?"none":"inline-block"}}>Alles</button>
+            </div>
+            <div style={{maxHeight:200,overflowY:"auto"}}>
               {filtered.length===0&&<div style={{color:T.textMuted,fontSize:12,padding:"12px 0",textAlign:"center"}}>Geen resultaten</div>}
               {filtered.map(function(ex){var color=PC[ex.pattern]||T.textMuted;return(
                 <div key={ex.id} className="rh" onClick={function(){step===1?selectA(ex):selectB(ex);}} style={{padding:"10px",borderBottom:"1px solid "+T.border,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",borderLeft:"3px solid "+color}}>
