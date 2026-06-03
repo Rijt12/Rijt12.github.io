@@ -207,6 +207,42 @@
         saveData(newData);
       }
 
+      // goBack: navigeer terug op basis van huidige view
+      var goBackRef = useRef(null);
+      goBackRef.current = function() {
+        if (view === "clients")                              { return; }
+        if (view === "library")                              { goView("clients"); return; }
+        if (view === "templates" && editingTpl)              { setEditingTpl(null); return; }
+        if (view === "templates")                            { goView("clients"); return; }
+        if (view === "client")                               { goView("clients"); return; }
+        if (view === "session" || view === "editSession")    { goView("client"); return; }
+        if (view === "viewSession")                          { goView("client"); return; }
+        if (view === "exHistory")                            { goView(prevView); return; }
+        if (view === "export")                               { goView("client"); return; }
+      };
+
+      // Swipe left = terug
+      useEffect(function() {
+        var startX=0, startY=0;
+        function onStart(e) {
+          var tag = e.target.tagName;
+          if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") { startX = null; return; }
+          startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+        }
+        function onEnd(e) {
+          if (startX === null) { return; }
+          var dx = e.changedTouches[0].clientX - startX;
+          var dy = e.changedTouches[0].clientY - startY;
+          if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 1.5) { goBackRef.current(); }
+        }
+        document.addEventListener("touchstart", onStart, {passive:true});
+        document.addEventListener("touchend",   onEnd,   {passive:true});
+        return function() {
+          document.removeEventListener("touchstart", onStart);
+          document.removeEventListener("touchend",   onEnd);
+        };
+      }, []);
+
       function buildSeed() {
         var defaultLib = [
           {id:uid(),name:"Goblet squat",         pattern:"Squat",    unilateral:false},
@@ -1342,27 +1378,17 @@
         });
       }, []);
 
-      // Swipe left = go back (history.back), swipe down from top = reload
+      // Swipe down from top = reload
       useEffect(function() {
-        var startX=0, startY=0;
-        function onStart(e){
-          var t=e.touches[0];startX=t.clientX;startY=t.clientY;
-        }
+        var startY=0;
+        function onStart(e){startY=e.touches[0].clientY;}
         function onEnd(e){
-          var t=e.changedTouches[0];
-          var dx=t.clientX-startX, dy=t.clientY-startY;
-          var adx=Math.abs(dx), ady=Math.abs(dy);
-          // swipe left: dx < -60, mostly horizontal
-          if(dx < -60 && adx > ady*1.5){ window.history.back(); }
-          // swipe down from very top: dy > 80, started near top, mostly vertical
-          if(dy > 80 && ady > adx*1.5 && startY < 80){ window.location.reload(); }
+          var dy=e.changedTouches[0].clientY-startY;
+          if(dy>80&&Math.abs(dy)>Math.abs(e.changedTouches[0].clientX-0)*1.5&&startY<80){window.location.reload();}
         }
         document.addEventListener("touchstart",onStart,{passive:true});
         document.addEventListener("touchend",onEnd,{passive:true});
-        return function(){
-          document.removeEventListener("touchstart",onStart);
-          document.removeEventListener("touchend",onEnd);
-        };
+        return function(){document.removeEventListener("touchstart",onStart);document.removeEventListener("touchend",onEnd);};
       }, []);
 
       if (user === undefined) {
