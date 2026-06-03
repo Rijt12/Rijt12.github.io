@@ -455,7 +455,7 @@
     // ── Shell ──────────────────────────────────────────────────────────────────
     function Shell(props) {
       return (
-        <div style={{minHeight:"100vh",background:T.bg,color:T.text,fontFamily:"'DM Mono','Courier New',monospace",maxWidth:480,margin:"0 auto"}}>
+        <div style={{minHeight:"100vh",background:T.bg,color:T.text,fontFamily:"'DM Mono','Courier New',monospace",maxWidth:480,margin:"0 auto",position:"relative"}}>
           <style dangerouslySetInnerHTML={{__html:`
             @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Barlow+Condensed:wght@400;600;700;800&display=swap');
             *{box-sizing:border-box;margin:0;padding:0}
@@ -661,7 +661,7 @@
               <div>
                 <div style={{marginBottom:10}}><Label>Naam oefening</Label><AutocompleteInput inputRef={inputRef} value={newName} onChange={setNewName} suggestions={library.map(function(e){return e.name;})} placeholder="bijv. Deadlift..." style={{marginTop:5}}/></div>
                 <div style={{marginBottom:10}}><Label>Bewegingspatroon</Label><PatternPicker value={newPat} onChange={setNewPat}/></div>
-                <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,cursor:"pointer",fontSize:13,color:T.textMid}}><input type="checkbox" checked={newUni} onChange={function(e){setNewUni(e.target.checked);}}/>Unilateraal (per kant)</label>
+                <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,cursor:"pointer",fontSize:13,color:T.textMid}}><input type="checkbox" checked={newUni} onChange={function(e){setNewUni(e.target.checked);}}/>Unilateraal</label>
                 <div style={{display:"flex",gap:8}}><Btn accent onClick={addExercise}>Toevoegen</Btn><Btn onClick={function(){setAdding(false);setNewName("");}}>Annuleer</Btn></div>
               </div>
             )}
@@ -1247,7 +1247,7 @@
             return (
               <div key={ex.key} className="rh" onClick={function(){props.onExHistory(ex.key);}} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,borderLeft:"3px solid "+color,cursor:"pointer",background:indent?T.surfaceAlt:T.surface,display:"flex",justifyContent:"space-between",alignItems:"center",paddingLeft:indent?32:20}}>
                 <div>
-                  <div style={{fontWeight:indent?400:500,fontSize:indent?13:14,color:indent?T.textMid:T.text}}>{ex.name}</div>
+                  <div style={{fontWeight:indent?400:500,fontSize:indent?13:14,color:indent?T.textMid:T.text}}>{ex.isSubEntry?ex.baseName:ex.name}{ex.isSubEntry&&<UniTag/>}</div>
                   <div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:2}}>{ex.pattern} · {ex.entries.length}×</div>
                 </div>
                 <div style={{textAlign:"right"}}><div style={{fontSize:indent?13:15,fontWeight:500}}>{bestLabel}</div>{diffLabel&&<div style={{fontSize:11,color:(hasWeight?diff&&diff.w>0:diff>0)?"#059669":T.accent}}>{diffLabel}</div>}</div>
