@@ -468,6 +468,21 @@
     }
 
     function Loader() { return <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:T.textMuted,fontSize:13}}>laden...</span></div>; }
+
+    function Stepper(props) {
+      var val = props.value;
+      var step = props.step || 1;
+      var num = parseFloat(val) || 0;
+      function dec() { var n = Math.max(0, +(num - step).toFixed(2)); props.onChange(n === 0 ? "" : String(n)); }
+      function inc() { props.onChange(String(+(num + step).toFixed(2))); }
+      return (
+        <div style={{display:"flex",alignItems:"center",border:"1px solid "+T.border,borderRadius:2,background:T.bg,overflow:"hidden"}}>
+          <button onMouseDown={function(e){e.preventDefault();dec();}} style={{background:"none",border:"none",borderRight:"1px solid "+T.border,color:T.textMid,fontSize:18,lineHeight:1,padding:"0 10px",height:38,cursor:"pointer",flexShrink:0}}>−</button>
+          <input type="number" inputMode={step<1?"decimal":"numeric"} value={val} onChange={function(e){props.onChange(e.target.value);}} placeholder={props.placeholder} style={{flex:1,background:"none",border:"none",color:T.text,fontSize:13,textAlign:"center",padding:"8px 2px",minWidth:0,outline:"none"}}/>
+          <button onMouseDown={function(e){e.preventDefault();inc();}} style={{background:"none",border:"none",borderLeft:"1px solid "+T.border,color:T.textMid,fontSize:18,lineHeight:1,padding:"0 10px",height:38,cursor:"pointer",flexShrink:0}}>+</button>
+        </div>
+      );
+    }
     function Toast(props) { return <div style={{position:"fixed",bottom:28,left:"50%",transform:"translateX(-50%)",background:T.text,color:T.bg,padding:"10px 20px",fontSize:12,zIndex:100,animation:"slideUp 0.2s ease",letterSpacing:0.3,whiteSpace:"nowrap",maxWidth:"90vw",textAlign:"center"}}>{props.msg}</div>; }
     function Label(props) { return <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.6}}>{props.children}</div>; }
     function UniTag() { return <span style={{fontSize:9,marginLeft:7,padding:"1px 5px",background:T.accentBg,color:T.accent,borderRadius:2,textTransform:"uppercase",letterSpacing:0.3}}>uni</span>; }
@@ -702,8 +717,8 @@
                   {ex.sets.map(function(s,si){return(
                     <div key={si} style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:6}}>
                       <span style={{color:T.textMuted,fontSize:12,paddingTop:8,textAlign:"center"}}>{si+1}</span>
-                      <input type="number" inputMode="decimal" pattern="[0-9.]*" value={s.weight} onChange={function(e){updateSet(idx,si,"weight",e.target.value);}} placeholder="kg" style={{...iS,textAlign:"center"}}/>
-                      <input type="number" inputMode="numeric" pattern="[0-9]*" value={s.reps} onChange={function(e){updateSet(idx,si,"reps",e.target.value);}} placeholder="reps" style={{...iS,textAlign:"center"}}/>
+                      <Stepper value={s.weight} step={0.5} placeholder="kg" onChange={function(v){updateSet(idx,si,"weight",v);}}/>
+                      <Stepper value={s.reps} step={1} placeholder="reps" onChange={function(v){updateSet(idx,si,"reps",v);}}/>
                       <button onClick={function(){removeSet(idx,si);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14}}>×</button>
                     </div>
                   );})}
@@ -885,9 +900,9 @@
               <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:5}}><span style={lS}>#</span><span style={lS}>kg</span><span style={lS}>reps</span><span/></div>
               {ex.sets.map(function(s,i){return(
                 <div key={i} style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:6}}>
-                  <span style={{color:T.textMuted,fontSize:12,paddingTop:8,textAlign:"center"}}>{i+1}</span>
-                  <input type="number" inputMode="decimal" pattern="[0-9.]*" value={s.weight} onChange={function(e){updateSet(i,"weight",e.target.value);}} placeholder="kg" style={{...iS,textAlign:"center"}}/>
-                  <input type="number" inputMode="numeric" pattern="[0-9]*" value={s.reps} onChange={function(e){updateSet(i,"reps",e.target.value);}} placeholder="reps" style={{...iS,textAlign:"center"}}/>
+                  <span style={{color:T.textMuted,fontSize:12,paddingTop:10,textAlign:"center"}}>{i+1}</span>
+                  <Stepper value={s.weight} step={0.5} placeholder="kg" onChange={function(v){updateSet(i,"weight",v);}}/>
+                  <Stepper value={s.reps} step={1} placeholder="reps" onChange={function(v){updateSet(i,"reps",v);}}/>
                   <button onClick={function(){removeSet(i);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14}}>×</button>
                 </div>
               );})}
