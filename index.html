@@ -814,14 +814,36 @@
     function SessionEditor(props) {
       var session=props.session; var onChange=props.onChange; var library=props.library||[]; var templates=props.templates||[]; var prevByName=props.prevByName||{};
       var [showAdd,setShowAdd]=useState(false); var [showTemplates,setShowTemplates]=useState(false);
+      var [showSuperset,setShowSuperset]=useState(false);
       function updateEx(idx,upd){var exs=session.exercises.map(function(e,i){return i===idx?{...e,...upd}:e;});onChange({...session,exercises:exs});}
       function deleteEx(idx){onChange({...session,exercises:session.exercises.filter(function(_,i){return i!==idx;})});}
+      function deleteSuperset(ssId){onChange({...session,exercises:session.exercises.filter(function(e){return e.supersetId!==ssId;})});}
       function addEx(ex){onChange({...session,exercises:session.exercises.concat([ex])});setShowAdd(false);props.showToast(ex.name+" toegevoegd");}
+      function addSuperset(exA,exB){var ssId=uid();onChange({...session,exercises:session.exercises.concat([{...exA,supersetId:ssId},{...exB,supersetId:ssId}])});setShowSuperset(false);props.showToast("Superset toegevoegd");}
       function moveUp(idx){if(idx===0){return;}var exs=session.exercises.slice();var tmp=exs[idx-1];exs[idx-1]=exs[idx];exs[idx]=tmp;onChange({...session,exercises:exs});}
       function moveDown(idx){if(idx===session.exercises.length-1){return;}var exs=session.exercises.slice();var tmp=exs[idx];exs[idx]=exs[idx+1];exs[idx+1]=tmp;onChange({...session,exercises:exs});}
       function loadTemplate(tpl){var exercises=tpl.exercises.map(function(e){return {id:uid(),name:e.name,pattern:e.pattern,unilateral:e.unilateral||false,isUnilateralExercise:e.unilateral||false,performedUnilateral:false,sets:(e.sets||[{weight:"",reps:""}]).map(function(s){return {weight:s.weight||"",reps:s.reps||""};}),notes:""};});onChange({...session,exercises:exercises});setShowTemplates(false);props.showToast('Schema "'+tpl.name+'" geladen ✓');}
       var localDateValue=session.date?toLocalISO(session.date):"";
       function handleDateChange(e){if(!e.target.value){return;}var orig=new Date(session.date);var parts=e.target.value.split("-");orig.setFullYear(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));onChange({...session,date:orig.toISOString()});}
+
+      // Bouw render-lijst: groepeer superset-oefeningen per ssId
+      var renderList=[];
+      var usedIds={};
+      session.exercises.forEach(function(ex,idx){
+        if(usedIds[ex.id]){return;}
+        usedIds[ex.id]=true;
+        if(!ex.supersetId){
+          renderList.push({type:"single",ex:ex,idx:idx});
+        } else {
+          var partnerIdx=-1; var partner=null;
+          for(var j=0;j<session.exercises.length;j++){
+            if(!usedIds[session.exercises[j].id]&&session.exercises[j].supersetId===ex.supersetId){partnerIdx=j;partner=session.exercises[j];break;}
+          }
+          if(partner){usedIds[partner.id]=true;renderList.push({type:"superset",exA:ex,idxA:idx,exB:partner,idxB:partnerIdx,ssId:ex.supersetId});}
+          else{renderList.push({type:"single",ex:ex,idx:idx});}
+        }
+      });
+
       return (
         <div className="ai" style={{paddingBottom:80}}>
           <div style={{padding:"10px 20px",background:T.surfaceAlt,borderBottom:"1px solid "+T.border,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
@@ -836,10 +858,33 @@
               {templates.map(function(tpl){return <div key={tpl.id} className="rh" onClick={function(){loadTemplate(tpl);}} style={{padding:"12px 20px",borderBottom:"1px solid "+T.border,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><div style={{fontSize:13,fontWeight:500}}>{tpl.name}</div><div style={{fontSize:11,color:T.textMuted,marginTop:2}}>{tpl.exercises.map(function(e){return e.name;}).join(", ")}</div></div><span style={{color:T.accent,fontSize:11,textTransform:"uppercase",letterSpacing:0.4}}>Laden →</span></div>;})}
             </div>
           )}
-          {session.exercises.length===0&&!showAdd&&<div style={{padding:"36px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Voeg een oefening toe om te beginnen.</div>}
-          {session.exercises.map(function(ex,idx){return <ExerciseRow key={ex.id} ex={ex} onChange={function(upd){updateEx(idx,upd);}} onDelete={function(){deleteEx(idx);}} onMoveUp={idx>0?function(){moveUp(idx);}:null} onMoveDown={idx<session.exercises.length-1?function(){moveDown(idx);}:null} prevData={prevByName[ex.name]} onViewHistory={function(){var k=(ex.performedUnilateral&&ex.isUnilateralExercise)?ex.name+"__uni":ex.name;props.onViewExHistory(k);}}/>;}) }
-          <div style={{padding:"16px 20px"}}>
-            {showAdd?<AddExerciseForm library={library} onAdd={addEx} onCancel={function(){setShowAdd(false);}}/>:<Btn accent onClick={function(){setShowAdd(true);}}>+ Oefening toevoegen</Btn>}
+          {session.exercises.length===0&&!showAdd&&!showSuperset&&<div style={{padding:"36px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Voeg een oefening toe om te beginnen.</div>}
+          {renderList.map(function(item){
+            if(item.type==="single"){
+              return <ExerciseRow key={item.ex.id} ex={item.ex}
+                onChange={function(upd){updateEx(item.idx,upd);}}
+                onDelete={function(){deleteEx(item.idx);}}
+                onMoveUp={item.idx>0?function(){moveUp(item.idx);}:null}
+                onMoveDown={item.idx<session.exercises.length-1?function(){moveDown(item.idx);}:null}
+                prevData={prevByName[item.ex.name]}
+                onViewHistory={function(){var k=(item.ex.performedUnilateral&&item.ex.isUnilateralExercise)?item.ex.name+"__uni":item.ex.name;props.onViewExHistory(k);}}
+              />;
+            }
+            return <SupersetBlock key={item.ssId}
+              exA={item.exA} idxA={item.idxA}
+              exB={item.exB} idxB={item.idxB}
+              onChangeA={function(upd){updateEx(item.idxA,upd);}}
+              onChangeB={function(upd){updateEx(item.idxB,upd);}}
+              onDelete={function(){deleteSuperset(item.ssId);}}
+              prevByName={prevByName}
+              onViewHistory={props.onViewExHistory}
+            />;
+          })}
+          <div style={{padding:"16px 20px",display:"flex",gap:8,flexWrap:"wrap"}}>
+            {!showAdd&&!showSuperset&&<Btn accent onClick={function(){setShowAdd(true);}}>+ Oefening</Btn>}
+            {!showAdd&&!showSuperset&&<Btn onClick={function(){setShowSuperset(true);}}>+ Superset</Btn>}
+            {showAdd&&<AddExerciseForm library={library} onAdd={addEx} onCancel={function(){setShowAdd(false);}}/>}
+            {showSuperset&&<AddSupersetForm library={library} onAdd={addSuperset} onCancel={function(){setShowSuperset(false);}}/>}
           </div>
           <div style={{padding:"0 20px 20px"}}>
             <Label>Notities sessie</Label>
@@ -892,6 +937,110 @@
             </div>
           )}
           <div style={{padding:"10px 14px",borderTop:"1px solid "+T.border}}><button onClick={props.onCancel} style={{background:"none",border:"none",color:T.textMuted,fontSize:12,textTransform:"uppercase",letterSpacing:0.5}}>Annuleer</button></div>
+        </div>
+      );
+    }
+
+    function AddSupersetForm(props) {
+      var library=props.library||[];
+      var [step,setStep]=useState(1);
+      var [exA,setExA]=useState(null);
+      var [search,setSearch]=useState("");
+      var inputRef=useRef(null);
+      useEffect(function(){if(inputRef.current){inputRef.current.focus();}});
+      function makeEx(ex){return {id:uid(),name:ex.name,pattern:ex.pattern,unilateral:ex.unilateral||false,isUnilateralExercise:ex.unilateral||false,performedUnilateral:false,sets:[{weight:"",reps:""}],notes:""};}
+      function selectA(ex){setExA(makeEx(ex));setStep(2);setSearch("");}
+      function selectB(ex){props.onAdd(exA,makeEx(ex));}
+      var filtered=library.filter(function(e){
+        if(step===2&&exA&&e.name.toLowerCase()===exA.name.toLowerCase()){return false;}
+        return e.name.toLowerCase().includes(search.toLowerCase());
+      }).sort(function(a,b){return a.name.localeCompare(b.name);});
+      return (
+        <div style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:4,overflow:"hidden"}}>
+          <div style={{padding:"10px 14px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div>
+              <div style={{fontSize:11,fontWeight:500,textTransform:"uppercase",letterSpacing:0.5,color:T.accent}}>Superset</div>
+              <div style={{fontSize:11,color:T.textMuted,marginTop:2}}>{step===1?"Stap 1: kies oefening A":"Stap 2: kies oefening B"}</div>
+            </div>
+            {step===2&&<div style={{fontSize:12,color:T.textMid,padding:"4px 8px",background:T.accentBg,borderRadius:2,border:"1px solid "+T.accent+"40"}}>A: {exA.name}</div>}
+          </div>
+          <div style={{padding:14}}>
+            <input ref={inputRef} value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Zoek oefening..." style={{...iS,marginBottom:8}}/>
+            <div style={{maxHeight:220,overflowY:"auto"}}>
+              {filtered.length===0&&<div style={{color:T.textMuted,fontSize:12,padding:"12px 0",textAlign:"center"}}>Geen resultaten</div>}
+              {filtered.map(function(ex){var color=PC[ex.pattern]||T.textMuted;return(
+                <div key={ex.id} className="rh" onClick={function(){step===1?selectA(ex):selectB(ex);}} style={{padding:"10px",borderBottom:"1px solid "+T.border,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",borderLeft:"3px solid "+color}}>
+                  <span style={{fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</span>
+                  <span style={{fontSize:9,color:color,textTransform:"uppercase",letterSpacing:0.4}}>{ex.pattern}</span>
+                </div>
+              );})}
+            </div>
+          </div>
+          <div style={{padding:"10px 14px",borderTop:"1px solid "+T.border,display:"flex",gap:10,alignItems:"center"}}>
+            {step===2&&<button onClick={function(){setStep(1);setExA(null);setSearch("");}} style={{background:"none",border:"none",color:T.textMuted,fontSize:12,textTransform:"uppercase",letterSpacing:0.5}}>← Terug</button>}
+            <button onClick={props.onCancel} style={{background:"none",border:"none",color:T.textMuted,fontSize:12,textTransform:"uppercase",letterSpacing:0.5}}>Annuleer</button>
+          </div>
+        </div>
+      );
+    }
+
+    function SupersetBlock(props) {
+      var exA=props.exA; var exB=props.exB;
+      var [open,setOpen]=useState(true);
+      var colA=PC[exA.pattern]||T.textMuted;
+      var colB=PC[exB.pattern]||T.textMuted;
+      function addSetA(){var last=exA.sets[exA.sets.length-1];props.onChangeA({...exA,sets:exA.sets.concat([{weight:last?last.weight:"",reps:last?last.reps:""}])});}
+      function addSetB(){var last=exB.sets[exB.sets.length-1];props.onChangeB({...exB,sets:exB.sets.concat([{weight:last?last.weight:"",reps:last?last.reps:""}])});}
+      function updateSetA(i,f,v){props.onChangeA({...exA,sets:exA.sets.map(function(s,idx){return idx===i?{...s,[f]:v}:s;})});}
+      function updateSetB(i,f,v){props.onChangeB({...exB,sets:exB.sets.map(function(s,idx){return idx===i?{...s,[f]:v}:s;})});}
+      function removeSetA(i){props.onChangeA({...exA,sets:exA.sets.filter(function(_,idx){return idx!==i;})});}
+      function removeSetB(i){props.onChangeB({...exB,sets:exB.sets.filter(function(_,idx){return idx!==i;})});}
+      return (
+        <div style={{borderBottom:"1px solid "+T.border,background:T.surface,borderLeft:"3px solid "+T.accent}}>
+          <div style={{padding:"10px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",background:T.accentBg,borderBottom:"1px solid "+T.border+"80"}} onClick={function(){setOpen(!open);}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:9,fontWeight:600,textTransform:"uppercase",letterSpacing:0.8,color:T.accent,background:"#fff",border:"1px solid "+T.accent,borderRadius:2,padding:"2px 5px"}}>SS</span>
+              <span style={{fontSize:12,color:T.textMid}}>{exA.name} <span style={{color:T.textMuted}}>+</span> {exB.name}</span>
+            </div>
+            <button onClick={function(e){e.stopPropagation();props.onDelete();}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 4px",lineHeight:1}}>×</button>
+          </div>
+          {open&&(
+            <div>
+              {[{ex:exA,col:colA,label:"A",addSet:addSetA,updateSet:updateSetA,removeSet:removeSetA,onChange:props.onChangeA,prevData:props.prevByName[exA.name]},
+                {ex:exB,col:colB,label:"B",addSet:addSetB,updateSet:updateSetB,removeSet:removeSetB,onChange:props.onChangeB,prevData:props.prevByName[exB.name]}
+              ].map(function(item,ri){
+                return (
+                  <div key={item.label} style={{borderTop:ri===1?"1px dashed "+T.borderStrong:"none"}}>
+                    <div style={{padding:"10px 20px 0",display:"flex",alignItems:"center",gap:8}}>
+                      <span style={{fontSize:10,fontWeight:600,color:item.col,background:item.col+"18",border:"1px solid "+item.col+"40",borderRadius:2,padding:"1px 6px",textTransform:"uppercase"}}>{item.label}</span>
+                      <span style={{fontSize:13,fontWeight:500}}>{item.ex.name}</span>
+                      <span style={{fontSize:10,color:item.col,textTransform:"uppercase",letterSpacing:0.4}}>{item.ex.pattern}</span>
+                    </div>
+                    <div style={{padding:"8px 20px 12px"}}>
+                      <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:5}}><span style={lS}>#</span><span style={lS}>kg</span><span style={lS}>reps</span><span/></div>
+                      {item.ex.sets.map(function(s,i){return(
+                        <div key={i} style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:6}}>
+                          <span style={{color:T.textMuted,fontSize:12,paddingTop:10,textAlign:"center"}}>{i+1}</span>
+                          <Stepper value={s.weight} step={0.5} placeholder="kg" onChange={function(v){item.updateSet(i,"weight",v);}}/>
+                          <Stepper value={s.reps} step={1} placeholder="reps" onChange={function(v){item.updateSet(i,"reps",v);}}/>
+                          <button onClick={function(){item.removeSet(i);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14}}>×</button>
+                        </div>
+                      );})}
+                      <button onClick={item.addSet} style={{background:"none",border:"1px dashed "+T.borderStrong,color:T.textMuted,padding:"5px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",width:"100%",borderRadius:2}}>+ Set</button>
+                      {item.prevData&&(
+                        <div style={{marginTop:8,padding:"7px 10px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:3}}>
+                          <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Vorige · {fmtDate(item.prevData.date)}</div>
+                          <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                            {item.prevData.sets.map(function(s,i){return <span key={i} style={{fontSize:11,padding:"3px 7px",background:T.surface,border:"1px solid "+T.border,borderRadius:2,color:T.textMid}}>{i+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       );
     }
