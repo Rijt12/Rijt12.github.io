@@ -118,6 +118,14 @@
       return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,10);
     }
 
+    function isDuo(s) { return s.clientIds && s.clientIds.length > 1; }
+    function exForClient(ex, s, clientId) {
+      if (!isDuo(s)) { return true; }
+      var label = ex.clientLabel || "AB";
+      var mine = s.clientIds[0] === clientId ? "A" : "B";
+      return label === "AB" || label === mine;
+    }
+
     // ── Confirm dialog ─────────────────────────────────────────────────────────
     function ConfirmDialog(props) {
       return (
@@ -304,7 +312,7 @@
       }
       if (client) {
         clientSessions = data.sessions
-          .filter(function(s){ return s.clientId === client.id; })
+          .filter(function(s){ return s.clientId === client.id || (s.clientIds && s.clientIds.indexOf(client.id) !== -1); })
           .sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
       }
 
@@ -371,6 +379,7 @@
       clientSessions.forEach(function(s){
         if (activeSessionDate && toLocalISO(s.date) === activeSessionDate) { return; }
         s.exercises.forEach(function(ex){
+          if (!exForClient(ex, s, activeClientId)) { return; }
           if (!prevByName[ex.name]) { prevByName[ex.name]={sets:ex.sets,date:s.date}; }
         });
       });
@@ -378,6 +387,7 @@
       var allEntriesByName = {};
       clientSessions.forEach(function(s){
         s.exercises.forEach(function(ex){
+          if (!exForClient(ex, s, activeClientId)) { return; }
           var performed = ex.performedUnilateral||false;
           var key = performed ? ex.name+"__uni" : ex.name;
           if (!allEntriesByName[key]) { allEntriesByName[key]=[]; }
@@ -454,10 +464,21 @@
               <Header title={view==="session"?"Sessie bezig":"Sessie bewerken"} back={function(){goView("client");}}
                 rightAction={{label:"Opslaan", fn:function(){saveSession(activeSession);}}}
               />
-              <SessionEditor session={activeSession} onChange={setActiveSession}
-                library={library} templates={templates} showToast={showToast} prevByName={prevByName}
-                onViewExHistory={function(name){setExHistoryName(name);setPrevView(view);goView("exHistory");}}
-              />
+              {(function(){
+                var duoClients = null;
+                if (isDuo(activeSession)) {
+                  var cA = data.clients.find(function(c){ return c.id === activeSession.clientIds[0]; });
+                  var cB = data.clients.find(function(c){ return c.id === activeSession.clientIds[1]; });
+                  if (cA && cB) { duoClients = [cA, cB]; }
+                }
+                return (
+                  <SessionEditor session={activeSession} onChange={setActiveSession}
+                    library={library} templates={templates} showToast={showToast} prevByName={prevByName}
+                    duoClients={duoClients}
+                    onViewExHistory={function(name){setExHistoryName(name);setPrevView(view);goView("exHistory");}}
+                  />
+                );
+              })()}
             </div>
           )}
 
@@ -814,15 +835,32 @@
     }
 
     function ClientDetail(props) {
-      var client=props.client; var sessions=props.sessions;
+      var client=props.client; var sessions=props.sessions; var data=props.data;
       var [tab,setTab]=useState("sessies");
-      function startSession(){props.onStartSession({id:uid(),clientId:client.id,date:new Date().toISOString(),exercises:[],notes:""});}
+      var [showDuoPicker,setShowDuoPicker]=useState(false);
+      function startSession(secondClientId){
+        var clientIds = secondClientId ? [client.id, secondClientId] : [client.id];
+        props.onStartSession({id:uid(),clientId:client.id,clientIds:clientIds,date:new Date().toISOString(),exercises:[],notes:""});
+        setShowDuoPicker(false);
+      }
+      var otherClients = data.clients.filter(function(c){ return c.id !== client.id; }).sort(function(a,b){return a.name.localeCompare(b.name);});
       return (
         <div className="ai">
-          <div style={{padding:"14px 20px",display:"flex",gap:8,borderBottom:"1px solid "+T.border,background:T.surface}}>
-            <Btn accent onClick={startSession}>▶ Nieuwe sessie</Btn>
+          <div style={{padding:"14px 20px",display:"flex",gap:8,borderBottom:"1px solid "+T.border,background:T.surface,flexWrap:"wrap"}}>
+            <Btn accent onClick={function(){startSession(null);}}>▶ Nieuwe sessie</Btn>
+            <Btn onClick={function(){setShowDuoPicker(!showDuoPicker);}}>Duo +</Btn>
             <Btn onClick={props.onExport}>Exporteer</Btn>
           </div>
+          {showDuoPicker&&(
+            <div style={{padding:"10px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}>
+              <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.6,marginBottom:8}}>Kies tweede klant voor duo-sessie</div>
+              {otherClients.length===0&&<div style={{fontSize:12,color:T.textMuted}}>Geen andere cliënten beschikbaar.</div>}
+              {otherClients.map(function(c){return(
+                <div key={c.id} className="rh" onClick={function(){startSession(c.id);}} style={{padding:"9px 12px",borderBottom:"1px solid "+T.border,cursor:"pointer",fontSize:13,background:T.surface,borderRadius:2,marginBottom:4}}>{c.name}</div>
+              );})}
+              <button onClick={function(){setShowDuoPicker(false);}} style={{marginTop:6,background:"none",border:"none",color:T.textMuted,fontSize:11,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer"}}>Annuleer</button>
+            </div>
+          )}
           <div style={{display:"flex",background:T.surface,borderBottom:"1px solid "+T.border}}>
             {["sessies","progressie"].map(function(t){return <button key={t} onClick={function(){setTab(t);}} style={{flex:1,padding:"11px 0",background:"none",border:"none",color:tab===t?T.text:T.textMuted,borderBottom:tab===t?"2px solid "+T.accent:"2px solid transparent",fontSize:11,textTransform:"uppercase",letterSpacing:0.8}}>{t}</button>;})}
           </div>
@@ -832,32 +870,34 @@
               {sessions.map(function(s){return(
                 <div key={s.id} className="rh" onClick={function(){props.onViewSession(s.id);}} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <div>
-                    <div style={{fontSize:14,fontWeight:500}}>{fmtDate(s.date)}</div>
+                    <div style={{fontSize:14,fontWeight:500,display:"flex",alignItems:"center",gap:6}}>
+                      {fmtDate(s.date)}
+                      {isDuo(s)&&<span style={{fontSize:9,padding:"1px 5px",background:"#ede9fe",color:"#7c3aed",borderRadius:2,textTransform:"uppercase",letterSpacing:0.3}}>DUO</span>}
+                    </div>
                     <div style={{fontSize:11,color:T.textMuted,marginTop:3}}>{s.exercises.length} oefening{s.exercises.length!==1?"en":""}{s.notes?" · notitie":""}</div>
                     <PatternTags exercises={s.exercises}/>
                   </div>
                   <div style={{display:"flex",gap:10,alignItems:"center"}}>
-  
                     <button onClick={function(e){e.stopPropagation();props.onDeleteSession(s.id);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 4px",lineHeight:1}}>×</button>
                   </div>
                 </div>
               );})}
             </div>
           )}
-          {tab==="progressie"&&<ProgressView sessions={sessions} onExHistory={props.onExHistory}/>}
+          {tab==="progressie"&&<ProgressView sessions={sessions} onExHistory={props.onExHistory} clientId={client.id}/>}
         </div>
       );
     }
 
     function SessionEditor(props) {
-      var session=props.session; var onChange=props.onChange; var library=props.library||[]; var templates=props.templates||[]; var prevByName=props.prevByName||{};
+      var session=props.session; var onChange=props.onChange; var library=props.library||[]; var templates=props.templates||[]; var prevByName=props.prevByName||{}; var duoClients=props.duoClients||null;
       var [showAdd,setShowAdd]=useState(false); var [showTemplates,setShowTemplates]=useState(false);
       var [showSuperset,setShowSuperset]=useState(false);
       function updateEx(idx,upd){var exs=session.exercises.map(function(e,i){return i===idx?{...e,...upd}:e;});onChange({...session,exercises:exs});}
       function deleteEx(idx){onChange({...session,exercises:session.exercises.filter(function(_,i){return i!==idx;})});}
       function deleteSuperset(ssId){onChange({...session,exercises:session.exercises.filter(function(e){return e.supersetId!==ssId;})});}
-      function addEx(ex){onChange({...session,exercises:session.exercises.concat([ex])});setShowAdd(false);props.showToast(ex.name+" toegevoegd");}
-      function addSuperset(exA,exB){var ssId=uid();onChange({...session,exercises:session.exercises.concat([{...exA,supersetId:ssId},{...exB,supersetId:ssId}])});setShowSuperset(false);props.showToast("Superset toegevoegd");}
+      function addEx(ex){onChange({...session,exercises:session.exercises.concat([{...ex,clientLabel:"AB"}])});setShowAdd(false);props.showToast(ex.name+" toegevoegd");}
+      function addSuperset(exA,exB){var ssId=uid();onChange({...session,exercises:session.exercises.concat([{...exA,supersetId:ssId,clientLabel:"AB"},{...exB,supersetId:ssId,clientLabel:"AB"}])});setShowSuperset(false);props.showToast("Superset toegevoegd");}
       function moveUp(idx){if(idx===0){return;}var exs=session.exercises.slice();var tmp=exs[idx-1];exs[idx-1]=exs[idx];exs[idx]=tmp;onChange({...session,exercises:exs});}
       function moveDown(idx){if(idx===session.exercises.length-1){return;}var exs=session.exercises.slice();var tmp=exs[idx];exs[idx]=exs[idx+1];exs[idx+1]=tmp;onChange({...session,exercises:exs});}
       function loadTemplate(tpl){var exercises=tpl.exercises.map(function(e){return {id:uid(),name:e.name,pattern:e.pattern,unilateral:e.unilateral||false,isUnilateralExercise:e.unilateral||false,performedUnilateral:false,sets:(e.sets||[{weight:"",reps:""}]).map(function(s){return {weight:s.weight||"",reps:s.reps||""};}),notes:""};});onChange({...session,exercises:exercises});setShowTemplates(false);props.showToast('Schema "'+tpl.name+'" geladen ✓');}
@@ -905,6 +945,7 @@
                 onMoveUp={item.idx>0?function(){moveUp(item.idx);}:null}
                 onMoveDown={item.idx<session.exercises.length-1?function(){moveDown(item.idx);}:null}
                 prevData={prevByName[item.ex.name]}
+                duoClients={duoClients}
                 onViewHistory={function(){var k=(item.ex.performedUnilateral&&item.ex.isUnilateralExercise)?item.ex.name+"__uni":item.ex.name;props.onViewExHistory(k);}}
               />;
             }
@@ -915,6 +956,7 @@
               onChangeB={function(upd){updateEx(item.idxB,upd);}}
               onDelete={function(){deleteSuperset(item.ssId);}}
               prevByName={prevByName}
+              duoClients={duoClients}
               onViewHistory={props.onViewExHistory}
             />;
           })}
@@ -1106,6 +1148,15 @@
                 <span>{ex.pattern} · {ex.sets.length} set{ex.sets.length!==1?"s":""}</span>
                 {ex.isUnilateralExercise&&(
                   <button onClick={function(e){e.stopPropagation();props.onChange({...ex,performedUnilateral:!ex.performedUnilateral});}} style={{padding:"2px 7px",fontSize:9,borderRadius:2,background:ex.performedUnilateral?T.accent+"18":"none",border:"1px solid "+(ex.performedUnilateral?T.accent:T.border),color:ex.performedUnilateral?T.accent:T.textMuted,textTransform:"uppercase",letterSpacing:0.3,cursor:"pointer",fontFamily:"inherit"}}>uni</button>
+                )}
+                {props.duoClients&&(
+                  <div style={{display:"flex",gap:0,border:"1px solid "+T.border,borderRadius:2,overflow:"hidden",marginLeft:4}}>
+                    {["A","AB","B"].map(function(lbl){
+                      var active=(ex.clientLabel||"AB")===lbl;
+                      var name=lbl==="A"?props.duoClients[0].name.split(" ")[0]:lbl==="B"?props.duoClients[1].name.split(" ")[0]:"Samen";
+                      return <button key={lbl} onClick={function(e){e.stopPropagation();props.onChange({...ex,clientLabel:lbl});}} style={{padding:"2px 7px",fontSize:9,background:active?T.accent:"none",border:"none",color:active?"#fff":T.textMuted,textTransform:"uppercase",letterSpacing:0.3,cursor:"pointer",fontFamily:"inherit"}}>{name}</button>;
+                    })}
+                  </div>
                 )}
               </div>
             </div>
