@@ -577,7 +577,7 @@
       );
     }
 
-    function Loader() { return <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:T.textMuted,fontSize:13}}>laden...</span></div>; }
+    function Loader() { return <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8}}><div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:48,letterSpacing:1,color:T.text,textTransform:"uppercase"}}>Trainer App</div><div style={{fontFamily:"'DM Mono','Courier New',monospace",fontWeight:300,fontSize:11,color:T.textMuted,letterSpacing:2,textTransform:"uppercase"}}>by MVDRPT</div></div>; }
 
     function Stepper(props) {
       var val = props.value;
@@ -1536,7 +1536,7 @@
       }, []);
 
       if (user === undefined) {
-        return <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:T.textMuted,fontFamily:"DM Mono,monospace",fontSize:13}}>laden...</span></div>;
+        return <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8}}><div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:48,letterSpacing:1,color:T.text,textTransform:"uppercase"}}>Trainer App</div><div style={{fontFamily:"'DM Mono','Courier New',monospace",fontWeight:300,fontSize:11,color:T.textMuted,letterSpacing:2,textTransform:"uppercase"}}>by MVDRPT</div></div>;
       }
       if (!user) { return <LoginScreen/>; }
       return <App onLogout={function(){ window._fbLogout(); }}/>;
