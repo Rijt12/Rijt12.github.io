@@ -155,6 +155,7 @@
       var [toast, setToast]                   = useState(null);
       var [dlg, setDlg]                       = useState(null);
       var [saving, setSaving]                 = useState(false);
+      var [navKey, setNavKey]                 = useState(0);
 
       useEffect(function() {
         Promise.all([loadData(), new Promise(function(r){ setTimeout(r, 1500); })]).then(function(res){ setData(res[0]); });
@@ -310,7 +311,6 @@
       }
       function handleConfirm() { if (dlg) { dlg.resolve(true); } setDlg(null); }
       function handleCancel()  { if (dlg) { dlg.resolve(false); } setDlg(null); }
-      var [navKey, setNavKey] = useState(0);
       function goView(v) { setView(v); setNavKey(function(k){return k+1;}); }
 
       var client = null, vSession = null, clientSessions = [];
