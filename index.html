@@ -218,7 +218,7 @@
           if (!e.changedTouches || !e.changedTouches[0]) { return; }
           var dx = e.changedTouches[0].clientX - startX;
           var dy = e.changedTouches[0].clientY - startY;
-          if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 1.5) { goBackRef.current(); }
+          if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { goBackRef.current(); }
         }
         document.addEventListener("touchstart", onStart, {passive:true});
         document.addEventListener("touchend",   onEnd,   {passive:true});
