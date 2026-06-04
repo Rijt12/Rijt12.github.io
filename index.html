@@ -879,8 +879,8 @@
                       {fmtDate(s.date)}
                       {isDuo(s)&&<span style={{fontSize:9,padding:"1px 5px",background:"#ede9fe",color:"#7c3aed",borderRadius:2,textTransform:"uppercase",letterSpacing:0.3}}>DUO</span>}
                     </div>
-                    <div style={{fontSize:11,color:T.textMuted,marginTop:3}}>{s.exercises.length} oefening{s.exercises.length!==1?"en":""}{s.notes?" · notitie":""}</div>
-                    <PatternTags exercises={s.exercises}/>
+                    <div style={{fontSize:11,color:T.textMuted,marginTop:3}}>{s.exercises.filter(function(ex){return exForClient(ex,s,client.id);}).length} oefening{s.exercises.filter(function(ex){return exForClient(ex,s,client.id);}).length!==1?"en":""}{s.notes?" · notitie":""}</div>
+                    <PatternTags exercises={s.exercises.filter(function(ex){return exForClient(ex,s,client.id);})}/>
                   </div>
                   <div style={{display:"flex",gap:10,alignItems:"center"}}>
                     <button onClick={function(e){e.stopPropagation();props.onDeleteSession(s.id);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 4px",lineHeight:1}}>×</button>
@@ -1260,7 +1260,7 @@
             <span>{client?client.name+' · ':''}{fmtDate(session.date)}</span>
             {duoClients&&<span style={{fontSize:10,color:"#7c3aed"}}>A: {duoClients[0].name} / B: {duoClients[1].name}</span>}
           </div>
-          {session.exercises.map(function(ex){
+          {session.exercises.filter(function(ex){ return !client||exForClient(ex,session,client.id); }).map(function(ex){
             var color=PC[ex.pattern]||T.textMuted;
             var totalVol=ex.sets.reduce(function(sum,s){return sum+(parseFloat(s.weight)||0)*(parseInt(s.reps)||0);},0);
             var performed=ex.performedUnilateral||false;
