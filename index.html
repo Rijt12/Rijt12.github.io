@@ -181,6 +181,11 @@
         autoSaveRef.current = setTimeout(function() {
           var d = dataRef.current;
           if (!d) { return; }
+          var hasData = activeSession.exercises.some(function(ex) {
+            var allSets = (ex.sets||[]).concat(ex.setsB||[]);
+            return allSets.some(function(s){ return (s.weight&&s.weight.trim()) || (s.reps&&s.reps.trim()); });
+          });
+          if (!hasData) { return; }
           var newSessions = d.sessions.filter(function(s){ return s.id !== activeSession.id; });
           newSessions.push(activeSession);
           var newData = {...d, sessions: newSessions};
