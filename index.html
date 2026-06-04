@@ -391,6 +391,22 @@
         });
       });
 
+      var prevByNameB = {};
+      if (activeSession && isDuo(activeSession)) {
+        var duoPartnerBId = activeSession.clientIds[1];
+        var duoPartnerBSessions = data.sessions.filter(function(s){
+          return s.clientId===duoPartnerBId||(s.clientIds&&s.clientIds.indexOf(duoPartnerBId)!==-1);
+        }).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+        duoPartnerBSessions.forEach(function(s){
+          if (activeSessionDate && toLocalISO(s.date) === activeSessionDate) { return; }
+          s.exercises.forEach(function(ex){
+            if (!exForClient(ex, s, duoPartnerBId)) { return; }
+            var sets = setsForClient(ex, s, duoPartnerBId);
+            if (!prevByNameB[ex.name]) { prevByNameB[ex.name]={sets:sets,date:s.date}; }
+          });
+        });
+      }
+
       var allEntriesByName = {};
       clientSessions.forEach(function(s){
         s.exercises.forEach(function(ex){
@@ -482,6 +498,7 @@
                 return (
                   <SessionEditor session={activeSession} onChange={setActiveSession}
                     library={library} templates={templates} showToast={showToast} prevByName={prevByName}
+                    prevByNameB={prevByNameB}
                     duoClients={duoClients}
                     onViewExHistory={function(name){setExHistoryName(name);setPrevView(view);goView("exHistory");}}
                   />
@@ -898,13 +915,13 @@
     }
 
     function SessionEditor(props) {
-      var session=props.session; var onChange=props.onChange; var library=props.library||[]; var templates=props.templates||[]; var prevByName=props.prevByName||{}; var duoClients=props.duoClients||null;
+      var session=props.session; var onChange=props.onChange; var library=props.library||[]; var templates=props.templates||[]; var prevByName=props.prevByName||{}; var prevByNameB=props.prevByNameB||{}; var duoClients=props.duoClients||null;
       var [showAdd,setShowAdd]=useState(false); var [showTemplates,setShowTemplates]=useState(false);
       var [showSuperset,setShowSuperset]=useState(false);
       function updateEx(idx,upd){var exs=session.exercises.map(function(e,i){return i===idx?{...e,...upd}:e;});onChange({...session,exercises:exs});}
       function deleteEx(idx){onChange({...session,exercises:session.exercises.filter(function(_,i){return i!==idx;})});}
       function deleteSuperset(ssId){onChange({...session,exercises:session.exercises.filter(function(e){return e.supersetId!==ssId;})});}
-      function withDuoDefaults(ex){if(!isDuo(session)){return ex;}return {...ex,clientLabel:"AB",setsB:ex.sets.map(function(s){return {weight:s.weight||"",reps:s.reps||""};})};}
+      function withDuoDefaults(ex){if(!isDuo(session)){return ex;}return {...ex,clientLabel:"A",setsB:ex.sets.map(function(s){return {weight:"",reps:""};})};}
       function addEx(ex){onChange({...session,exercises:session.exercises.concat([withDuoDefaults(ex)])});setShowAdd(false);props.showToast(ex.name+" toegevoegd");}
       function addSuperset(exA,exB){var ssId=uid();onChange({...session,exercises:session.exercises.concat([{...withDuoDefaults(exA),supersetId:ssId},{...withDuoDefaults(exB),supersetId:ssId}])});setShowSuperset(false);props.showToast("Superset toegevoegd");}
       function moveUp(idx){if(idx===0){return;}var exs=session.exercises.slice();var tmp=exs[idx-1];exs[idx-1]=exs[idx];exs[idx]=tmp;onChange({...session,exercises:exs});}
@@ -954,6 +971,7 @@
                 onMoveUp={item.idx>0?function(){moveUp(item.idx);}:null}
                 onMoveDown={item.idx<session.exercises.length-1?function(){moveDown(item.idx);}:null}
                 prevData={prevByName[item.ex.name]}
+                prevDataB={prevByNameB[item.ex.name]}
                 duoClients={duoClients}
                 onViewHistory={function(){var k=(item.ex.performedUnilateral&&item.ex.isUnilateralExercise)?item.ex.name+"__uni":item.ex.name;props.onViewExHistory(k);}}
               />;
@@ -1113,9 +1131,10 @@
                       <span style={{fontSize:10,color:item.col,textTransform:"uppercase",letterSpacing:0.4}}>{item.ex.pattern}</span>
                       {duoClients&&(
                         <div style={{display:"flex",gap:0,border:"1px solid "+T.border,borderRadius:2,overflow:"hidden",marginLeft:4}}>
-                          {["A","AB","B"].map(function(lbl){
-                            var active=(item.ex.clientLabel||"AB")===lbl;
-                            var name=lbl==="A"?duoClients[0].name.split(" ")[0]:lbl==="B"?duoClients[1].name.split(" ")[0]:"Samen";
+                          {["A","B"].map(function(lbl){
+                            var curLbl=item.ex.clientLabel||"A";
+                            var active=curLbl===lbl||(!["A","B"].includes(curLbl)&&lbl==="A");
+                            var name=lbl==="A"?duoClients[0].name.split(" ")[0]:duoClients[1].name.split(" ")[0];
                             return <button key={lbl} onClick={function(e){e.stopPropagation();item.onChange({...item.ex,clientLabel:lbl});}} style={{padding:"2px 7px",fontSize:9,background:active?T.accent:"none",border:"none",color:active?"#fff":T.textMuted,textTransform:"uppercase",letterSpacing:0.3,cursor:"pointer",fontFamily:"inherit"}}>{name}</button>;
                           })}
                         </div>
@@ -1151,11 +1170,12 @@
     }
 
     function ExerciseRow(props) {
-      var ex=props.ex; var prevData=props.prevData;
+      var ex=props.ex;
       var duoClients=props.duoClients||null;
-      var lbl=ex.clientLabel||"AB";
+      var lbl=duoClients?(ex.clientLabel||"A"):(ex.clientLabel||"AB");
       var isB=duoClients&&lbl==="B";
       var isAB=duoClients&&lbl==="AB";
+      var prevData=isB?(props.prevDataB||null):props.prevData;
       var [open,setOpen]=useState(true);
       var color=PC[ex.pattern]||T.textMuted;
       var activeSets=isB?(ex.setsB||[{weight:"",reps:""}]):ex.sets;
@@ -1195,9 +1215,9 @@
                 )}
                 {props.duoClients&&(
                   <div style={{display:"flex",gap:0,border:"1px solid "+T.border,borderRadius:2,overflow:"hidden",marginLeft:4}}>
-                    {["A","AB","B"].map(function(l){
-                      var active=lbl===l;
-                      var name=l==="A"?props.duoClients[0].name.split(" ")[0]:l==="B"?props.duoClients[1].name.split(" ")[0]:"Samen";
+                    {["A","B"].map(function(l){
+                      var active=lbl===l||(!["A","B"].includes(lbl)&&l==="A");
+                      var name=l==="A"?props.duoClients[0].name.split(" ")[0]:props.duoClients[1].name.split(" ")[0];
                       return <button key={l} onClick={function(e){e.stopPropagation();setLabel(l);}} style={{padding:"2px 7px",fontSize:9,background:active?T.accent:"none",border:"none",color:active?"#fff":T.textMuted,textTransform:"uppercase",letterSpacing:0.3,cursor:"pointer",fontFamily:"inherit"}}>{name}</button>;
                     })}
                   </div>
