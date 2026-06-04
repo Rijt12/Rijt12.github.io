@@ -502,6 +502,11 @@
                     library={library} templates={templates} showToast={showToast} prevByName={prevByName}
                     prevByNameB={prevByNameB}
                     duoClients={duoClients}
+                    allClients={data.clients}
+                    onDuoPick={function(secondId){
+                      var ids=[activeSession.clientIds[0],secondId];
+                      setActiveSession({...activeSession,clientIds:ids});
+                    }}
                     onViewExHistory={function(name){setExHistoryName(name);setPrevView(view);goView("exHistory");}}
                   />
                 );
@@ -864,30 +869,15 @@
     function ClientDetail(props) {
       var client=props.client; var sessions=props.sessions; var data=props.data;
       var [tab,setTab]=useState("sessies");
-      var [showDuoPicker,setShowDuoPicker]=useState(false);
-      function startSession(secondClientId){
-        var clientIds = secondClientId ? [client.id, secondClientId] : [client.id];
-        props.onStartSession({id:uid(),clientId:client.id,clientIds:clientIds,date:new Date().toISOString(),exercises:[],notes:""});
-        setShowDuoPicker(false);
+      function startSession(){
+        props.onStartSession({id:uid(),clientId:client.id,clientIds:[client.id],date:new Date().toISOString(),exercises:[],notes:""});
       }
-      var otherClients = data.clients.filter(function(c){ return c.id !== client.id; }).sort(function(a,b){return a.name.localeCompare(b.name);});
       return (
         <div className="ai">
           <div style={{padding:"14px 20px",display:"flex",gap:8,borderBottom:"1px solid "+T.border,background:T.surface,flexWrap:"wrap"}}>
-            <Btn accent onClick={function(){startSession(null);}}>▶ Nieuwe sessie</Btn>
-            <Btn onClick={function(){setShowDuoPicker(!showDuoPicker);}}>Duo +</Btn>
+            <Btn accent onClick={startSession}>▶ Nieuwe sessie</Btn>
             <Btn onClick={props.onExport}>Exporteer</Btn>
           </div>
-          {showDuoPicker&&(
-            <div style={{padding:"10px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}>
-              <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.6,marginBottom:8}}>Kies tweede klant voor duo-sessie</div>
-              {otherClients.length===0&&<div style={{fontSize:12,color:T.textMuted}}>Geen andere cliënten beschikbaar.</div>}
-              {otherClients.map(function(c){return(
-                <div key={c.id} className="rh" onClick={function(){startSession(c.id);}} style={{padding:"9px 12px",borderBottom:"1px solid "+T.border,cursor:"pointer",fontSize:13,background:T.surface,borderRadius:2,marginBottom:4}}>{c.name}</div>
-              );})}
-              <button onClick={function(){setShowDuoPicker(false);}} style={{marginTop:6,background:"none",border:"none",color:T.textMuted,fontSize:11,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer"}}>Annuleer</button>
-            </div>
-          )}
           <div style={{display:"flex",background:T.surface,borderBottom:"1px solid "+T.border}}>
             {["sessies","progressie"].map(function(t){return <button key={t} onClick={function(){setTab(t);}} style={{flex:1,padding:"11px 0",background:"none",border:"none",color:tab===t?T.text:T.textMuted,borderBottom:tab===t?"2px solid "+T.accent:"2px solid transparent",fontSize:11,textTransform:"uppercase",letterSpacing:0.8}}>{t}</button>;})}
           </div>
@@ -918,8 +908,9 @@
 
     function SessionEditor(props) {
       var session=props.session; var onChange=props.onChange; var library=props.library||[]; var templates=props.templates||[]; var prevByName=props.prevByName||{}; var prevByNameB=props.prevByNameB||{}; var duoClients=props.duoClients||null;
+      var allClients=props.allClients||[]; var onDuoPick=props.onDuoPick||null;
       var [showAdd,setShowAdd]=useState(false); var [showTemplates,setShowTemplates]=useState(false);
-      var [showSuperset,setShowSuperset]=useState(false);
+      var [showSuperset,setShowSuperset]=useState(false); var [showDuoPicker,setShowDuoPicker]=useState(false);
       function updateEx(idx,upd){var exs=session.exercises.map(function(e,i){return i===idx?{...e,...upd}:e;});onChange({...session,exercises:exs});}
       function deleteEx(idx){onChange({...session,exercises:session.exercises.filter(function(_,i){return i!==idx;})});}
       function deleteSuperset(ssId){onChange({...session,exercises:session.exercises.filter(function(e){return e.supersetId!==ssId;})});}
@@ -957,7 +948,21 @@
               <Label>Datum</Label>
               <input type="date" value={localDateValue} onChange={handleDateChange} style={{...iS,width:"auto",fontSize:13,padding:"5px 10px",background:T.surface,cursor:"pointer"}}/>
             </div>
-            {templates.length>0&&<button onClick={function(){setShowTemplates(!showTemplates);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:10,borderRadius:2,textTransform:"uppercase",letterSpacing:0.5}}>{showTemplates?"Sluiten":"Schema laden"}</button>}
+            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              {templates.length>0&&<button onClick={function(){setShowTemplates(!showTemplates);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:10,borderRadius:2,textTransform:"uppercase",letterSpacing:0.5}}>{showTemplates?"Sluiten":"Schema laden"}</button>}
+              {!isDuo(session)&&onDuoPick&&<button onClick={function(){setShowDuoPicker(!showDuoPicker);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:10,borderRadius:2,textTransform:"uppercase",letterSpacing:0.5}}>Duo +</button>}
+              {isDuo(session)&&duoClients&&<span style={{fontSize:10,color:"#7c3aed",padding:"5px 8px",border:"1px solid #ede9fe",borderRadius:2,textTransform:"uppercase",letterSpacing:0.4}}>DUO: {duoClients[0].name.split(" ")[0]} + {duoClients[1].name.split(" ")[0]}</span>}
+            </div>
+          </div>
+          {showDuoPicker&&(
+            <div style={{padding:"10px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}>
+              <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.6,marginBottom:8}}>Kies tweede klant voor duo-sessie</div>
+              {allClients.filter(function(c){return c.id!==session.clientIds[0];}).map(function(c){return(
+                <div key={c.id} className="rh" onClick={function(){onDuoPick(c.id);setShowDuoPicker(false);}} style={{padding:"9px 12px",borderBottom:"1px solid "+T.border,cursor:"pointer",fontSize:13,background:T.surface,borderRadius:2,marginBottom:4}}>{c.name}</div>
+              );})}
+              <button onClick={function(){setShowDuoPicker(false);}} style={{marginTop:6,background:"none",border:"none",color:T.textMuted,fontSize:11,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer"}}>Annuleer</button>
+            </div>
+          )}
           </div>
           {showTemplates&&(
             <div style={{borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}>
