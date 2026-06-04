@@ -1304,9 +1304,10 @@
             <span>{client?client.name+' · ':''}{fmtDate(session.date)}</span>
             {duoClients&&<span style={{fontSize:10,color:"#7c3aed"}}>A: {duoClients[0].name} / B: {duoClients[1].name}</span>}
           </div>
-          {session.exercises.filter(function(ex){ return !client||exForClient(ex,session,client.id); }).map(function(ex){
+          {session.exercises.map(function(ex){
             var color=PC[ex.pattern]||T.textMuted;
-            var totalVol=ex.sets.reduce(function(sum,s){return sum+(parseFloat(s.weight)||0)*(parseInt(s.reps)||0);},0);
+            var viewSets=client?setsForClient(ex,session,client.id):ex.sets;
+            var totalVol=viewSets.reduce(function(sum,s){return sum+(parseFloat(s.weight)||0)*(parseInt(s.reps)||0);},0);
             var performed=ex.performedUnilateral||false;
             var exKey=performed?ex.name+"__uni":ex.name;
             var prevEntry=null; var allEntries=allEntriesByName[exKey]||[];
@@ -1321,7 +1322,7 @@
                 </div>
                 <div style={{padding:"0 20px 8px"}}>
                   <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr",gap:6,marginBottom:5}}><span style={lS}>#</span><span style={lS}>kg</span><span style={lS}>reps</span></div>
-                  {ex.sets.map(function(s,i){return(
+                  {viewSets.map(function(s,i){return(
                     <div key={i} style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr",gap:6,marginBottom:4}}>
                       <span style={{color:T.textMuted,fontSize:12,paddingTop:6,textAlign:"center"}}>{i+1}</span>
                       <div style={{...iS,textAlign:"center",color:T.text,cursor:"default"}}>{s.weight||"—"}</div>
