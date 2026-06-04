@@ -156,7 +156,9 @@
       var [dlg, setDlg]                       = useState(null);
       var [saving, setSaving]                 = useState(false);
 
-      useEffect(function() { loadData().then(setData); }, []);
+      useEffect(function() {
+        Promise.all([loadData(), new Promise(function(r){ setTimeout(r, 1500); })]).then(function(res){ setData(res[0]); });
+      }, []);
 
       // Seed on first load
       useEffect(function() {
