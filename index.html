@@ -310,7 +310,8 @@
       }
       function handleConfirm() { if (dlg) { dlg.resolve(true); } setDlg(null); }
       function handleCancel()  { if (dlg) { dlg.resolve(false); } setDlg(null); }
-      function goView(v) { setView(v); }
+      var [navKey, setNavKey] = useState(0);
+      function goView(v) { setView(v); setNavKey(function(k){return k+1;}); }
 
       var client = null, vSession = null, clientSessions = [];
       for (var ci=0; ci<data.clients.length; ci++) {
@@ -432,7 +433,7 @@
       return (
         <Shell saving={saving}>
           {view==="clients" && (
-            <div>
+            <div key={navKey} className="page-enter">
               <Header title="Cliënten"
                 rightAction2={{label:"Schema's",   fn:function(){goView("templates");}}}
                 rightAction= {{label:"Bibliotheek",fn:function(){goView("library");}}}
@@ -447,14 +448,14 @@
           )}
 
           {view==="library" && (
-            <div>
+            <div key={navKey} className="page-enter">
               <Header title="Oefeningen" back={function(){goView("clients");}}/>
               <ExerciseLibrary data={data} persist={persist} showToast={showToast} onDelete={deleteExercise}/>
             </div>
           )}
 
           {view==="templates" && !editingTpl && (
-            <div>
+            <div key={navKey} className="page-enter">
               <Header title="Trainingsschema's" back={function(){goView("clients");}}/>
               <TemplateList data={data}
                 onNew={function(){ setEditingTpl({id:uid(),name:"",exercises:[]}); }}
@@ -465,7 +466,7 @@
           )}
 
           {view==="templates" && editingTpl && (
-            <div>
+            <div key={navKey} className="page-enter">
               <Header title={editingTpl.name||"Nieuw schema"} back={function(){setEditingTpl(null);}}
                 rightAction={{label:"Opslaan", fn:function(){ if(editingTpl.name.trim()){ saveTpl(editingTpl); } }}}
               />
@@ -474,7 +475,7 @@
           )}
 
           {view==="client" && client && (
-            <div>
+            <div key={navKey} className="page-enter">
               <Header title={client.name} back={function(){goView("clients");}}/>
               <ClientDetail client={client} sessions={clientSessions} data={data}
                 onStartSession={function(s){setActiveSession(s);goView("session");}}
@@ -487,7 +488,7 @@
           )}
 
           {(view==="session"||view==="editSession") && activeSession && (
-            <div>
+            <div key={navKey} className="page-enter">
               <Header title={view==="session"?"Sessie bezig":"Sessie bewerken"} back={function(){goView("client");}}
                 rightAction={{label:"Opslaan", fn:function(){saveSession(activeSession);}}}
               />
@@ -516,7 +517,7 @@
           )}
 
           {view==="viewSession" && vSession && (
-            <div>
+            <div key={navKey} className="page-enter">
               <Header title={"Sessie "+fmtDate(vSession.date)} back={function(){goView("client");}}
                 rightAction={{label:"Bewerk", fn:function(){setActiveSession({...vSession});goView("editSession");}}}
               />
@@ -525,14 +526,14 @@
           )}
 
           {view==="exHistory" && exHistoryName && (
-            <div>
+            <div key={navKey} className="page-enter">
               <Header title={exHistoryName.replace("__uni"," (uni)")} back={function(){goView(prevView);}}/>
               <ExerciseHistoryPage entries={(allEntriesByName[exHistoryName]||[]).sort(function(a,b){return new Date(b.date)-new Date(a.date);})}/>
             </div>
           )}
 
           {view==="export" && client && (
-            <div>
+            <div key={navKey} className="page-enter">
               <Header title="Exporteren" back={function(){goView("client");}}/>
               <ExportView client={client} sessions={clientSessions}/>
             </div>
@@ -558,7 +559,9 @@
             ::-webkit-scrollbar-thumb{background:#d0cbc2;border-radius:2px}
             .rh:hover{background:#faf9f7!important}
             @keyframes slideUp{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+            @keyframes slideIn{from{transform:translateX(18px);opacity:0}to{transform:translateX(0);opacity:1}}
             .ai{animation:slideUp 0.18s ease}
+            .page-enter{animation:slideIn 0.22s cubic-bezier(0.25,0.46,0.45,0.94)}
             input:focus,textarea:focus{outline:none;border-color:#dc4f2a!important}
             input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#dc4f2a}
           `}}/>
