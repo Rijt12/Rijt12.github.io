@@ -126,6 +126,9 @@
       return label === "AB" || label === mine;
     }
     function setsForClient(ex, s, clientId) {
+      if (!isDuo(s)) { return ex.sets; }
+      var label = ex.clientLabel || "AB";
+      if (label === "B") { return ex.setsB || ex.sets; }
       return ex.sets;
     }
 
@@ -901,8 +904,9 @@
       function updateEx(idx,upd){var exs=session.exercises.map(function(e,i){return i===idx?{...e,...upd}:e;});onChange({...session,exercises:exs});}
       function deleteEx(idx){onChange({...session,exercises:session.exercises.filter(function(_,i){return i!==idx;})});}
       function deleteSuperset(ssId){onChange({...session,exercises:session.exercises.filter(function(e){return e.supersetId!==ssId;})});}
-      function addEx(ex){onChange({...session,exercises:session.exercises.concat([{...ex,clientLabel:"AB"}])});setShowAdd(false);props.showToast(ex.name+" toegevoegd");}
-      function addSuperset(exA,exB){var ssId=uid();onChange({...session,exercises:session.exercises.concat([{...exA,supersetId:ssId,clientLabel:"AB"},{...exB,supersetId:ssId,clientLabel:"AB"}])});setShowSuperset(false);props.showToast("Superset toegevoegd");}
+      function withDuoDefaults(ex){if(!isDuo(session)){return ex;}return {...ex,clientLabel:"AB",setsB:ex.sets.map(function(s){return {weight:s.weight||"",reps:s.reps||""};});};}
+      function addEx(ex){onChange({...session,exercises:session.exercises.concat([withDuoDefaults(ex)])});setShowAdd(false);props.showToast(ex.name+" toegevoegd");}
+      function addSuperset(exA,exB){var ssId=uid();onChange({...session,exercises:session.exercises.concat([{...withDuoDefaults(exA),supersetId:ssId},{...withDuoDefaults(exB),supersetId:ssId}])});setShowSuperset(false);props.showToast("Superset toegevoegd");}
       function moveUp(idx){if(idx===0){return;}var exs=session.exercises.slice();var tmp=exs[idx-1];exs[idx-1]=exs[idx];exs[idx]=tmp;onChange({...session,exercises:exs});}
       function moveDown(idx){if(idx===session.exercises.length-1){return;}var exs=session.exercises.slice();var tmp=exs[idx];exs[idx]=exs[idx+1];exs[idx+1]=tmp;onChange({...session,exercises:exs});}
       function loadTemplate(tpl){var exercises=tpl.exercises.map(function(e){return {id:uid(),name:e.name,pattern:e.pattern,unilateral:e.unilateral||false,isUnilateralExercise:e.unilateral||false,performedUnilateral:false,sets:(e.sets||[{weight:"",reps:""}]).map(function(s){return {weight:s.weight||"",reps:s.reps||""};}),notes:""};});onChange({...session,exercises:exercises});setShowTemplates(false);props.showToast('Schema "'+tpl.name+'" geladen ✓');}
@@ -1149,27 +1153,52 @@
     function ExerciseRow(props) {
       var ex=props.ex; var prevData=props.prevData;
       var duoClients=props.duoClients||null;
+      var lbl=ex.clientLabel||"AB";
+      var isB=duoClients&&lbl==="B";
+      var isAB=duoClients&&lbl==="AB";
       var [open,setOpen]=useState(true);
       var color=PC[ex.pattern]||T.textMuted;
-      function addSet(){var last=ex.sets[ex.sets.length-1];props.onChange({...ex,sets:ex.sets.concat([{weight:last?last.weight:"",reps:last?last.reps:""}])});}
-      function updateSet(i,field,val){props.onChange({...ex,sets:ex.sets.map(function(s,idx){return idx===i?{...s,[field]:val}:s;})});}
-      function removeSet(i){props.onChange({...ex,sets:ex.sets.filter(function(_,idx){return idx!==i;})});}
+      var activeSets=isB?(ex.setsB||[{weight:"",reps:""}]):ex.sets;
+      function getSetsB(){return ex.setsB||ex.sets.map(function(){return {weight:"",reps:""};});}
+      function addSet(){
+        var last=activeSets[activeSets.length-1];
+        var newSet={weight:last?last.weight:"",reps:last?last.reps:""};
+        if(isB){props.onChange({...ex,setsB:getSetsB().concat([newSet])});}
+        else if(isAB){var ns=ex.sets.concat([newSet]);props.onChange({...ex,sets:ns,setsB:ns.map(function(s){return {...s};})});}
+        else{props.onChange({...ex,sets:ex.sets.concat([newSet])});}
+      }
+      function updateSet(i,field,val){
+        if(isB){var nb=getSetsB().map(function(s,idx){return idx===i?{...s,[field]:val}:s;});props.onChange({...ex,setsB:nb});}
+        else if(isAB){var ns=ex.sets.map(function(s,idx){return idx===i?{...s,[field]:val}:s;});props.onChange({...ex,sets:ns,setsB:ns.map(function(s){return {...s};})});}
+        else{props.onChange({...ex,sets:ex.sets.map(function(s,idx){return idx===i?{...s,[field]:val}:s;})});}
+      }
+      function removeSet(i){
+        if(isB){props.onChange({...ex,setsB:getSetsB().filter(function(_,idx){return idx!==i;})});}
+        else if(isAB){var ns=ex.sets.filter(function(_,idx){return idx!==i;});props.onChange({...ex,sets:ns,setsB:ns.map(function(s){return {...s};})});}
+        else{props.onChange({...ex,sets:ex.sets.filter(function(_,idx){return idx!==i;})});}
+      }
+      function setLabel(newLbl){
+        var upd={...ex,clientLabel:newLbl};
+        if(newLbl==="AB"){upd.setsB=ex.sets.map(function(s){return {...s};});}
+        if(newLbl==="B"&&!ex.setsB){upd.setsB=ex.sets.map(function(){return {weight:"",reps:""};});}
+        props.onChange(upd);
+      }
       return (
         <div style={{borderBottom:"1px solid "+T.border,borderLeft:"3px solid "+color,background:T.surface}}>
           <div style={{padding:"12px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={function(){setOpen(!open);}}>
             <div>
               <div style={{fontWeight:500,fontSize:14}}>{ex.name}</div>
               <div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:2,display:"flex",alignItems:"center",gap:8}}>
-                <span>{ex.pattern} · {ex.sets.length} set{ex.sets.length!==1?"s":""}</span>
+                <span>{ex.pattern} · {activeSets.length} set{activeSets.length!==1?"s":""}</span>
                 {ex.isUnilateralExercise&&(
                   <button onClick={function(e){e.stopPropagation();props.onChange({...ex,performedUnilateral:!ex.performedUnilateral});}} style={{padding:"2px 7px",fontSize:9,borderRadius:2,background:ex.performedUnilateral?T.accent+"18":"none",border:"1px solid "+(ex.performedUnilateral?T.accent:T.border),color:ex.performedUnilateral?T.accent:T.textMuted,textTransform:"uppercase",letterSpacing:0.3,cursor:"pointer",fontFamily:"inherit"}}>uni</button>
                 )}
                 {props.duoClients&&(
                   <div style={{display:"flex",gap:0,border:"1px solid "+T.border,borderRadius:2,overflow:"hidden",marginLeft:4}}>
-                    {["A","AB","B"].map(function(lbl){
-                      var active=(ex.clientLabel||"AB")===lbl;
-                      var name=lbl==="A"?props.duoClients[0].name.split(" ")[0]:lbl==="B"?props.duoClients[1].name.split(" ")[0]:"Samen";
-                      return <button key={lbl} onClick={function(e){e.stopPropagation();props.onChange({...ex,clientLabel:lbl});}} style={{padding:"2px 7px",fontSize:9,background:active?T.accent:"none",border:"none",color:active?"#fff":T.textMuted,textTransform:"uppercase",letterSpacing:0.3,cursor:"pointer",fontFamily:"inherit"}}>{name}</button>;
+                    {["A","AB","B"].map(function(l){
+                      var active=lbl===l;
+                      var name=l==="A"?props.duoClients[0].name.split(" ")[0]:l==="B"?props.duoClients[1].name.split(" ")[0]:"Samen";
+                      return <button key={l} onClick={function(e){e.stopPropagation();setLabel(l);}} style={{padding:"2px 7px",fontSize:9,background:active?T.accent:"none",border:"none",color:active?"#fff":T.textMuted,textTransform:"uppercase",letterSpacing:0.3,cursor:"pointer",fontFamily:"inherit"}}>{name}</button>;
                     })}
                   </div>
                 )}
@@ -1184,7 +1213,7 @@
           {open&&(
             <div style={{padding:"0 20px 14px"}}>
               <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:5}}><span style={lS}>#</span><span style={lS}>kg</span><span style={lS}>reps</span><span/></div>
-              {ex.sets.map(function(s,i){return(
+              {activeSets.map(function(s,i){return(
                 <div key={i} style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:6}}>
                   <span style={{color:T.textMuted,fontSize:12,paddingTop:10,textAlign:"center"}}>{i+1}</span>
                   <Stepper value={s.weight} step={0.5} placeholder="kg" onChange={function(v){updateSet(i,"weight",v);}}/>
