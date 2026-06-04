@@ -738,8 +738,11 @@
     function ExerciseLibrary(props) {
       var data=props.data; var library=data.exerciseLibrary||[];
       var [newName,setNewName]=useState(""); var [newPat,setNewPat]=useState("Push"); var [newUni,setNewUni]=useState(false); var [adding,setAdding]=useState(false); var [search,setSearch]=useState("");
+      var [editingId,setEditingId]=useState(null); var [editName,setEditName]=useState(""); var [editPat,setEditPat]=useState("Push"); var [editUni,setEditUni]=useState(false);
       var inputRef=useRef(null);
       function addExercise(){if(!newName.trim()){return;}if(library.some(function(e){return e.name.toLowerCase()===newName.trim().toLowerCase();})){props.showToast("Oefening bestaat al");return;}var ex={id:uid(),name:newName.trim(),pattern:newPat,unilateral:newUni};props.persist({...data,exerciseLibrary:library.concat([ex])});setNewName("");setNewUni(false);props.showToast(ex.name+" toegevoegd ✓");}
+      function startEdit(ex){setEditingId(ex.id);setEditName(ex.name);setEditPat(ex.pattern);setEditUni(ex.unilateral||false);}
+      function saveEdit(){if(!editName.trim()){return;}var updated=library.map(function(e){return e.id===editingId?{...e,name:editName.trim(),pattern:editPat,unilateral:editUni}:e;});props.persist({...data,exerciseLibrary:updated});props.showToast("Opgeslagen ✓");setEditingId(null);}
       var filtered=library.filter(function(e){return e.name.toLowerCase().includes(search.toLowerCase());}).sort(function(a,b){return a.name.localeCompare(b.name);});
       var grouped={};filtered.forEach(function(e){if(!grouped[e.pattern]){grouped[e.pattern]=[];}grouped[e.pattern].push(e);});
       return (
@@ -764,9 +767,23 @@
               <div key={pattern}>
                 <div style={{padding:"8px 20px 6px",fontSize:10,textTransform:"uppercase",letterSpacing:0.8,color:color,fontWeight:500,borderBottom:"1px solid "+T.border,background:T.bg}}>{pattern}</div>
                 {exs.map(function(ex){return(
-                  <div key={ex.id} style={{padding:"12px 20px",borderBottom:"1px solid "+T.border,background:T.surface,display:"flex",justifyContent:"space-between",alignItems:"center",borderLeft:"3px solid "+color}}>
-                    <div style={{fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</div>
-                    <button onClick={function(){props.onDelete(ex.id);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 4px",lineHeight:1}}>×</button>
+                  <div key={ex.id} style={{borderBottom:"1px solid "+T.border,background:T.surface,borderLeft:"3px solid "+color}}>
+                    {editingId===ex.id?(
+                      <div style={{padding:"12px 20px"}}>
+                        <div style={{marginBottom:10}}><Label>Naam oefening</Label><input value={editName} onChange={function(e){setEditName(e.target.value);}} style={{...iS,marginTop:5}}/></div>
+                        <div style={{marginBottom:10}}><Label>Bewegingspatroon</Label><PatternPicker value={editPat} onChange={setEditPat}/></div>
+                        <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,cursor:"pointer",fontSize:13,color:T.textMid}}><input type="checkbox" checked={editUni} onChange={function(e){setEditUni(e.target.checked);}}/>Unilateraal</label>
+                        <div style={{display:"flex",gap:8}}><Btn accent onClick={saveEdit}>Opslaan</Btn><Btn onClick={function(){setEditingId(null);}}>Annuleer</Btn></div>
+                      </div>
+                    ):(
+                      <div style={{padding:"12px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <div style={{fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</div>
+                        <div style={{display:"flex",gap:4}}>
+                          <button onClick={function(){startEdit(ex);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,fontSize:11,padding:"3px 8px",borderRadius:2,cursor:"pointer"}}>✎</button>
+                          <button onClick={function(){props.onDelete(ex.id);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 4px",lineHeight:1}}>×</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );})}
               </div>
