@@ -904,7 +904,7 @@
       function updateEx(idx,upd){var exs=session.exercises.map(function(e,i){return i===idx?{...e,...upd}:e;});onChange({...session,exercises:exs});}
       function deleteEx(idx){onChange({...session,exercises:session.exercises.filter(function(_,i){return i!==idx;})});}
       function deleteSuperset(ssId){onChange({...session,exercises:session.exercises.filter(function(e){return e.supersetId!==ssId;})});}
-      function withDuoDefaults(ex){if(!isDuo(session)){return ex;}return {...ex,clientLabel:"AB",setsB:ex.sets.map(function(s){return {weight:s.weight||"",reps:s.reps||""};});};}
+      function withDuoDefaults(ex){if(!isDuo(session)){return ex;}return {...ex,clientLabel:"AB",setsB:ex.sets.map(function(s){return {weight:s.weight||"",reps:s.reps||""};})};}
       function addEx(ex){onChange({...session,exercises:session.exercises.concat([withDuoDefaults(ex)])});setShowAdd(false);props.showToast(ex.name+" toegevoegd");}
       function addSuperset(exA,exB){var ssId=uid();onChange({...session,exercises:session.exercises.concat([{...withDuoDefaults(exA),supersetId:ssId},{...withDuoDefaults(exB),supersetId:ssId}])});setShowSuperset(false);props.showToast("Superset toegevoegd");}
       function moveUp(idx){if(idx===0){return;}var exs=session.exercises.slice();var tmp=exs[idx-1];exs[idx-1]=exs[idx];exs[idx]=tmp;onChange({...session,exercises:exs});}
