@@ -963,7 +963,6 @@
               <button onClick={function(){setShowDuoPicker(false);}} style={{marginTop:6,background:"none",border:"none",color:T.textMuted,fontSize:11,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer"}}>Annuleer</button>
             </div>
           )}
-          </div>
           {showTemplates&&(
             <div style={{borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}>
               {templates.map(function(tpl){return <div key={tpl.id} className="rh" onClick={function(){loadTemplate(tpl);}} style={{padding:"12px 20px",borderBottom:"1px solid "+T.border,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><div style={{fontSize:13,fontWeight:500}}>{tpl.name}</div><div style={{fontSize:11,color:T.textMuted,marginTop:2}}>{tpl.exercises.map(function(e){return e.name;}).join(", ")}</div></div><span style={{color:T.accent,fontSize:11,textTransform:"uppercase",letterSpacing:0.4}}>Laden →</span></div>;})}
