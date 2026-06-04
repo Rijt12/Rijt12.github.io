@@ -120,16 +120,11 @@
 
     function isDuo(s) { return s.clientIds && s.clientIds.length > 1; }
     function exForClient(ex, s, clientId) {
-      if (!isDuo(s)) { return true; }
-      var label = ex.clientLabel || "AB";
-      var mine = s.clientIds[0] === clientId ? "A" : "B";
-      return label === "AB" || label === mine;
+      return true;
     }
     function setsForClient(ex, s, clientId) {
       if (!isDuo(s)) { return ex.sets; }
-      var label = ex.clientLabel || "AB";
-      if (label === "B") { return ex.setsB || ex.sets; }
-      return ex.sets;
+      return s.clientIds[0] === clientId ? ex.sets : (ex.setsB || ex.sets);
     }
 
     // ── Confirm dialog ─────────────────────────────────────────────────────────
