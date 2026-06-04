@@ -603,6 +603,40 @@
     function Toast(props) { return <div style={{position:"fixed",bottom:28,left:"50%",transform:"translateX(-50%)",background:T.text,color:T.bg,padding:"10px 20px",fontSize:12,zIndex:100,animation:"slideUp 0.2s ease",letterSpacing:0.3,whiteSpace:"nowrap",maxWidth:"90vw",textAlign:"center"}}>{props.msg}</div>; }
     function Label(props) { return <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.6}}>{props.children}</div>; }
     function UniTag() { return <span style={{fontSize:9,marginLeft:7,padding:"1px 5px",background:T.accentBg,color:T.accent,borderRadius:2,textTransform:"uppercase",letterSpacing:0.3}}>uni</span>; }
+
+    function SwipeRow(props) {
+      var [offset,setOffset]=useState(0);
+      var [swiping,setSwiping]=useState(false);
+      var startX=useRef(0); var startY=useRef(0); var moved=useRef(false);
+      var REVEAL=112;
+      function onTouchStart(e){startX.current=e.touches[0].clientX;startY.current=e.touches[0].clientY;moved.current=false;setSwiping(true);}
+      function onTouchMove(e){
+        var dx=e.touches[0].clientX-startX.current;
+        var dy=e.touches[0].clientY-startY.current;
+        if(!moved.current&&Math.abs(dy)>Math.abs(dx)){setSwiping(false);return;}
+        moved.current=true;
+        if(dx<0){setOffset(Math.max(dx,-REVEAL));}else{setOffset(Math.min(offset+dx,0));}
+      }
+      function onTouchEnd(){
+        setSwiping(false);
+        if(offset<-REVEAL/2){setOffset(-REVEAL);}else{setOffset(0);}
+      }
+      function close(){setOffset(0);}
+      return (
+        <div style={{position:"relative",overflow:"hidden",borderBottom:"1px solid "+T.border}}>
+          <div style={{position:"absolute",top:0,right:0,bottom:0,display:"flex",alignItems:"stretch"}}>
+            {props.onEdit&&<button onClick={function(){close();props.onEdit();}} style={{width:56,background:"#2563eb",border:"none",color:"#fff",fontSize:11,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer"}}>✎</button>}
+            <button onClick={function(){close();props.onDelete();}} style={{width:56,background:"#dc2626",border:"none",color:"#fff",fontSize:18,cursor:"pointer"}}>×</button>
+          </div>
+          <div
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            style={{transform:"translateX("+offset+"px)",transition:swiping?"none":"transform 0.2s ease",background:props.background||T.surface,willChange:"transform"}}
+          >{props.children}</div>
+        </div>
+      );
+    }
     function Btn(props) {
       var bg = props.accent?T.accent:props.danger?T.danger:"none";
       var border = props.accent?"1px solid "+T.accent:props.danger?"1px solid "+T.danger:"1px solid "+T.border;
@@ -679,9 +713,9 @@
             var last=cs.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);})[0];
             var isEditing = editingId===c.id;
             return (
-              <div key={c.id} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <SwipeRow key={c.id} onEdit={function(){setEditingId(c.id);setEditName(c.name);}} onDelete={function(){props.onDelete(c.id);}}>
                 {isEditing ? (
-                  <div style={{flex:1,display:"flex",gap:8,marginRight:8}}>
+                  <div style={{padding:"14px 20px",display:"flex",gap:8,alignItems:"center"}}>
                     <input autoFocus value={editName}
                       onChange={function(e){setEditName(e.target.value);}}
                       onKeyDown={function(e){if(e.key==="Enter"){saveEdit(c.id);}if(e.key==="Escape"){setEditingId(null);}}}
@@ -690,19 +724,12 @@
                     <button onClick={function(){setEditingId(null);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"6px 10px",fontSize:11,borderRadius:2,cursor:"pointer"}}>×</button>
                   </div>
                 ) : (
-                  <div className="rh" onClick={function(){props.onSelect(c.id);}} style={{flex:1,cursor:"pointer",paddingRight:12}}>
+                  <div className="rh" onClick={function(){props.onSelect(c.id);}} style={{padding:"14px 20px",cursor:"pointer"}}>
                     <div style={{fontWeight:500,fontSize:14}}>{c.name}</div>
                     <div style={{color:T.textMuted,fontSize:11,marginTop:3}}>{cs.length} sessie{cs.length!==1?"s":""}{last?" · "+fmtDate(last.date):""}</div>
                   </div>
                 )}
-                {!isEditing && (
-                  <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                    <button onClick={function(){setEditingId(c.id);setEditName(c.name);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:13,padding:"4px 6px",cursor:"pointer"}}>✎</button>
-
-                    <button onClick={function(){props.onDelete(c.id);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 4px",lineHeight:1}}>×</button>
-                  </div>
-                )}
-              </div>
+              </SwipeRow>
             );
           })}
         </div>
@@ -767,24 +794,20 @@
               <div key={pattern}>
                 <div style={{padding:"8px 20px 6px",fontSize:10,textTransform:"uppercase",letterSpacing:0.8,color:color,fontWeight:500,borderBottom:"1px solid "+T.border,background:T.bg}}>{pattern}</div>
                 {exs.map(function(ex){return(
-                  <div key={ex.id} style={{borderBottom:"1px solid "+T.border,background:T.surface,borderLeft:"3px solid "+color}}>
-                    {editingId===ex.id?(
-                      <div style={{padding:"12px 20px"}}>
-                        <div style={{marginBottom:10}}><Label>Naam oefening</Label><input value={editName} onChange={function(e){setEditName(e.target.value);}} style={{...iS,marginTop:5}}/></div>
-                        <div style={{marginBottom:10}}><Label>Bewegingspatroon</Label><PatternPicker value={editPat} onChange={setEditPat}/></div>
-                        <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,cursor:"pointer",fontSize:13,color:T.textMid}}><input type="checkbox" checked={editUni} onChange={function(e){setEditUni(e.target.checked);}}/>Unilateraal</label>
-                        <div style={{display:"flex",gap:8}}><Btn accent onClick={saveEdit}>Opslaan</Btn><Btn onClick={function(){setEditingId(null);}}>Annuleer</Btn></div>
-                      </div>
-                    ):(
-                      <div style={{padding:"12px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                        <div style={{fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</div>
-                        <div style={{display:"flex",gap:4}}>
-                          <button onClick={function(){startEdit(ex);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,fontSize:11,padding:"3px 8px",borderRadius:2,cursor:"pointer"}}>✎</button>
-                          <button onClick={function(){props.onDelete(ex.id);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 4px",lineHeight:1}}>×</button>
+                  <SwipeRow key={ex.id} background={T.surface} onEdit={function(){startEdit(ex);}} onDelete={function(){props.onDelete(ex.id);}}>
+                    <div style={{borderLeft:"3px solid "+color}}>
+                      {editingId===ex.id?(
+                        <div style={{padding:"12px 20px"}}>
+                          <div style={{marginBottom:10}}><Label>Naam oefening</Label><input value={editName} onChange={function(e){setEditName(e.target.value);}} style={{...iS,marginTop:5}}/></div>
+                          <div style={{marginBottom:10}}><Label>Bewegingspatroon</Label><PatternPicker value={editPat} onChange={setEditPat}/></div>
+                          <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,cursor:"pointer",fontSize:13,color:T.textMid}}><input type="checkbox" checked={editUni} onChange={function(e){setEditUni(e.target.checked);}}/>Unilateraal</label>
+                          <div style={{display:"flex",gap:8}}><Btn accent onClick={saveEdit}>Opslaan</Btn><Btn onClick={function(){setEditingId(null);}}>Annuleer</Btn></div>
                         </div>
-                      </div>
-                    )}
-                  </div>
+                      ):(
+                        <div style={{padding:"12px 20px",fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</div>
+                      )}
+                    </div>
+                  </SwipeRow>
                 );})}
               </div>
             );
