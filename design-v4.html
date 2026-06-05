@@ -566,9 +566,9 @@
     // ── Shell ──────────────────────────────────────────────────────────────────
     function Shell(props) {
       return (
-        <div style={{minHeight:"100vh",background:T.bg,color:T.text,fontFamily:"'JetBrains Mono','Courier New',monospace",maxWidth:480,margin:"0 auto",position:"relative"}}>
+        <div style={{minHeight:"100vh",background:T.bg,color:T.text,fontFamily:"'JetBrains Mono','JetBrains Mono',monospace",maxWidth:480,margin:"0 auto",position:"relative"}}>
           <style dangerouslySetInnerHTML={{__html:`
-            @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Bebas+Neue&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@300;400;500&display=swap');
             *{box-sizing:border-box;margin:0;padding:0}
             input,textarea,select,button{font-family:inherit}
             button{cursor:pointer}
@@ -596,7 +596,7 @@
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:0,zIndex:10}}>
           <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
             {props.back && <button onClick={props.back} style={{background:"none",border:"none",color:T.textMuted,fontSize:18,lineHeight:1,padding:"0 4px 0 0",flexShrink:0}}>←</button>}
-            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontWeight:400,fontSize:26,letterSpacing:2,textTransform:"uppercase",color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{props.title}</span>
+            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontWeight:400,fontSize:22,letterSpacing:0.5,textTransform:"uppercase",color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{props.title}</span>
           </div>
           <div style={{display:"flex",gap:6,flexShrink:0,marginLeft:8}}>
             {props.rightAction2 && <button onClick={props.rightAction2.fn} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"6px 12px",fontSize:11,letterSpacing:0.5,textTransform:"uppercase",borderRadius:2}}>{props.rightAction2.label}</button>}
@@ -1614,10 +1614,10 @@
       }
 
       return (
-        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:24,fontFamily:"'JetBrains Mono','Courier New',monospace",overflow:"hidden"}}>
-          <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Bebas+Neue&display=swap');*{box-sizing:border-box;margin:0;padding:0}input:focus{outline:none;border-color:#dc4f2a!important}`}}/>
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:24,fontFamily:"'JetBrains Mono','JetBrains Mono',monospace",overflow:"hidden"}}>
+          <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@300;400;500&display=swap');*{box-sizing:border-box;margin:0;padding:0}input:focus{outline:none;border-color:#dc4f2a!important}`}}/>
           <div style={{width:"100%",maxWidth:360}}>
-            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontWeight:400,fontSize:32,letterSpacing:2,textTransform:"uppercase",color:T.text,marginBottom:8}}>Trainer App</div>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontWeight:400,fontSize:32,letterSpacing:1,textTransform:"uppercase",color:T.text,marginBottom:8}}>Trainer App</div>
             <div style={{fontSize:12,color:T.textMuted,marginBottom:32,letterSpacing:0.3}}>Log in om door te gaan</div>
             <div style={{marginBottom:14}}>
               <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.6,marginBottom:5}}>E-mailadres</div>

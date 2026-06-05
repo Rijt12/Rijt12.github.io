@@ -121,7 +121,7 @@
     };
     const T = {
       bg:"#ffffff", surface:"#f8f9ff", surfaceAlt:"#f0f2ff",
-      border:"#e2e5f0", borderStrong:"#c5cbdf",
+      border:"#e2e5f0", borderStrong:"#c8cce0",
       text:"#111827", textMid:"#374151", textMuted:"#9ca3af",
       accent:"#6366f1", accentBg:"#eef2ff", danger:"#dc2626",
     };
@@ -573,9 +573,9 @@
             input,textarea,select,button{font-family:inherit}
             button{cursor:pointer}
             ::-webkit-scrollbar{width:4px}
-            ::-webkit-scrollbar-track{background:#f8f9ff}
-            ::-webkit-scrollbar-thumb{background:#c5cbdf;border-radius:2px}
-            .rh:hover{background:#f0f2ff!important}
+            ::-webkit-scrollbar-track{background:#ffffff}
+            ::-webkit-scrollbar-thumb{background:#d0cbc2;border-radius:2px}
+            .rh:hover{background:#faf9f7!important}
             @keyframes slideUp{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
             @keyframes slideIn{from{opacity:0}to{opacity:1}}
             .ai{animation:slideUp 0.18s ease}
@@ -730,7 +730,7 @@
         <div style={{position:"relative"}}>
           <input ref={props.inputRef} value={value} onChange={function(e){props.onChange(e.target.value);setOpen(true);}} onBlur={function(){setTimeout(function(){setOpen(false);},150);}} onFocus={function(){setOpen(true);}} placeholder={props.placeholder} style={{...iS,...(props.style||{})}}/>
           {open&&filtered.length>0&&(
-            <div style={{position:"absolute",top:"100%",left:0,right:0,background:T.surface,border:"1px solid "+T.border,borderTop:"none",zIndex:20,maxHeight:160,overflowY:"auto",borderRadius:"0 0 8px 8px",boxShadow:"0 4px 12px rgba(0,0,0,0.08)"}}>
+            <div style={{position:"absolute",top:"100%",left:0,right:0,background:T.surface,border:"1px solid "+T.border,borderTop:"none",zIndex:20,maxHeight:160,overflowY:"auto",borderRadius:"0 0 4px 4px",boxShadow:"0 4px 12px rgba(0,0,0,0.08)"}}>
               {filtered.map(function(s,i){ return <div key={i} className="rh" onMouseDown={function(){props.onChange(s);}} style={{padding:"9px 12px",fontSize:13,cursor:"pointer",borderBottom:i<filtered.length-1?"1px solid "+T.border:"none"}}>{s}</div>; })}
             </div>
           )}
@@ -931,7 +931,7 @@
           {tpl.exercises.map(function(ex,idx){
             var color=PC[ex.pattern]||T.textMuted;
             return (
-              <div key={ex.id} style={{borderBottom:"1px solid "+T.border,background:color+"0d"}}>
+              <div key={ex.id} style={{borderBottom:"1px solid "+T.border,borderLeft:"3px solid "+color,background:T.surface}}>
                 <div style={{padding:"10px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"1px solid "+T.border}}>
                   <div><div style={{fontSize:13,fontWeight:500}}>{ex.name}{ex.unilateral&&<UniTag/>}</div><div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:1}}>{ex.pattern}</div></div>
                   <div style={{display:"flex",gap:4,alignItems:"center"}}>
@@ -963,7 +963,7 @@
                   {library.length===0&&<div style={{padding:14,fontSize:12,color:T.textMuted,textAlign:"center"}}>Bibliotheek is leeg.</div>}
                   {filtLib.length===0&&library.length>0&&<div style={{padding:14,fontSize:12,color:T.textMuted,textAlign:"center"}}>Geen resultaten</div>}
                   {filtLib.map(function(ex){var color=PC[ex.pattern]||T.textMuted;return(
-                    <div key={ex.id} className="rh" onClick={function(){addFromLib(ex);}} style={{padding:"10px 14px",borderBottom:"1px solid "+T.border,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",background:color+"0d"}}>
+                    <div key={ex.id} className="rh" onClick={function(){addFromLib(ex);}} style={{padding:"10px 14px",borderBottom:"1px solid "+T.border,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",borderLeft:"3px solid "+color}}>
                       <span style={{fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</span>
                       <span style={{fontSize:9,color:color,textTransform:"uppercase",letterSpacing:0.4}}>{ex.pattern}</span>
                     </div>
@@ -1152,7 +1152,7 @@
                   </div>
                   <div style={{maxHeight:200,overflowY:"auto"}}>
                     {filtered.length===0&&<div style={{color:T.textMuted,fontSize:12,padding:"12px 0",textAlign:"center"}}>Geen resultaten</div>}
-                    {filtered.map(function(ex){var color=PC[ex.pattern]||T.textMuted;return <div key={ex.id} className="rh" onClick={function(){selectLib(ex);}} style={{padding:"10px",borderBottom:"1px solid "+T.border,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",background:color+"0d"}}><span style={{fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</span><span style={{fontSize:9,color:color,textTransform:"uppercase",letterSpacing:0.4}}>{ex.pattern}</span></div>;})}
+                    {filtered.map(function(ex){var color=PC[ex.pattern]||T.textMuted;return <div key={ex.id} className="rh" onClick={function(){selectLib(ex);}} style={{padding:"10px",borderBottom:"1px solid "+T.border,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",borderLeft:"3px solid "+color}}><span style={{fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</span><span style={{fontSize:9,color:color,textTransform:"uppercase",letterSpacing:0.4}}>{ex.pattern}</span></div>;})}
                   </div>
                 </div>
               )}
@@ -1206,7 +1206,7 @@
             <div style={{maxHeight:200,overflowY:"auto"}}>
               {filtered.length===0&&<div style={{color:T.textMuted,fontSize:12,padding:"12px 0",textAlign:"center"}}>Geen resultaten</div>}
               {filtered.map(function(ex){var color=PC[ex.pattern]||T.textMuted;return(
-                <div key={ex.id} className="rh" onClick={function(){step===1?selectA(ex):selectB(ex);}} style={{padding:"10px",borderBottom:"1px solid "+T.border,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",background:color+"0d"}}>
+                <div key={ex.id} className="rh" onClick={function(){step===1?selectA(ex):selectB(ex);}} style={{padding:"10px",borderBottom:"1px solid "+T.border,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",borderLeft:"3px solid "+color}}>
                   <span style={{fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</span>
                   <span style={{fontSize:9,color:color,textTransform:"uppercase",letterSpacing:0.4}}>{ex.pattern}</span>
                 </div>
@@ -1233,7 +1233,7 @@
       function removeSetA(i){props.onChangeA({...exA,sets:exA.sets.filter(function(_,idx){return idx!==i;})});}
       function removeSetB(i){props.onChangeB({...exB,sets:exB.sets.filter(function(_,idx){return idx!==i;})});}
       return (
-        <div style={{borderBottom:"1px solid "+T.border,background:T.accentBg+"80"}}>
+        <div style={{borderBottom:"1px solid "+T.border,background:T.surface,borderLeft:"3px solid "+T.accent}}>
           <div style={{padding:"10px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",background:T.accentBg,borderBottom:"1px solid "+T.border+"80"}} onClick={function(){setOpen(!open);}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <span style={{fontSize:9,fontWeight:600,textTransform:"uppercase",letterSpacing:0.8,color:T.accent,background:"#fff",border:"1px solid "+T.accent,borderRadius:6,padding:"2px 5px"}}>SS</span>
@@ -1331,7 +1331,7 @@
         props.onChange(upd);
       }
       return (
-        <div style={{borderBottom:"1px solid "+T.border,background:color+"0d"}}>
+        <div style={{borderBottom:"1px solid "+T.border,borderLeft:"3px solid "+color,background:T.surface}}>
           <div style={{padding:"12px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={function(){setOpen(!open);}}>
             <div>
               <div style={{fontWeight:500,fontSize:14}}>{ex.name}</div>
@@ -1447,7 +1447,7 @@
             var clientLbl=isDuo(session)?(ex.clientLabel||"AB"):null;
             var badgeColor=clientLbl==="A"?"#2563eb":clientLbl==="B"?"#059669":"#7c3aed";
             return (
-              <div key={ex.id} style={{borderBottom:"1px solid "+T.border,background:color+"0d"}}>
+              <div key={ex.id} style={{borderBottom:"1px solid "+T.border,borderLeft:"3px solid "+color,background:T.surface}}>
                 <div style={{padding:"12px 20px 6px"}}>
                   <div style={{fontWeight:500,fontSize:14,display:"flex",alignItems:"center",gap:6}}>{ex.name}{ex.performedUnilateral&&<UniTag/>}{clientLbl&&<span style={{fontSize:9,padding:"1px 5px",background:badgeColor+"18",color:badgeColor,borderRadius:6,textTransform:"uppercase",letterSpacing:0.3}}>{clientLbl==="AB"?"A+B":clientLbl}</span>}</div>
                   <div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:2}}>{ex.pattern}{totalVol>0?" · "+totalVol.toLocaleString("nl-NL")+" kg vol.":""}</div>
@@ -1550,7 +1550,7 @@
               :(diff?(diff>0?"+":"")+diff+" reps":null);
             var indent=ex.isSubEntry;
             return (
-              <div key={ex.key} className="rh" onClick={function(){props.onExHistory(ex.key);}} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,cursor:"pointer",background:indent?color+"0d":color+"08",display:"flex",justifyContent:"space-between",alignItems:"center",paddingLeft:indent?32:20}}>
+              <div key={ex.key} className="rh" onClick={function(){props.onExHistory(ex.key);}} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,borderLeft:"3px solid "+color,cursor:"pointer",background:indent?T.surfaceAlt:T.surface,display:"flex",justifyContent:"space-between",alignItems:"center",paddingLeft:indent?32:20}}>
                 <div>
                   <div style={{fontWeight:indent?400:500,fontSize:indent?13:14,color:indent?T.textMid:T.text}}>{ex.isSubEntry?ex.baseName:ex.name}{ex.isSubEntry&&<UniTag/>}</div>
                   <div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:2}}>{ex.pattern} · {ex.entries.length}×</div>

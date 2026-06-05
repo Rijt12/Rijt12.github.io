@@ -574,8 +574,8 @@
             button{cursor:pointer}
             ::-webkit-scrollbar{width:4px}
             ::-webkit-scrollbar-track{background:#fdf8f3}
-            ::-webkit-scrollbar-thumb{background:#d4b89a;border-radius:12px}
-            .rh:hover{background:#fef4eb!important}
+            ::-webkit-scrollbar-thumb{background:#d0cbc2;border-radius:2px}
+            .rh:hover{background:#faf9f7!important}
             @keyframes slideUp{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
             @keyframes slideIn{from{opacity:0}to{opacity:1}}
             .ai{animation:slideUp 0.18s ease}
@@ -606,7 +606,7 @@
       );
     }
 
-    function Loader() { return <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8}}><div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:48,letterSpacing:1,color:T.text,textTransform:"uppercase"}}>Trainer App</div><div style={{fontFamily:"'Nunito','DM Mono',sans-serif",fontWeight:400,fontSize:11,color:T.textMuted,letterSpacing:2,textTransform:"uppercase"}}>by MVDRPT</div></div>; }
+    function Loader() { return <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8}}><div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:48,letterSpacing:1,color:T.text,textTransform:"uppercase"}}>Trainer App</div><div style={{fontFamily:"'Nunito','DM Mono',sans-serif",fontWeight:300,fontSize:11,color:T.textMuted,letterSpacing:2,textTransform:"uppercase"}}>by MVDRPT</div></div>; }
 
     function Stepper(props) {
       var val = props.value;
@@ -730,7 +730,7 @@
         <div style={{position:"relative"}}>
           <input ref={props.inputRef} value={value} onChange={function(e){props.onChange(e.target.value);setOpen(true);}} onBlur={function(){setTimeout(function(){setOpen(false);},150);}} onFocus={function(){setOpen(true);}} placeholder={props.placeholder} style={{...iS,...(props.style||{})}}/>
           {open&&filtered.length>0&&(
-            <div style={{position:"absolute",top:"100%",left:0,right:0,background:T.surface,border:"1px solid "+T.border,borderTop:"none",zIndex:20,maxHeight:160,overflowY:"auto",borderRadius:"0 0 14px 14px",boxShadow:"0 4px 12px rgba(0,0,0,0.08)"}}>
+            <div style={{position:"absolute",top:"100%",left:0,right:0,background:T.surface,border:"1px solid "+T.border,borderTop:"none",zIndex:20,maxHeight:160,overflowY:"auto",borderRadius:"0 0 4px 4px",boxShadow:"0 4px 12px rgba(0,0,0,0.08)"}}>
               {filtered.map(function(s,i){ return <div key={i} className="rh" onMouseDown={function(){props.onChange(s);}} style={{padding:"9px 12px",fontSize:13,cursor:"pointer",borderBottom:i<filtered.length-1?"1px solid "+T.border:"none"}}>{s}</div>; })}
             </div>
           )}
@@ -1663,7 +1663,7 @@
       }, []);
 
       if (user === undefined) {
-        return <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8}}><div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:48,letterSpacing:1,color:T.text,textTransform:"uppercase"}}>Trainer App</div><div style={{fontFamily:"'Nunito','DM Mono',sans-serif",fontWeight:400,fontSize:11,color:T.textMuted,letterSpacing:2,textTransform:"uppercase"}}>by MVDRPT</div></div>;
+        return <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8}}><div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:48,letterSpacing:1,color:T.text,textTransform:"uppercase"}}>Trainer App</div><div style={{fontFamily:"'Nunito','DM Mono',sans-serif",fontWeight:300,fontSize:11,color:T.textMuted,letterSpacing:2,textTransform:"uppercase"}}>by MVDRPT</div></div>;
       }
       if (!user) { return <LoginScreen/>; }
       return <App onLogout={function(){ window._fbLogout(); }}/>;
