@@ -824,7 +824,23 @@
       var inputRef=useRef(null);
       function addExercise(){if(!newName.trim()){return;}if(library.some(function(e){return e.name.toLowerCase()===newName.trim().toLowerCase();})){props.showToast("Oefening bestaat al");return;}var ex={id:uid(),name:newName.trim(),pattern:newPat,unilateral:newUni};props.persist({...data,exerciseLibrary:library.concat([ex])});setNewName("");setNewUni(false);props.showToast(ex.name+" toegevoegd ✓");}
       function startEdit(ex){setEditingId(ex.id);setEditName(ex.name);setEditPat(ex.pattern);setEditUni(ex.unilateral||false);}
-      function saveEdit(){if(!editName.trim()){return;}var updated=library.map(function(e){return e.id===editingId?{...e,name:editName.trim(),pattern:editPat,unilateral:editUni}:e;});props.persist({...data,exerciseLibrary:updated});props.showToast("Opgeslagen ✓");setEditingId(null);}
+      function saveEdit(){
+        if(!editName.trim()){return;}
+        var oldEx=library.find(function(e){return e.id===editingId;});
+        var newName=editName.trim();
+        var updated=library.map(function(e){return e.id===editingId?{...e,name:newName,pattern:editPat,unilateral:editUni}:e;});
+        var updatedSessions=data.sessions.map(function(s){
+          var changed=false;
+          var exs=s.exercises.map(function(ex){
+            if(ex.name.toLowerCase()!==oldEx.name.toLowerCase()){return ex;}
+            changed=true;
+            return {...ex,name:newName,pattern:editPat,unilateral:editUni};
+          });
+          return changed?{...s,exercises:exs}:s;
+        });
+        props.persist({...data,exerciseLibrary:updated,sessions:updatedSessions});
+        props.showToast("Opgeslagen ✓");setEditingId(null);
+      }
       var filtered=library.filter(function(e){return e.name.toLowerCase().includes(search.toLowerCase());}).sort(function(a,b){return a.name.localeCompare(b.name);});
       var grouped={};filtered.forEach(function(e){if(!grouped[e.pattern]){grouped[e.pattern]=[];}grouped[e.pattern].push(e);});
       return (
@@ -1014,6 +1030,8 @@
       function addSuperset(exA,exB){var ssId=uid();onChange({...session,exercises:session.exercises.concat([{...withDuoDefaults(exA),supersetId:ssId},{...withDuoDefaults(exB),supersetId:ssId}])});setShowSuperset(false);props.showToast("Superset toegevoegd");}
       function moveUp(idx){if(idx===0){return;}var exs=session.exercises.slice();var tmp=exs[idx-1];exs[idx-1]=exs[idx];exs[idx]=tmp;onChange({...session,exercises:exs});}
       function moveDown(idx){if(idx===session.exercises.length-1){return;}var exs=session.exercises.slice();var tmp=exs[idx];exs[idx]=exs[idx+1];exs[idx+1]=tmp;onChange({...session,exercises:exs});}
+      function moveSupersetUp(idxA,idxB){var lo=Math.min(idxA,idxB);if(lo===0){return;}var exs=session.exercises.slice();var pair=[exs[lo],exs[lo+1]];exs.splice(lo,2);exs.splice(lo-1,0,pair[0],pair[1]);onChange({...session,exercises:exs});}
+      function moveSupersetDown(idxA,idxB){var lo=Math.min(idxA,idxB);var hi=Math.max(idxA,idxB);if(hi>=session.exercises.length-1){return;}var exs=session.exercises.slice();var pair=[exs[lo],exs[lo+1]];exs.splice(lo,2);exs.splice(lo+1,0,pair[0],pair[1]);onChange({...session,exercises:exs});}
       function loadTemplate(tpl){var exercises=tpl.exercises.map(function(e){return {id:uid(),name:e.name,pattern:e.pattern,unilateral:e.unilateral||false,isUnilateralExercise:e.unilateral||false,performedUnilateral:false,sets:(e.sets||[{weight:"",reps:""}]).map(function(s){return {weight:s.weight||"",reps:s.reps||""};}),notes:""};});onChange({...session,exercises:exercises});setShowTemplates(false);props.showToast('Schema "'+tpl.name+'" geladen ✓');}
       var localDateValue=session.date?toLocalISO(session.date):"";
       function handleDateChange(e){if(!e.target.value||!session.date){return;}var orig=new Date(session.date);var parts=e.target.value.split("-");orig.setFullYear(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));onChange({...session,date:orig.toISOString()});}
@@ -1079,12 +1097,15 @@
                 onViewHistory={function(){var k=(item.ex.performedUnilateral&&item.ex.isUnilateralExercise)?item.ex.name+"__uni":item.ex.name;props.onViewExHistory(k);}}
               />;
             }
+            var ssLo=Math.min(item.idxA,item.idxB);var ssHi=Math.max(item.idxA,item.idxB);
             return <SupersetBlock key={item.ssId}
               exA={item.exA} idxA={item.idxA}
               exB={item.exB} idxB={item.idxB}
               onChangeA={function(upd){updateEx(item.idxA,upd);}}
               onChangeB={function(upd){updateEx(item.idxB,upd);}}
               onDelete={function(){deleteSuperset(item.ssId);}}
+              onMoveUp={ssLo>0?function(){moveSupersetUp(item.idxA,item.idxB);}:null}
+              onMoveDown={ssHi<session.exercises.length-1?function(){moveSupersetDown(item.idxA,item.idxB);}:null}
               prevByName={prevByName}
               duoClients={duoClients}
               onViewHistory={props.onViewExHistory}
@@ -1218,7 +1239,11 @@
               <span style={{fontSize:9,fontWeight:600,textTransform:"uppercase",letterSpacing:0.8,color:T.accent,background:"#fff",border:"1px solid "+T.accent,borderRadius:2,padding:"2px 5px"}}>SS</span>
               <span style={{fontSize:12,color:T.textMid}}>{exA.name} <span style={{color:T.textMuted}}>+</span> {exB.name}</span>
             </div>
-            <button onClick={function(e){e.stopPropagation();props.onDelete();}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 4px",lineHeight:1}}>×</button>
+            <div style={{display:"flex",alignItems:"center",gap:2}}>
+              {props.onMoveUp&&<button onClick={function(e){e.stopPropagation();props.onMoveUp();}} style={{background:"none",border:"none",color:T.textMuted,fontSize:16,padding:"4px 6px",lineHeight:1}}>↑</button>}
+              {props.onMoveDown&&<button onClick={function(e){e.stopPropagation();props.onMoveDown();}} style={{background:"none",border:"none",color:T.textMuted,fontSize:16,padding:"4px 6px",lineHeight:1}}>↓</button>}
+              <button onClick={function(e){e.stopPropagation();props.onDelete();}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 4px",lineHeight:1}}>×</button>
+            </div>
           </div>
           {open&&(
             <div>
