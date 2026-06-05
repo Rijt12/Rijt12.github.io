@@ -152,8 +152,8 @@
           <div style={{background:T.surface,borderRadius:6,padding:24,maxWidth:320,width:"100%",boxShadow:"0 8px 32px rgba(0,0,0,0.18)"}}>
             <div style={{fontSize:14,color:T.text,lineHeight:1.6,marginBottom:20}}>{props.msg}</div>
             <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
-              <button onClick={props.onCancel} style={{padding:"8px 16px",fontSize:12,background:"none",border:"1px solid "+T.border,color:T.textMid,borderRadius:3,cursor:"pointer",textTransform:"uppercase",letterSpacing:0.4}}>Annuleer</button>
-              <button onClick={props.onConfirm} style={{padding:"8px 16px",fontSize:12,background:T.danger,border:"none",color:"#fff",borderRadius:3,cursor:"pointer",textTransform:"uppercase",letterSpacing:0.4}}>Verwijderen</button>
+              <button onClick={props.onCancel} style={{padding:"8px 16px",fontSize:12,background:"none",border:"1px solid "+T.border,color:T.textMid,borderRadius:6,cursor:"pointer",textTransform:"uppercase",letterSpacing:0.4}}>Annuleer</button>
+              <button onClick={props.onConfirm} style={{padding:"8px 16px",fontSize:12,background:T.danger,border:"none",color:"#fff",borderRadius:6,cursor:"pointer",textTransform:"uppercase",letterSpacing:0.4}}>Verwijderen</button>
             </div>
           </div>
         </div>
@@ -599,8 +599,8 @@
             <span style={{fontFamily:"'Raleway',sans-serif",fontWeight:800,fontSize:22,letterSpacing:0.5,textTransform:"uppercase",color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{props.title}</span>
           </div>
           <div style={{display:"flex",gap:6,flexShrink:0,marginLeft:8}}>
-            {props.rightAction2 && <button onClick={props.rightAction2.fn} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"6px 12px",fontSize:11,letterSpacing:0.5,textTransform:"uppercase",borderRadius:2}}>{props.rightAction2.label}</button>}
-            {props.rightAction  && <button onClick={props.rightAction.fn}  style={{background:T.accent,border:"none",color:"#fff",padding:"6px 14px",fontSize:11,fontWeight:500,letterSpacing:0.5,textTransform:"uppercase",borderRadius:2}}>{props.rightAction.label}</button>}
+            {props.rightAction2 && <button onClick={props.rightAction2.fn} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"6px 12px",fontSize:11,letterSpacing:0.5,textTransform:"uppercase",borderRadius:6}}>{props.rightAction2.label}</button>}
+            {props.rightAction  && <button onClick={props.rightAction.fn}  style={{background:T.accent,border:"none",color:"#fff",padding:"6px 14px",fontSize:11,fontWeight:500,letterSpacing:0.5,textTransform:"uppercase",borderRadius:6}}>{props.rightAction.label}</button>}
           </div>
         </div>
       );
@@ -615,7 +615,7 @@
       function dec() { var n = Math.max(0, +(num - step).toFixed(2)); props.onChange(n === 0 ? "" : String(n)); }
       function inc() { props.onChange(String(+(num + step).toFixed(2))); }
       return (
-        <div style={{display:"flex",alignItems:"center",border:"1px solid "+T.border,borderRadius:2,background:T.bg,overflow:"hidden"}}>
+        <div style={{display:"flex",alignItems:"center",border:"1px solid "+T.border,borderRadius:6,background:T.bg,overflow:"hidden"}}>
           <button onMouseDown={function(e){e.preventDefault();dec();}} style={{background:"none",border:"none",borderRight:"1px solid "+T.border,color:T.textMid,fontSize:18,lineHeight:1,padding:"0 10px",height:38,cursor:"pointer",flexShrink:0}}>−</button>
           <input type="number" inputMode={step<1?"decimal":"numeric"} value={val} onChange={function(e){props.onChange(e.target.value);}} placeholder={props.placeholder} style={{flex:1,background:"none",border:"none",color:T.text,fontSize:13,textAlign:"center",padding:"8px 2px",minWidth:0,outline:"none"}}/>
           <button onMouseDown={function(e){e.preventDefault();inc();}} style={{background:"none",border:"none",borderLeft:"1px solid "+T.border,color:T.textMid,fontSize:18,lineHeight:1,padding:"0 10px",height:38,cursor:"pointer",flexShrink:0}}>+</button>
@@ -624,7 +624,7 @@
     }
     function Toast(props) { return <div style={{position:"fixed",bottom:28,left:"50%",transform:"translateX(-50%)",background:T.text,color:T.bg,padding:"10px 20px",fontSize:12,zIndex:100,animation:"slideUp 0.2s ease",letterSpacing:0.3,whiteSpace:"nowrap",maxWidth:"90vw",textAlign:"center"}}>{props.msg}</div>; }
     function Label(props) { return <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.6}}>{props.children}</div>; }
-    function UniTag() { return <span style={{fontSize:9,marginLeft:7,padding:"1px 5px",background:T.accentBg,color:T.accent,borderRadius:2,textTransform:"uppercase",letterSpacing:0.3}}>uni</span>; }
+    function UniTag() { return <span style={{fontSize:9,marginLeft:7,padding:"1px 5px",background:T.accentBg,color:T.accent,borderRadius:6,textTransform:"uppercase",letterSpacing:0.3}}>uni</span>; }
 
     function SwipeRow(props) {
       var [offset,setOffset]=useState(0);
@@ -694,17 +694,17 @@
       var bg = props.accent?T.accent:props.danger?T.danger:"none";
       var border = props.accent?"1px solid "+T.accent:props.danger?"1px solid "+T.danger:"1px solid "+T.border;
       var color = (props.accent||props.danger)?"#fff":T.textMid;
-      return <button onClick={props.onClick} style={{padding:"9px 16px",fontSize:11,background:bg,border:border,color:color,textTransform:"uppercase",letterSpacing:0.5,fontFamily:"inherit",borderRadius:2,...(props.style||{})}}>{props.children}</button>;
+      return <button onClick={props.onClick} style={{padding:"9px 16px",fontSize:11,background:bg,border:border,color:color,textTransform:"uppercase",letterSpacing:0.5,fontFamily:"inherit",borderRadius:6,...(props.style||{})}}>{props.children}</button>;
     }
 
-    var iS = {background:T.bg,border:"1px solid "+T.border,color:T.text,padding:"8px 10px",fontSize:13,outline:"none",borderRadius:2,width:"100%"};
+    var iS = {background:T.bg,border:"1px solid "+T.border,color:T.text,padding:"8px 10px",fontSize:13,outline:"none",borderRadius:6,width:"100%"};
     var lS = {fontSize:9,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5};
 
     function PatternPicker(props) {
       return (
         <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:6}}>
           {PATTERNS.map(function(p){
-            return <button key={p} onClick={function(){props.onChange(p);}} style={{padding:"5px 10px",fontSize:11,borderRadius:2,background:props.value===p?PC[p]:T.surface,border:"1px solid "+(props.value===p?PC[p]:T.border),color:props.value===p?"#fff":T.textMid,textTransform:"uppercase",letterSpacing:0.4}}>{p}</button>;
+            return <button key={p} onClick={function(){props.onChange(p);}} style={{padding:"5px 10px",fontSize:11,borderRadius:6,background:props.value===p?PC[p]:T.surface,border:"1px solid "+(props.value===p?PC[p]:T.border),color:props.value===p?"#fff":T.textMid,textTransform:"uppercase",letterSpacing:0.4}}>{p}</button>;
           })}
         </div>
       );
@@ -716,7 +716,7 @@
       if (!patterns.length) { return null; }
       return (
         <div style={{display:"flex",gap:4,marginTop:5,flexWrap:"wrap"}}>
-          {patterns.map(function(p){ return <span key={p} style={{fontSize:9,padding:"2px 6px",textTransform:"uppercase",letterSpacing:0.4,background:(PC[p]||"#999")+"18",color:PC[p]||"#999",border:"1px solid "+(PC[p]||"#999")+"40",borderRadius:2}}>{p}</span>; })}
+          {patterns.map(function(p){ return <span key={p} style={{fontSize:9,padding:"2px 6px",textTransform:"uppercase",letterSpacing:0.4,background:(PC[p]||"#999")+"18",color:PC[p]||"#999",border:"1px solid "+(PC[p]||"#999")+"40",borderRadius:6}}>{p}</span>; })}
         </div>
       );
     }
@@ -774,8 +774,8 @@
                       onChange={function(e){setEditName(e.target.value);}}
                       onKeyDown={function(e){if(e.key==="Enter"){saveEdit(c.id);}if(e.key==="Escape"){setEditingId(null);}}}
                       style={{...iS,flex:1,padding:"6px 10px"}}/>
-                    <button onClick={function(){saveEdit(c.id);}} style={{background:T.accent,border:"none",color:"#fff",padding:"6px 12px",fontSize:11,borderRadius:2,cursor:"pointer",textTransform:"uppercase",letterSpacing:0.4}}>Ok</button>
-                    <button onClick={function(){setEditingId(null);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"6px 10px",fontSize:11,borderRadius:2,cursor:"pointer"}}>×</button>
+                    <button onClick={function(){saveEdit(c.id);}} style={{background:T.accent,border:"none",color:"#fff",padding:"6px 12px",fontSize:11,borderRadius:6,cursor:"pointer",textTransform:"uppercase",letterSpacing:0.4}}>Ok</button>
+                    <button onClick={function(){setEditingId(null);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"6px 10px",fontSize:11,borderRadius:6,cursor:"pointer"}}>×</button>
                   </div>
                 ) : (
                   <div className="rh" onClick={function(){props.onSelect(c.id);}} style={{padding:"14px 20px",cursor:"pointer"}}>
@@ -899,12 +899,12 @@
                 <div style={{fontWeight:500,fontSize:14}}>{tpl.name}</div>
                 <div style={{fontSize:11,color:T.textMuted,marginTop:3}}>{tpl.exercises.length} oefening{tpl.exercises.length!==1?"en":""}</div>
                 <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>
-                  {tpl.exercises.slice(0,5).map(function(e,i){var col=PC[e.pattern]||"#999";return <span key={i} style={{fontSize:9,padding:"2px 7px",background:col+"18",color:col,border:"1px solid "+col+"40",borderRadius:2}}>{e.name}</span>;})}
+                  {tpl.exercises.slice(0,5).map(function(e,i){var col=PC[e.pattern]||"#999";return <span key={i} style={{fontSize:9,padding:"2px 7px",background:col+"18",color:col,border:"1px solid "+col+"40",borderRadius:6}}>{e.name}</span>;})}
                   {tpl.exercises.length>5&&<span style={{fontSize:9,padding:"2px 6px",color:T.textMuted}}>+{tpl.exercises.length-5}</span>}
                 </div>
               </div>
               <div style={{display:"flex",gap:8,marginLeft:12,alignItems:"center"}}>
-                <button onClick={function(){props.onEdit(tpl);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:11,borderRadius:2,textTransform:"uppercase",letterSpacing:0.4}}>Bewerk</button>
+                <button onClick={function(){props.onEdit(tpl);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:11,borderRadius:6,textTransform:"uppercase",letterSpacing:0.4}}>Bewerk</button>
                 <button onClick={function(){props.onDelete(tpl.id);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 4px",lineHeight:1}}>×</button>
               </div>
             </div>
@@ -950,7 +950,7 @@
                       <button onClick={function(){removeSet(idx,si);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14}}>×</button>
                     </div>
                   );})}
-                  <button onClick={function(){addSet(idx);}} style={{background:"none",border:"1px dashed "+T.borderStrong,color:T.textMuted,padding:"5px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",width:"100%",borderRadius:2}}>+ Set</button>
+                  <button onClick={function(){addSet(idx);}} style={{background:"none",border:"1px dashed "+T.borderStrong,color:T.textMuted,padding:"5px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",width:"100%",borderRadius:6}}>+ Set</button>
                 </div>
               </div>
             );
@@ -987,7 +987,7 @@
         <div className="ai">
           <div style={{padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid "+T.border,background:T.surface}}>
             <Btn accent onClick={startSession}>▶ Nieuwe sessie</Btn>
-            <button onClick={props.onExport} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:10,borderRadius:2,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer"}}>Exporteer</button>
+            <button onClick={props.onExport} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:10,borderRadius:6,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer"}}>Exporteer</button>
           </div>
           <div style={{display:"flex",background:T.surface,borderBottom:"1px solid "+T.border}}>
             {["sessies","progressie"].map(function(t){return <button key={t} onClick={function(){setTab(t);}} style={{flex:1,padding:"11px 0",background:"none",border:"none",color:tab===t?T.text:T.textMuted,borderBottom:tab===t?"2px solid "+T.accent:"2px solid transparent",fontSize:11,textTransform:"uppercase",letterSpacing:0.8}}>{t}</button>;})}
@@ -1000,7 +1000,7 @@
                   <div>
                     <div style={{fontSize:14,fontWeight:500,display:"flex",alignItems:"center",gap:6}}>
                       {fmtDate(s.date)}
-                      {isDuo(s)&&<span style={{fontSize:9,padding:"1px 5px",background:"#ede9fe",color:"#7c3aed",borderRadius:2,textTransform:"uppercase",letterSpacing:0.3}}>DUO</span>}
+                      {isDuo(s)&&<span style={{fontSize:9,padding:"1px 5px",background:"#ede9fe",color:"#7c3aed",borderRadius:6,textTransform:"uppercase",letterSpacing:0.3}}>DUO</span>}
                     </div>
                     <div style={{fontSize:11,color:T.textMuted,marginTop:3}}>{s.exercises.filter(function(ex){return exForClient(ex,s,client.id);}).length} oefening{s.exercises.filter(function(ex){return exForClient(ex,s,client.id);}).length!==1?"en":""}{s.notes?" · notitie":""}</div>
                     <PatternTags exercises={s.exercises.filter(function(ex){return exForClient(ex,s,client.id);})}/>
@@ -1062,9 +1062,9 @@
               <input type="date" value={localDateValue} onChange={handleDateChange} style={{...iS,width:"auto",fontSize:13,padding:"5px 10px",background:T.surface,cursor:"pointer"}}/>
             </div>
             <div style={{display:"flex",gap:6,alignItems:"center"}}>
-              {templates.length>0&&<button onClick={function(){setShowTemplates(!showTemplates);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:10,borderRadius:2,textTransform:"uppercase",letterSpacing:0.5}}>{showTemplates?"Sluiten":"Schema laden"}</button>}
-              {!isDuo(session)&&onDuoPick&&<button onClick={function(){setShowDuoPicker(!showDuoPicker);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:10,borderRadius:2,textTransform:"uppercase",letterSpacing:0.5}}>Duo +</button>}
-              {isDuo(session)&&duoClients&&<span style={{fontSize:10,color:"#7c3aed",padding:"5px 8px",border:"1px solid #ede9fe",borderRadius:2,textTransform:"uppercase",letterSpacing:0.4}}>DUO: {duoClients[0].name.split(" ")[0]} + {duoClients[1].name.split(" ")[0]}</span>}
+              {templates.length>0&&<button onClick={function(){setShowTemplates(!showTemplates);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:10,borderRadius:6,textTransform:"uppercase",letterSpacing:0.5}}>{showTemplates?"Sluiten":"Schema laden"}</button>}
+              {!isDuo(session)&&onDuoPick&&<button onClick={function(){setShowDuoPicker(!showDuoPicker);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:10,borderRadius:6,textTransform:"uppercase",letterSpacing:0.5}}>Duo +</button>}
+              {isDuo(session)&&duoClients&&<span style={{fontSize:10,color:"#7c3aed",padding:"5px 8px",border:"1px solid #ede9fe",borderRadius:6,textTransform:"uppercase",letterSpacing:0.4}}>DUO: {duoClients[0].name.split(" ")[0]} + {duoClients[1].name.split(" ")[0]}</span>}
             </div>
           </div>
           {showAdd&&<div style={{position:"sticky",top:48,zIndex:9,background:T.surface,borderBottom:"2px solid "+T.accent,boxShadow:"0 4px 12px rgba(0,0,0,0.08)"}}><AddExerciseForm library={library} onAdd={addEx} onCancel={function(){setShowAdd(false);}}/></div>}
@@ -1073,7 +1073,7 @@
             <div style={{padding:"10px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}>
               <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.6,marginBottom:8}}>Kies tweede klant voor duo-sessie</div>
               {allClients.filter(function(c){return c.id!==session.clientIds[0];}).map(function(c){return(
-                <div key={c.id} className="rh" onClick={function(){onDuoPick(c.id);setShowDuoPicker(false);}} style={{padding:"9px 12px",borderBottom:"1px solid "+T.border,cursor:"pointer",fontSize:13,background:T.surface,borderRadius:2,marginBottom:4}}>{c.name}</div>
+                <div key={c.id} className="rh" onClick={function(){onDuoPick(c.id);setShowDuoPicker(false);}} style={{padding:"9px 12px",borderBottom:"1px solid "+T.border,cursor:"pointer",fontSize:13,background:T.surface,borderRadius:6,marginBottom:4}}>{c.name}</div>
               );})}
               <button onClick={function(){setShowDuoPicker(false);}} style={{marginTop:6,background:"none",border:"none",color:T.textMuted,fontSize:11,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer"}}>Annuleer</button>
             </div>
@@ -1147,8 +1147,8 @@
                 <div>
                   <input ref={inputRef} value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Zoek oefening..." style={{...iS,marginBottom:8}}/>
                   <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8,alignItems:"center"}}>
-                    {PATTERNS.map(function(p){var on=patternActive(p);var col=PC[p]||"#999";return <button key={p} onClick={function(){togglePattern(p);}} style={{padding:"3px 8px",fontSize:9,borderRadius:2,background:on?col+"18":"none",border:"1px solid "+(on?col:T.border),color:on?col:T.textMuted,textTransform:"uppercase",letterSpacing:0.3}}>{p}</button>;})}
-                    <button onClick={function(){setActivePatterns({});}} style={{padding:"3px 8px",fontSize:9,borderRadius:2,marginLeft:2,background:"none",border:"1px solid "+T.border,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.3,display:PATTERNS.filter(function(p){return activePatterns[p]===false;}).length===0?"none":"inline-block"}}>Alles</button>
+                    {PATTERNS.map(function(p){var on=patternActive(p);var col=PC[p]||"#999";return <button key={p} onClick={function(){togglePattern(p);}} style={{padding:"3px 8px",fontSize:9,borderRadius:6,background:on?col+"18":"none",border:"1px solid "+(on?col:T.border),color:on?col:T.textMuted,textTransform:"uppercase",letterSpacing:0.3}}>{p}</button>;})}
+                    <button onClick={function(){setActivePatterns({});}} style={{padding:"3px 8px",fontSize:9,borderRadius:6,marginLeft:2,background:"none",border:"1px solid "+T.border,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.3,display:PATTERNS.filter(function(p){return activePatterns[p]===false;}).length===0?"none":"inline-block"}}>Alles</button>
                   </div>
                   <div style={{maxHeight:200,overflowY:"auto"}}>
                     {filtered.length===0&&<div style={{color:T.textMuted,fontSize:12,padding:"12px 0",textAlign:"center"}}>Geen resultaten</div>}
@@ -1195,13 +1195,13 @@
               <div style={{fontSize:11,fontWeight:500,textTransform:"uppercase",letterSpacing:0.5,color:T.accent}}>Superset</div>
               <div style={{fontSize:11,color:T.textMuted,marginTop:2}}>{step===1?"Stap 1: kies oefening A":"Stap 2: kies oefening B"}</div>
             </div>
-            {step===2&&<div style={{fontSize:12,color:T.textMid,padding:"4px 8px",background:T.accentBg,borderRadius:2,border:"1px solid "+T.accent+"40"}}>A: {exA.name}</div>}
+            {step===2&&<div style={{fontSize:12,color:T.textMid,padding:"4px 8px",background:T.accentBg,borderRadius:6,border:"1px solid "+T.accent+"40"}}>A: {exA.name}</div>}
           </div>
           <div style={{padding:14}}>
             <input ref={inputRef} value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Zoek oefening..." style={{...iS,marginBottom:8}}/>
             <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8,alignItems:"center"}}>
-              {PATTERNS.map(function(p){var on=patternActive(p);var col=PC[p]||"#999";return <button key={p} onClick={function(){togglePattern(p);}} style={{padding:"3px 8px",fontSize:9,borderRadius:2,background:on?col+"18":"none",border:"1px solid "+(on?col:T.border),color:on?col:T.textMuted,textTransform:"uppercase",letterSpacing:0.3}}>{p}</button>;})}
-              <button onClick={function(){setActivePatterns({});}} style={{padding:"3px 8px",fontSize:9,borderRadius:2,marginLeft:2,background:"none",border:"1px solid "+T.border,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.3,display:PATTERNS.filter(function(p){return activePatterns[p]===false;}).length===0?"none":"inline-block"}}>Alles</button>
+              {PATTERNS.map(function(p){var on=patternActive(p);var col=PC[p]||"#999";return <button key={p} onClick={function(){togglePattern(p);}} style={{padding:"3px 8px",fontSize:9,borderRadius:6,background:on?col+"18":"none",border:"1px solid "+(on?col:T.border),color:on?col:T.textMuted,textTransform:"uppercase",letterSpacing:0.3}}>{p}</button>;})}
+              <button onClick={function(){setActivePatterns({});}} style={{padding:"3px 8px",fontSize:9,borderRadius:6,marginLeft:2,background:"none",border:"1px solid "+T.border,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.3,display:PATTERNS.filter(function(p){return activePatterns[p]===false;}).length===0?"none":"inline-block"}}>Alles</button>
             </div>
             <div style={{maxHeight:200,overflowY:"auto"}}>
               {filtered.length===0&&<div style={{color:T.textMuted,fontSize:12,padding:"12px 0",textAlign:"center"}}>Geen resultaten</div>}
@@ -1236,7 +1236,7 @@
         <div style={{borderBottom:"1px solid "+T.border,background:T.surface,borderLeft:"3px solid "+T.accent}}>
           <div style={{padding:"10px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",background:T.accentBg,borderBottom:"1px solid "+T.border+"80"}} onClick={function(){setOpen(!open);}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontSize:9,fontWeight:600,textTransform:"uppercase",letterSpacing:0.8,color:T.accent,background:"#fff",border:"1px solid "+T.accent,borderRadius:2,padding:"2px 5px"}}>SS</span>
+              <span style={{fontSize:9,fontWeight:600,textTransform:"uppercase",letterSpacing:0.8,color:T.accent,background:"#fff",border:"1px solid "+T.accent,borderRadius:6,padding:"2px 5px"}}>SS</span>
               <span style={{fontSize:12,color:T.textMid}}>{exA.name} <span style={{color:T.textMuted}}>+</span> {exB.name}</span>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:2}}>
@@ -1253,11 +1253,11 @@
                 return (
                   <div key={item.label} style={{borderTop:ri===1?"1px dashed "+T.borderStrong:"none"}}>
                     <div style={{padding:"10px 20px 0",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                      <span style={{fontSize:10,fontWeight:600,color:item.col,background:item.col+"18",border:"1px solid "+item.col+"40",borderRadius:2,padding:"1px 6px",textTransform:"uppercase"}}>{item.label}</span>
+                      <span style={{fontSize:10,fontWeight:600,color:item.col,background:item.col+"18",border:"1px solid "+item.col+"40",borderRadius:6,padding:"1px 6px",textTransform:"uppercase"}}>{item.label}</span>
                       <span style={{fontSize:13,fontWeight:500}}>{item.ex.name}</span>
                       <span style={{fontSize:10,color:item.col,textTransform:"uppercase",letterSpacing:0.4}}>{item.ex.pattern}</span>
                       {duoClients&&(
-                        <div style={{display:"flex",gap:0,border:"1px solid "+T.border,borderRadius:2,overflow:"hidden",marginLeft:4}}>
+                        <div style={{display:"flex",gap:0,border:"1px solid "+T.border,borderRadius:6,overflow:"hidden",marginLeft:4}}>
                           {["A","B"].map(function(lbl){
                             var curLbl=item.ex.clientLabel||"A";
                             var active=curLbl===lbl||(!["A","B"].includes(curLbl)&&lbl==="A");
@@ -1277,12 +1277,12 @@
                           <button onClick={function(){item.removeSet(i);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14}}>×</button>
                         </div>
                       );})}
-                      <button onClick={item.addSet} style={{background:"none",border:"1px dashed "+T.borderStrong,color:T.textMuted,padding:"5px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",width:"100%",borderRadius:2}}>+ Set</button>
+                      <button onClick={item.addSet} style={{background:"none",border:"1px dashed "+T.borderStrong,color:T.textMuted,padding:"5px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",width:"100%",borderRadius:6}}>+ Set</button>
                       {item.prevData&&(
-                        <div style={{marginTop:8,padding:"7px 10px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:3}}>
+                        <div style={{marginTop:8,padding:"7px 10px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:6}}>
                           <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Vorige · {fmtDate(item.prevData.date)}</div>
                           <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-                            {item.prevData.sets.map(function(s,i){return <span key={i} style={{fontSize:11,padding:"3px 7px",background:T.surface,border:"1px solid "+T.border,borderRadius:2,color:T.textMid}}>{i+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
+                            {item.prevData.sets.map(function(s,i){return <span key={i} style={{fontSize:11,padding:"3px 7px",background:T.surface,border:"1px solid "+T.border,borderRadius:6,color:T.textMid}}>{i+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
                           </div>
                         </div>
                       )}
@@ -1338,10 +1338,10 @@
               <div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:2,display:"flex",alignItems:"center",gap:8}}>
                 <span>{ex.pattern} · {activeSets.length} set{activeSets.length!==1?"s":""}</span>
                 {ex.isUnilateralExercise&&(
-                  <button onClick={function(e){e.stopPropagation();props.onChange({...ex,performedUnilateral:!ex.performedUnilateral});}} style={{padding:"2px 7px",fontSize:9,borderRadius:2,background:ex.performedUnilateral?T.accent+"18":"none",border:"1px solid "+(ex.performedUnilateral?T.accent:T.border),color:ex.performedUnilateral?T.accent:T.textMuted,textTransform:"uppercase",letterSpacing:0.3,cursor:"pointer",fontFamily:"inherit"}}>uni</button>
+                  <button onClick={function(e){e.stopPropagation();props.onChange({...ex,performedUnilateral:!ex.performedUnilateral});}} style={{padding:"2px 7px",fontSize:9,borderRadius:6,background:ex.performedUnilateral?T.accent+"18":"none",border:"1px solid "+(ex.performedUnilateral?T.accent:T.border),color:ex.performedUnilateral?T.accent:T.textMuted,textTransform:"uppercase",letterSpacing:0.3,cursor:"pointer",fontFamily:"inherit"}}>uni</button>
                 )}
                 {props.duoClients&&(
-                  <div style={{display:"flex",gap:0,border:"1px solid "+T.border,borderRadius:2,overflow:"hidden",marginLeft:4}}>
+                  <div style={{display:"flex",gap:0,border:"1px solid "+T.border,borderRadius:6,overflow:"hidden",marginLeft:4}}>
                     {["A","B"].map(function(l){
                       var active=lbl===l||(!["A","B"].includes(lbl)&&l==="A");
                       var name=l==="A"?props.duoClients[0].name.split(" ")[0]:props.duoClients[1].name.split(" ")[0];
@@ -1368,16 +1368,16 @@
                   <button onClick={function(){removeSet(i);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14}}>×</button>
                 </div>
               );})}
-              <button onClick={addSet} style={{background:"none",border:"1px dashed "+T.borderStrong,color:T.textMuted,padding:"6px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,marginTop:2,cursor:"pointer",width:"100%",borderRadius:2}}>+ Set toevoegen</button>
+              <button onClick={addSet} style={{background:"none",border:"1px dashed "+T.borderStrong,color:T.textMuted,padding:"6px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,marginTop:2,cursor:"pointer",width:"100%",borderRadius:6}}>+ Set toevoegen</button>
               <div style={{marginTop:10}}><textarea value={ex.notes||""} onChange={function(e){props.onChange({...ex,notes:e.target.value});}} placeholder="Opmerking bij deze oefening..." rows={2} style={{...iS,resize:"none",fontSize:12,color:T.textMid,background:T.surfaceAlt,marginTop:2}}/></div>
               {prevData&&(
-                <div style={{marginTop:10,padding:"8px 10px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:3}}>
+                <div style={{marginTop:10,padding:"8px 10px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:6}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
                     <span style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5}}>Vorige · {fmtDate(prevData.date)}</span>
                     <button onClick={props.onViewHistory} style={{background:"none",border:"none",color:T.accent,fontSize:10,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",padding:0}}>Volledige historie →</button>
                   </div>
                   <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-                    {prevData.sets.map(function(s,i){return <span key={i} style={{fontSize:11,padding:"3px 7px",background:T.surface,border:"1px solid "+T.border,borderRadius:2,color:T.textMid}}>{i+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
+                    {prevData.sets.map(function(s,i){return <span key={i} style={{fontSize:11,padding:"3px 7px",background:T.surface,border:"1px solid "+T.border,borderRadius:6,color:T.textMid}}>{i+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
                   </div>
                 </div>
               )}
@@ -1414,7 +1414,7 @@
                 <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:500}}>{e.maxWeight>0?e.maxWeight+" kg":"—"}</div>{e.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{e.totalVol.toLocaleString("nl-NL")} vol.</div>}</div>
               </div>
               <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-                {e.sets.map(function(s,si){return <span key={si} style={{fontSize:11,padding:"3px 7px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:2,color:T.textMid}}>{si+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
+                {e.sets.map(function(s,si){return <span key={si} style={{fontSize:11,padding:"3px 7px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:6,color:T.textMid}}>{si+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
               </div>
             </div>
           );})}
@@ -1449,7 +1449,7 @@
             return (
               <div key={ex.id} style={{borderBottom:"1px solid "+T.border,borderLeft:"3px solid "+color,background:T.surface}}>
                 <div style={{padding:"12px 20px 6px"}}>
-                  <div style={{fontWeight:500,fontSize:14,display:"flex",alignItems:"center",gap:6}}>{ex.name}{ex.performedUnilateral&&<UniTag/>}{clientLbl&&<span style={{fontSize:9,padding:"1px 5px",background:badgeColor+"18",color:badgeColor,borderRadius:2,textTransform:"uppercase",letterSpacing:0.3}}>{clientLbl==="AB"?"A+B":clientLbl}</span>}</div>
+                  <div style={{fontWeight:500,fontSize:14,display:"flex",alignItems:"center",gap:6}}>{ex.name}{ex.performedUnilateral&&<UniTag/>}{clientLbl&&<span style={{fontSize:9,padding:"1px 5px",background:badgeColor+"18",color:badgeColor,borderRadius:6,textTransform:"uppercase",letterSpacing:0.3}}>{clientLbl==="AB"?"A+B":clientLbl}</span>}</div>
                   <div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:2}}>{ex.pattern}{totalVol>0?" · "+totalVol.toLocaleString("nl-NL")+" kg vol.":""}</div>
                 </div>
                 <div style={{padding:"0 20px 8px"}}>
@@ -1461,11 +1461,11 @@
                       <div style={{...iS,textAlign:"center",color:T.text,cursor:"default"}}>{s.reps||"—"}</div>
                     </div>
                   );})}
-                  {ex.notes&&<div style={{marginTop:6,fontSize:12,color:T.textMid,fontStyle:"italic",background:T.surfaceAlt,padding:"6px 10px",borderRadius:2}}>{ex.notes}</div>}
+                  {ex.notes&&<div style={{marginTop:6,fontSize:12,color:T.textMid,fontStyle:"italic",background:T.surfaceAlt,padding:"6px 10px",borderRadius:6}}>{ex.notes}</div>}
                   {prevEntry&&(
-                    <div style={{marginTop:8,padding:"8px 10px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:3}}>
+                    <div style={{marginTop:8,padding:"8px 10px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:6}}>
                       <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Vorige sessie · {fmtDate(prevEntry.date)}</div>
-                      <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{prevEntry.sets.map(function(s,i){return <span key={i} style={{fontSize:11,padding:"3px 7px",background:T.surface,border:"1px solid "+T.border,borderRadius:2,color:T.textMid}}>{i+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}</div>
+                      <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{prevEntry.sets.map(function(s,i){return <span key={i} style={{fontSize:11,padding:"3px 7px",background:T.surface,border:"1px solid "+T.border,borderRadius:6,color:T.textMid}}>{i+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}</div>
                     </div>
                   )}
                 </div>
@@ -1520,7 +1520,7 @@
       return (
         <div>
           <div style={{display:"flex",gap:5,padding:"12px 20px",borderBottom:"1px solid "+T.border,background:T.surface,flexWrap:"wrap"}}>
-            {periods.map(function(item){var k=item[0],label=item[1],active=period===k;return <button key={k} onClick={function(){setPeriod(k);}} style={{padding:"5px 10px",fontSize:11,borderRadius:2,background:active?T.accent:"none",border:"1px solid "+(active?T.accent:T.border),color:active?"#fff":T.textMid,textTransform:"uppercase",letterSpacing:0.4}}>{label}</button>;})}
+            {periods.map(function(item){var k=item[0],label=item[1],active=period===k;return <button key={k} onClick={function(){setPeriod(k);}} style={{padding:"5px 10px",fontSize:11,borderRadius:6,background:active?T.accent:"none",border:"1px solid "+(active?T.accent:T.border),color:active?"#fff":T.textMid,textTransform:"uppercase",letterSpacing:0.4}}>{label}</button>;})}
           </div>
           {exercises.length===0&&<div style={{padding:"40px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Geen data in deze periode.</div>}
           {exercises.map(function(ex){
@@ -1577,17 +1577,17 @@
         <div className="ai" style={{padding:20,paddingBottom:40}}>
           <div style={{fontSize:12,color:T.textMid,marginBottom:14,lineHeight:1.6}}>Beste resultaat per oefening (hoogste max gewicht) in de geselecteerde periode.</div>
           <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
-            {[["all","Alles"],["month","Deze maand"],["3m","Afgelopen 3 mnd"]].map(function(item){return <button key={item[0]} onClick={function(){setPeriod(item[0]);}} style={{padding:"6px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,borderRadius:2,background:period===item[0]?T.accent:T.surface,border:"1px solid "+(period===item[0]?T.accent:T.border),color:period===item[0]?"#fff":T.textMid}}>{item[1]}</button>;})}
+            {[["all","Alles"],["month","Deze maand"],["3m","Afgelopen 3 mnd"]].map(function(item){return <button key={item[0]} onClick={function(){setPeriod(item[0]);}} style={{padding:"6px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,borderRadius:6,background:period===item[0]?T.accent:T.surface,border:"1px solid "+(period===item[0]?T.accent:T.border),color:period===item[0]?"#fff":T.textMid}}>{item[1]}</button>;})}
           </div>
           <Btn accent onClick={copy} style={{marginBottom:16}}>{copied?"✓ Gekopieerd!":"Kopieer tekst"}</Btn>
           {bestList.length===0&&<div style={{color:T.textMuted,fontSize:13,textAlign:"center",padding:"20px 0"}}>Geen sessies in deze periode.</div>}
           {bestList.map(function(ex,i){var color=PC[ex.pattern]||T.textMuted;return(
-            <div key={i} style={{background:T.surface,border:"1px solid "+T.border,borderLeft:"3px solid "+color,marginBottom:8,padding:"12px 16px",borderRadius:2}}>
+            <div key={i} style={{background:T.surface,border:"1px solid "+T.border,borderLeft:"3px solid "+color,marginBottom:8,padding:"12px 16px",borderRadius:6}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                 <div><div style={{fontWeight:500,fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</div><div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:1}}>{ex.pattern}</div><div style={{fontSize:10,color:T.textMuted,marginTop:2}}>Beste sessie: {fmtDate(ex.date)}</div></div>
                 <div style={{textAlign:"right"}}><div style={{fontSize:16,fontWeight:600}}>{ex.maxWeight>0?ex.maxWeight+" kg":(ex.maxReps>0?ex.maxReps+" reps":"—")}</div>{ex.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{ex.totalVol.toLocaleString("nl-NL")} vol.</div>}</div>
               </div>
-              <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:8}}>{ex.sets.map(function(s,si){return <span key={si} style={{fontSize:11,padding:"3px 7px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:2,color:T.textMid}}>{si+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}</div>
+              <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:8}}>{ex.sets.map(function(s,si){return <span key={si} style={{fontSize:11,padding:"3px 7px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:6,color:T.textMid}}>{si+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}</div>
             </div>
           );})}
         </div>
@@ -1628,7 +1628,7 @@
               <input type="password" value={password} onChange={function(e){setPassword(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter"){handleLogin(e);}}} placeholder="••••••••" style={{...iS}} autoComplete="current-password"/>
             </div>
             {error && <div style={{fontSize:12,color:T.danger,marginBottom:14}}>{error}</div>}
-            <button onClick={handleLogin} disabled={loading} style={{width:"100%",padding:"12px",fontSize:12,background:T.accent,border:"none",color:"#fff",textTransform:"uppercase",letterSpacing:0.8,cursor:"pointer",borderRadius:2,opacity:loading?0.6:1}}>
+            <button onClick={handleLogin} disabled={loading} style={{width:"100%",padding:"12px",fontSize:12,background:T.accent,border:"none",color:"#fff",textTransform:"uppercase",letterSpacing:0.8,cursor:"pointer",borderRadius:6,opacity:loading?0.6:1}}>
               {loading?"Inloggen...":"Inloggen"}
             </button>
           </div>
