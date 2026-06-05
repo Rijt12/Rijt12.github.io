@@ -577,9 +577,9 @@
             ::-webkit-scrollbar-thumb{background:#d0cbc2;border-radius:2px}
             .rh:hover{background:#faf9f7!important}
             @keyframes slideUp{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
-            @keyframes slideIn{from{transform:translateX(18px);opacity:0}to{transform:translateX(0);opacity:1}}
+            @keyframes slideIn{from{opacity:0}to{opacity:1}}
             .ai{animation:slideUp 0.18s ease}
-            .page-enter{animation:slideIn 0.22s cubic-bezier(0.25,0.46,0.45,0.94)}
+            .page-enter{animation:slideIn 0.2s ease}
             input:focus,textarea:focus{outline:none;border-color:#dc4f2a!important}
             input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#dc4f2a}
           `}}/>
