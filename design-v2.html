@@ -1,0 +1,1677 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, interactive-widget=resizes-content"/>
+  <title>Trainer App</title>
+  <!-- PWA / Home screen -->
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="Trainer"/>
+  <meta name="theme-color" content="#ffffff"/>
+  <link rel="apple-touch-icon" sizes="180x180" href="icon.png"/>
+  <link rel="icon" type="image/png" href="icon.png"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <!-- Firebase 9.x compat builds (stable gstatic CDN) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script>
+    // Scroll focused input above keyboard
+    function scrollFocusedAboveKeyboard() {
+      var el = document.activeElement;
+      if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) { return; }
+      setTimeout(function() {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 120);
+    }
+    document.addEventListener('focusin', scrollFocusedAboveKeyboard);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', function() {
+        var el = document.activeElement;
+        if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) { return; }
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    }
+  </script>
+  <script>
+    (function() {
+      var config = {
+        apiKey: "AIzaSyAt5Pe3_mi6KAD5w4nSqeKiUKCrJjOFJhY",
+        authDomain: "trainer-app-b4dd1.firebaseapp.com",
+        projectId: "trainer-app-b4dd1",
+        storageBucket: "trainer-app-b4dd1.firebasestorage.app",
+        messagingSenderId: "376018012060",
+        appId: "1:376018012060:web:5fe266522a06f76f816a59"
+      };
+
+      firebase.initializeApp(config);
+
+      var db   = firebase.firestore();
+      var auth = firebase.auth();
+      var ref  = db.collection("app").doc("data");
+
+      // Single-subscriber auth listener
+      var _authResolved = false;
+      var _authUser     = null;
+      var _authCb       = null;
+
+      auth.onAuthStateChanged(function(user) {
+        _authResolved = true;
+        _authUser = user || null;
+        if (_authCb) { _authCb(_authUser); }
+      });
+
+      window._fbOnAuth = function(cb) {
+        _authCb = cb;
+        if (_authResolved) { cb(_authUser); }
+      };
+
+      window._fbLogin = function(email, pw) {
+        return auth.signInWithEmailAndPassword(email, pw);
+      };
+
+      window._fbLogout = function() {
+        return auth.signOut();
+      };
+
+      window._fbLoad = async function() {
+        try {
+          var snap = await ref.get();
+          return snap.exists ? snap.data().payload : null;
+        } catch(e) { console.error("load error", e); return null; }
+      };
+
+      window._fbSave = async function(data) {
+        try { await ref.set({ payload: data }); }
+        catch(e) { console.error("save error", e); }
+      };
+    })();
+  </script>
+</head>
+<body style="margin:0;padding:0;background:#ffffff;overflow-x:hidden;">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // ── Storage via Firebase ───────────────────────────────────────────────────
+    const EMPTY = { clients:[], sessions:[], exerciseLibrary:[], templates:[] };
+
+    async function loadData() {
+      try {
+        var result = await window._fbLoad();
+        return result || EMPTY;
+      } catch(e) { return EMPTY; }
+    }
+
+    async function saveData(d) {
+      if (!window._fbSave) { return; }
+      try { await window._fbSave(d); }
+      catch(e) { console.error(e); }
+    }
+
+    // ── Constants ──────────────────────────────────────────────────────────────
+    const PATTERNS = ["Push","Pull","Hinge","Squat","Carry","Core","Isolatie","Mobiliteit"];
+    const PC = {
+      Push:"#ef4444", Pull:"#3b82f6", Hinge:"#f59e0b", Squat:"#10b981",
+      Carry:"#8b5cf6", Core:"#ec4899", Isolatie:"#06b6d4", Mobiliteit:"#14b8a6"
+    };
+    const T = {
+      bg:"#ffffff", surface:"#f8f9ff", surfaceAlt:"#f0f2ff",
+      border:"#e2e5f0", borderStrong:"#c5cbdf",
+      text:"#111827", textMid:"#374151", textMuted:"#9ca3af",
+      accent:"#6366f1", accentBg:"#eef2ff", danger:"#dc2626",
+    };
+
+    // ── Utils ──────────────────────────────────────────────────────────────────
+    function uid() { return Math.random().toString(36).slice(2,10); }
+    function fmtDate(iso) {
+      return new Date(iso).toLocaleDateString("nl-NL", {day:"2-digit", month:"short", year:"numeric"});
+    }
+    function toLocalISO(iso) {
+      const d = new Date(iso);
+      return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,10);
+    }
+
+    function isDuo(s) { return s.clientIds && s.clientIds.length > 1; }
+    function exForClient(ex, s, clientId) {
+      return true;
+    }
+    function setsForClient(ex, s, clientId) {
+      if (!isDuo(s)) { return ex.sets; }
+      return s.clientIds[0] === clientId ? ex.sets : (ex.setsB || ex.sets);
+    }
+
+    // ── Confirm dialog ─────────────────────────────────────────────────────────
+    function ConfirmDialog(props) {
+      return (
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.45)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+          <div style={{background:T.surface,borderRadius:6,padding:24,maxWidth:320,width:"100%",boxShadow:"0 8px 32px rgba(0,0,0,0.18)"}}>
+            <div style={{fontSize:14,color:T.text,lineHeight:1.6,marginBottom:20}}>{props.msg}</div>
+            <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+              <button onClick={props.onCancel} style={{padding:"8px 16px",fontSize:12,background:"none",border:"1px solid "+T.border,color:T.textMid,borderRadius:8,cursor:"pointer",textTransform:"uppercase",letterSpacing:0.4}}>Annuleer</button>
+              <button onClick={props.onConfirm} style={{padding:"8px 16px",fontSize:12,background:T.danger,border:"none",color:"#fff",borderRadius:8,cursor:"pointer",textTransform:"uppercase",letterSpacing:0.4}}>Verwijderen</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── App ────────────────────────────────────────────────────────────────────
+    function App(props) {
+      var [data, setData]                     = useState(null);
+      var [view, setView]                     = useState("clients");
+      var [activeClientId, setActiveClientId] = useState(null);
+      var [activeSession, setActiveSession]   = useState(null);
+      var [viewSessionId, setViewSessionId]   = useState(null);
+      var [editingTpl, setEditingTpl]         = useState(null);
+      var [exHistoryName, setExHistoryName]   = useState(null);
+      var [prevView, setPrevView]             = useState("client");
+      var [toast, setToast]                   = useState(null);
+      var [dlg, setDlg]                       = useState(null);
+      var [saving, setSaving]                 = useState(false);
+      var [navKey, setNavKey]                 = useState(0);
+
+      useEffect(function() {
+        Promise.all([loadData(), new Promise(function(r){ setTimeout(r, 1500); })]).then(function(res){ setData(res[0]); });
+      }, []);
+
+      // Seed on first load
+      useEffect(function() {
+        if (!data) { return; }
+        if ((data.exerciseLibrary||[]).length === 0 && data.clients.length === 0) {
+          var seeded = buildSeed();
+          setData(seeded);
+          saveData(seeded);
+        }
+      }, [!!data]);
+
+      // Ref zodat callbacks altijd de laatste data hebben
+      var dataRef = useRef(data);
+      useEffect(function() { dataRef.current = data; }, [data]);
+
+      // Auto-save active session while editing
+      var autoSaveRef = useRef(null);
+      useEffect(function() {
+        if (!activeSession) { return; }
+        if (view !== "session" && view !== "editSession") { return; }
+        clearTimeout(autoSaveRef.current);
+        autoSaveRef.current = setTimeout(function() {
+          var d = dataRef.current;
+          if (!d) { return; }
+          var hasData = activeSession.exercises.some(function(ex) {
+            var allSets = (ex.sets||[]).concat(ex.setsB||[]);
+            return allSets.some(function(s){ return (s.weight&&s.weight.trim()) || (s.reps&&s.reps.trim()); });
+          });
+          if (!hasData) { return; }
+          var newSessions = d.sessions.filter(function(s){ return s.id !== activeSession.id; });
+          newSessions.push(activeSession);
+          var newData = {...d, sessions: newSessions};
+          setData(newData);
+          saveData(newData);
+        }, 1500);
+        return function() { clearTimeout(autoSaveRef.current); };
+      }, [activeSession]);
+
+      // goBack: navigeer terug op basis van huidige view
+      var goBackRef = useRef(null);
+      goBackRef.current = function() {
+        if (view === "clients")                              { return; }
+        if (view === "library")                              { goView("clients"); return; }
+        if (view === "templates" && editingTpl)              { setEditingTpl(null); return; }
+        if (view === "templates")                            { goView("clients"); return; }
+        if (view === "client")                               { goView("clients"); return; }
+        if (view === "session" || view === "editSession")    { goView("client"); return; }
+        if (view === "viewSession")                          { goView("client"); return; }
+        if (view === "exHistory")                            { goView(prevView); return; }
+        if (view === "export")                               { goView("client"); return; }
+      };
+
+      // Swipe left = terug
+      useEffect(function() {
+        var startX=0, startY=0;
+        function onStart(e) {
+          var tag = e.target.tagName;
+          if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") { startX = null; return; }
+          if (!e.touches || !e.touches[0]) { return; }
+          startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+          if (startX > 40) { startX = null; return; }
+        }
+        function onEnd(e) {
+          if (startX === null) { return; }
+          if (!e.changedTouches || !e.changedTouches[0]) { return; }
+          var dx = e.changedTouches[0].clientX - startX;
+          var dy = e.changedTouches[0].clientY - startY;
+          if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { goBackRef.current(); }
+        }
+        document.addEventListener("touchstart", onStart, {passive:true});
+        document.addEventListener("touchend",   onEnd,   {passive:true});
+        return function() {
+          document.removeEventListener("touchstart", onStart);
+          document.removeEventListener("touchend",   onEnd);
+        };
+      }, []);
+
+      if (!data) { return <Loader />; }
+
+      function persist(d) {
+        setData(d);
+        setSaving(true);
+        saveData(d).then(function(){ setSaving(false); });
+      }
+
+      // Sla sessie stil op (bij terugknop), voegt ook nieuwe oefeningen toe aan bibliotheek
+      function saveSessionSilent(session) {
+        if (!session) { return; }
+        var d = dataRef.current;
+        if (!d) { return; }
+        var library = d.exerciseLibrary || [];
+        var newExs = [];
+        session.exercises.forEach(function(ex) {
+          var found = library.some(function(l){ return l.name.toLowerCase() === ex.name.toLowerCase(); });
+          if (!found) { newExs.push({id:uid(), name:ex.name, pattern:ex.pattern, unilateral:ex.unilateral||false}); }
+        });
+        var newSessions = d.sessions.filter(function(s){ return s.id !== session.id; });
+        newSessions.push(session);
+        var newData = {...d, sessions: newSessions, exerciseLibrary: library.concat(newExs)};
+        setData(newData);
+        saveData(newData);
+      }
+
+      function buildSeed() {
+        var defaultLib = [
+          {id:uid(),name:"Goblet squat",         pattern:"Squat",    unilateral:false},
+          {id:uid(),name:"Split squat",          pattern:"Squat",    unilateral:false},
+          {id:uid(),name:"Romanian deadlift",    pattern:"Hinge",    unilateral:false},
+          {id:uid(),name:"Hip thrust",           pattern:"Hinge",    unilateral:false},
+          {id:uid(),name:"Push up",              pattern:"Push",     unilateral:false},
+          {id:uid(),name:"DB bench press",       pattern:"Push",     unilateral:false},
+          {id:uid(),name:"Chin up",              pattern:"Pull",     unilateral:false},
+          {id:uid(),name:"Lat pulldown",         pattern:"Pull",     unilateral:false},
+          {id:uid(),name:"High to low cable row",pattern:"Pull",     unilateral:false},
+          {id:uid(),name:"Leg extension",        pattern:"Isolatie", unilateral:true},
+          {id:uid(),name:"Leg curl",             pattern:"Isolatie", unilateral:false},
+        ];
+        var markId = uid();
+        var mark = {id:markId, name:"Mark", createdAt:"2026-04-01T09:00:00.000Z"};
+        function sets3(w,r){return [{weight:String(w),reps:String(r)},{weight:String(w),reps:String(r)},{weight:String(w),reps:String(r)}];}
+        var s1={id:uid(),clientId:markId,date:"2026-04-07T10:00:00.000Z",notes:"Eerste sessie, lekker bewogen.",exercises:[
+          {id:uid(),name:"Goblet squat",      pattern:"Squat",unilateral:false,sets:sets3(16,10),notes:""},
+          {id:uid(),name:"Romanian deadlift", pattern:"Hinge", unilateral:false,sets:sets3(30,10),notes:""},
+          {id:uid(),name:"DB bench press",    pattern:"Push",  unilateral:false,sets:sets3(14,10),notes:""},
+          {id:uid(),name:"Lat pulldown",      pattern:"Pull",  unilateral:false,sets:sets3(35,10),notes:""},
+        ]};
+        var s2={id:uid(),clientId:markId,date:"2026-05-05T10:00:00.000Z",notes:"Goede progressie op squat.",exercises:[
+          {id:uid(),name:"Goblet squat",      pattern:"Squat",unilateral:false,sets:sets3(18,10),notes:""},
+          {id:uid(),name:"Romanian deadlift", pattern:"Hinge", unilateral:false,sets:sets3(32,10),notes:""},
+          {id:uid(),name:"DB bench press",    pattern:"Push",  unilateral:false,sets:sets3(16,10),notes:""},
+          {id:uid(),name:"Lat pulldown",      pattern:"Pull",  unilateral:false,sets:sets3(37,10),notes:""},
+        ]};
+        var s3={id:uid(),clientId:markId,date:"2026-06-02T10:00:00.000Z",notes:"PR op bench press!",exercises:[
+          {id:uid(),name:"Goblet squat",      pattern:"Squat",unilateral:false,sets:sets3(20,10),notes:""},
+          {id:uid(),name:"Romanian deadlift", pattern:"Hinge", unilateral:false,sets:sets3(35,10),notes:"Voelde zwaar maar goed"},
+          {id:uid(),name:"DB bench press",    pattern:"Push",  unilateral:false,sets:sets3(18,10),notes:"PR!"},
+          {id:uid(),name:"Lat pulldown",      pattern:"Pull",  unilateral:false,sets:sets3(40,10),notes:""},
+        ]};
+        return {clients:[mark],sessions:[s1,s2,s3],exerciseLibrary:defaultLib,templates:[]};
+      }
+
+      function showToast(msg) {
+        setToast(msg);
+        setTimeout(function() { setToast(null); }, 2500);
+      }
+
+      function ask(msg) {
+        return new Promise(function(resolve) { setDlg({msg:msg, resolve:resolve}); });
+      }
+      function handleConfirm() { if (dlg) { dlg.resolve(true); } setDlg(null); }
+      function handleCancel()  { if (dlg) { dlg.resolve(false); } setDlg(null); }
+      function goView(v) { setView(v); setNavKey(function(k){return k+1;}); }
+
+      var client = null, vSession = null, clientSessions = [];
+      for (var ci=0; ci<data.clients.length; ci++) {
+        if (data.clients[ci].id === activeClientId) { client = data.clients[ci]; break; }
+      }
+      for (var si=0; si<data.sessions.length; si++) {
+        if (data.sessions[si].id === viewSessionId) { vSession = data.sessions[si]; break; }
+      }
+      if (client) {
+        clientSessions = data.sessions
+          .filter(function(s){ return s.clientId === client.id || (s.clientIds && s.clientIds.indexOf(client.id) !== -1); })
+          .sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
+      }
+
+      function saveSession(session) {
+        var library = data.exerciseLibrary || [];
+        var newExs = [];
+        session.exercises.forEach(function(ex) {
+          var found = false;
+          library.forEach(function(l){ if (l.name.toLowerCase()===ex.name.toLowerCase()){found=true;} });
+          if (!found) { newExs.push({id:uid(),name:ex.name,pattern:ex.pattern,unilateral:ex.unilateral||false}); }
+        });
+        var newSessions = data.sessions.filter(function(s){ return s.id !== session.id; });
+        newSessions.push(session);
+        persist({...data, sessions:newSessions, exerciseLibrary:library.concat(newExs)});
+        goView("client");
+        showToast(newExs.length>0 ? "Opgeslagen · "+newExs.length+" oef. aan bibliotheek toegevoegd ✓" : "Sessie opgeslagen ✓");
+      }
+
+      function saveTpl(tpl) {
+        var templates = data.templates || [];
+        var exists = false;
+        templates.forEach(function(t){ if(t.id===tpl.id){exists=true;} });
+        var newTemplates = exists
+          ? templates.map(function(t){ return t.id===tpl.id?tpl:t; })
+          : templates.concat([tpl]);
+        persist({...data, templates:newTemplates});
+        setEditingTpl(null);
+        showToast('"'+tpl.name+'" opgeslagen ✓');
+      }
+
+      async function deleteClient(id) {
+        var c = data.clients.find(function(x){ return x.id===id; });
+        var ok = await ask('Cliënt "' + (c?c.name:"") + '" en alle sessies verwijderen?');
+        if (!ok) { return; }
+        persist({...data, clients:data.clients.filter(function(x){return x.id!==id;}), sessions:data.sessions.filter(function(s){return s.clientId!==id;})});
+        showToast("Cliënt verwijderd");
+      }
+      async function deleteSession(id) {
+        var s = data.sessions.find(function(x){ return x.id===id; });
+        var ok = await ask("Sessie van "+(s?fmtDate(s.date):"?")+" verwijderen?");
+        if (!ok) { return; }
+        persist({...data, sessions:data.sessions.filter(function(x){return x.id!==id;})});
+        showToast("Sessie verwijderd");
+      }
+      async function deleteExercise(id) {
+        var lib = data.exerciseLibrary || [];
+        var ex = lib.find(function(e){ return e.id===id; });
+        var ok = await ask('Oefening "' + (ex?ex.name:"") + '" verwijderen?');
+        if (!ok) { return; }
+        persist({...data, exerciseLibrary:lib.filter(function(e){return e.id!==id;})});
+        showToast("Oefening verwijderd");
+      }
+      async function deleteTemplate(id) {
+        var templates = data.templates || [];
+        var tpl = templates.find(function(t){ return t.id===id; });
+        var ok = await ask('Schema "' + (tpl?tpl.name:"") + '" verwijderen?');
+        if (!ok) { return; }
+        persist({...data, templates:templates.filter(function(t){return t.id!==id;})});
+        showToast("Schema verwijderd");
+      }
+
+      var activeSessionDate = activeSession ? toLocalISO(activeSession.date) : null;
+      var prevByName = {};
+      clientSessions.forEach(function(s){
+        if (activeSessionDate && toLocalISO(s.date) === activeSessionDate) { return; }
+        s.exercises.forEach(function(ex){
+          if (!exForClient(ex, s, activeClientId)) { return; }
+          var sets = setsForClient(ex, s, activeClientId);
+          if (!prevByName[ex.name]) { prevByName[ex.name]={sets:sets,date:s.date}; }
+        });
+      });
+
+      var prevByNameB = {};
+      if (activeSession && isDuo(activeSession)) {
+        var duoPartnerBId = activeSession.clientIds[1];
+        var duoPartnerBSessions = data.sessions.filter(function(s){
+          return s.clientId===duoPartnerBId||(s.clientIds&&s.clientIds.indexOf(duoPartnerBId)!==-1);
+        }).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+        duoPartnerBSessions.forEach(function(s){
+          if (activeSessionDate && toLocalISO(s.date) === activeSessionDate) { return; }
+          s.exercises.forEach(function(ex){
+            if (!exForClient(ex, s, duoPartnerBId)) { return; }
+            var sets = setsForClient(ex, s, duoPartnerBId);
+            if (!prevByNameB[ex.name]) { prevByNameB[ex.name]={sets:sets,date:s.date}; }
+          });
+        });
+      }
+
+      var allEntriesByName = {};
+      clientSessions.forEach(function(s){
+        s.exercises.forEach(function(ex){
+          if (!exForClient(ex, s, activeClientId)) { return; }
+          var sets = setsForClient(ex, s, activeClientId);
+          var performed = ex.performedUnilateral||false;
+          var key = performed ? ex.name+"__uni" : ex.name;
+          if (!allEntriesByName[key]) { allEntriesByName[key]=[]; }
+          allEntriesByName[key].push({
+            date:s.date, sets:sets,
+            maxWeight:Math.max.apply(null,sets.map(function(st){return parseFloat(st.weight)||0;})),
+            totalVol:sets.reduce(function(sum,st){return sum+(parseFloat(st.weight)||0)*(parseInt(st.reps)||0);},0),
+          });
+        });
+      });
+
+      var library   = data.exerciseLibrary || [];
+      var templates = data.templates || [];
+
+      return (
+        <Shell saving={saving}>
+          {view==="clients" && (
+            <div key={navKey} className="page-enter">
+              <Header title="Cliënten"
+                rightAction2={{label:"Schema's",   fn:function(){goView("templates");}}}
+                rightAction= {{label:"Bibliotheek",fn:function(){goView("library");}}}
+              />
+
+              <ClientList data={data} onSelect={function(id){setActiveClientId(id);goView("client");}} onDelete={deleteClient}
+                onRename={function(updatedClients){ persist({...data, clients:updatedClients}); showToast("Naam opgeslagen ✓"); }}
+              />
+              <AddClientInline data={data} persist={persist} showToast={showToast}/>
+              <LogoutBar/>
+            </div>
+          )}
+
+          {view==="library" && (
+            <div key={navKey} className="page-enter">
+              <Header title="Oefeningen" back={function(){goView("clients");}}/>
+              <ExerciseLibrary data={data} persist={persist} showToast={showToast} onDelete={deleteExercise}/>
+            </div>
+          )}
+
+          {view==="templates" && !editingTpl && (
+            <div key={navKey} className="page-enter">
+              <Header title="Trainingsschema's" back={function(){goView("clients");}}/>
+              <TemplateList data={data}
+                onNew={function(){ setEditingTpl({id:uid(),name:"",exercises:[]}); }}
+                onEdit={function(tpl){ setEditingTpl({...tpl,exercises:(tpl.exercises||[]).map(function(e){return {...e,sets:e.sets||[{weight:"",reps:""}]};})}); }}
+                onDelete={deleteTemplate}
+              />
+            </div>
+          )}
+
+          {view==="templates" && editingTpl && (
+            <div key={navKey} className="page-enter">
+              <Header title={editingTpl.name||"Nieuw schema"} back={function(){setEditingTpl(null);}}
+                rightAction={{label:"Opslaan", fn:function(){ if(editingTpl.name.trim()){ saveTpl(editingTpl); } }}}
+              />
+              <TemplateEditor template={editingTpl} onChange={setEditingTpl} library={library}/>
+            </div>
+          )}
+
+          {view==="client" && client && (
+            <div key={navKey} className="page-enter">
+              <Header title={client.name} back={function(){goView("clients");}}/>
+              <ClientDetail client={client} sessions={clientSessions} data={data}
+                onStartSession={function(s){setActiveSession(s);goView("session");}}
+                onViewSession={function(id){setViewSessionId(id);goView("viewSession");}}
+                onExport={function(){goView("export");}}
+                onDeleteSession={deleteSession}
+                onExHistory={function(name){setExHistoryName(name);setPrevView("client");goView("exHistory");}}
+              />
+            </div>
+          )}
+
+          {(view==="session"||view==="editSession") && activeSession && (
+            <div key={navKey} className="page-enter">
+              <Header title={view==="session"?"Sessie bezig":"Sessie bewerken"} back={function(){goView("client");}}
+                rightAction={{label:"Opslaan", fn:function(){saveSession(activeSession);}}}
+              />
+              {(function(){
+                var duoClients = null;
+                if (isDuo(activeSession)) {
+                  var cA = data.clients.find(function(c){ return c.id === activeSession.clientIds[0]; });
+                  var cB = data.clients.find(function(c){ return c.id === activeSession.clientIds[1]; });
+                  if (cA && cB) { duoClients = [cA, cB]; }
+                }
+                return (
+                  <SessionEditor session={activeSession} onChange={setActiveSession}
+                    library={library} templates={templates} showToast={showToast} prevByName={prevByName}
+                    prevByNameB={prevByNameB}
+                    duoClients={duoClients}
+                    allClients={data.clients}
+                    onDuoPick={function(secondId){
+                      var ids=[activeSession.clientIds[0],secondId];
+                      setActiveSession({...activeSession,clientIds:ids});
+                    }}
+                    onViewExHistory={function(name){setExHistoryName(name);setPrevView(view);goView("exHistory");}}
+                  />
+                );
+              })()}
+            </div>
+          )}
+
+          {view==="viewSession" && vSession && (
+            <div key={navKey} className="page-enter">
+              <Header title={"Sessie "+fmtDate(vSession.date)} back={function(){goView("client");}}
+                rightAction={{label:"Bewerk", fn:function(){setActiveSession({...vSession});goView("editSession");}}}
+              />
+              <SessionView session={vSession} client={client} allEntriesByName={allEntriesByName} data={data}/>
+            </div>
+          )}
+
+          {view==="exHistory" && exHistoryName && (
+            <div key={navKey} className="page-enter">
+              <Header title={exHistoryName.replace("__uni"," (uni)")} back={function(){goView(prevView);}}/>
+              <ExerciseHistoryPage entries={(allEntriesByName[exHistoryName]||[]).sort(function(a,b){return new Date(b.date)-new Date(a.date);})}/>
+            </div>
+          )}
+
+          {view==="export" && client && (
+            <div key={navKey} className="page-enter">
+              <Header title="Exporteren" back={function(){goView("client");}}/>
+              <ExportView client={client} sessions={clientSessions}/>
+            </div>
+          )}
+
+          {dlg && <ConfirmDialog msg={dlg.msg} onConfirm={handleConfirm} onCancel={handleCancel}/>}
+          {toast && <Toast msg={toast}/>}
+        </Shell>
+      );
+    }
+
+    // ── Shell ──────────────────────────────────────────────────────────────────
+    function Shell(props) {
+      return (
+        <div style={{minHeight:"100vh",background:T.bg,color:T.text,fontFamily:"'Space Grotesk','DM Mono',sans-serif",maxWidth:480,margin:"0 auto",position:"relative"}}>
+          <style dangerouslySetInnerHTML={{__html:`
+            @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Barlow+Condensed:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap');
+            *{box-sizing:border-box;margin:0;padding:0}
+            input,textarea,select,button{font-family:inherit}
+            button{cursor:pointer}
+            ::-webkit-scrollbar{width:4px}
+            ::-webkit-scrollbar-track{background:#f8f9ff}
+            ::-webkit-scrollbar-thumb{background:#c5cbdf;border-radius:2px}
+            .rh:hover{background:#f0f2ff!important}
+            @keyframes slideUp{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+            @keyframes slideIn{from{opacity:0}to{opacity:1}}
+            .ai{animation:slideUp 0.18s ease}
+            .page-enter{animation:slideIn 0.2s ease}
+            input:focus,textarea:focus{outline:none;border-color:#6366f1!important}
+            input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#6366f1}
+          `}}/>
+          {props.saving && (
+            <div style={{position:"fixed",top:0,left:0,right:0,height:2,background:T.accent,zIndex:999,animation:"slideUp 0s"}}/>
+          )}
+          {props.children}
+        </div>
+      );
+    }
+
+    function Header(props) {
+      return (
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:0,zIndex:10}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
+            {props.back && <button onClick={props.back} style={{background:"none",border:"none",color:T.textMuted,fontSize:18,lineHeight:1,padding:"0 4px 0 0",flexShrink:0}}>←</button>}
+            <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:22,letterSpacing:0.5,textTransform:"uppercase",color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{props.title}</span>
+          </div>
+          <div style={{display:"flex",gap:6,flexShrink:0,marginLeft:8}}>
+            {props.rightAction2 && <button onClick={props.rightAction2.fn} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"6px 12px",fontSize:11,letterSpacing:0.5,textTransform:"uppercase",borderRadius:6}}>{props.rightAction2.label}</button>}
+            {props.rightAction  && <button onClick={props.rightAction.fn}  style={{background:T.accent,border:"none",color:"#fff",padding:"6px 14px",fontSize:11,fontWeight:500,letterSpacing:0.5,textTransform:"uppercase",borderRadius:6}}>{props.rightAction.label}</button>}
+          </div>
+        </div>
+      );
+    }
+
+    function Loader() { return <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8}}><div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:48,letterSpacing:1,color:T.text,textTransform:"uppercase"}}>Trainer App</div><div style={{fontFamily:"'DM Mono','Courier New',monospace",fontWeight:300,fontSize:11,color:T.textMuted,letterSpacing:2,textTransform:"uppercase"}}>by MVDRPT</div></div>; }
+
+    function Stepper(props) {
+      var val = props.value;
+      var step = props.step || 1;
+      var num = parseFloat(val) || 0;
+      function dec() { var n = Math.max(0, +(num - step).toFixed(2)); props.onChange(n === 0 ? "" : String(n)); }
+      function inc() { props.onChange(String(+(num + step).toFixed(2))); }
+      return (
+        <div style={{display:"flex",alignItems:"center",border:"1px solid "+T.border,borderRadius:6,background:T.bg,overflow:"hidden"}}>
+          <button onMouseDown={function(e){e.preventDefault();dec();}} style={{background:"none",border:"none",borderRight:"1px solid "+T.border,color:T.textMid,fontSize:18,lineHeight:1,padding:"0 10px",height:38,cursor:"pointer",flexShrink:0}}>−</button>
+          <input type="number" inputMode={step<1?"decimal":"numeric"} value={val} onChange={function(e){props.onChange(e.target.value);}} placeholder={props.placeholder} style={{flex:1,background:"none",border:"none",color:T.text,fontSize:13,textAlign:"center",padding:"8px 2px",minWidth:0,outline:"none"}}/>
+          <button onMouseDown={function(e){e.preventDefault();inc();}} style={{background:"none",border:"none",borderLeft:"1px solid "+T.border,color:T.textMid,fontSize:18,lineHeight:1,padding:"0 10px",height:38,cursor:"pointer",flexShrink:0}}>+</button>
+        </div>
+      );
+    }
+    function Toast(props) { return <div style={{position:"fixed",bottom:28,left:"50%",transform:"translateX(-50%)",background:T.text,color:T.bg,padding:"10px 20px",fontSize:12,zIndex:100,animation:"slideUp 0.2s ease",letterSpacing:0.3,whiteSpace:"nowrap",maxWidth:"90vw",textAlign:"center"}}>{props.msg}</div>; }
+    function Label(props) { return <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.6}}>{props.children}</div>; }
+    function UniTag() { return <span style={{fontSize:9,marginLeft:7,padding:"1px 5px",background:T.accentBg,color:T.accent,borderRadius:6,textTransform:"uppercase",letterSpacing:0.3}}>uni</span>; }
+
+    function SwipeRow(props) {
+      var [offset,setOffset]=useState(0);
+      var dragging=useRef(false); var startX=useRef(0); var startY=useRef(0);
+      var lastX=useRef(0); var lastT=useRef(0); var vel=useRef(0); var axisLocked=useRef(null);
+      var REVEAL=props.onEdit?144:72;
+
+      // close when another row opens
+      useEffect(function(){
+        if(props.openId!==null&&props.openId!==undefined&&props.rowId!==undefined&&props.openId!==props.rowId){
+          setOffset(0);
+        }
+      },[props.openId]);
+
+      function onTouchStart(e){
+        dragging.current=true; axisLocked.current=null;
+        startX.current=e.touches[0].clientX; startY.current=e.touches[0].clientY;
+        lastX.current=startX.current; lastT.current=Date.now(); vel.current=0;
+      }
+      function onTouchMove(e){
+        if(!dragging.current){return;}
+        var dx=e.touches[0].clientX-startX.current;
+        var dy=e.touches[0].clientY-startY.current;
+        if(axisLocked.current===null){
+          if(Math.abs(dx)<4&&Math.abs(dy)<4){return;}
+          axisLocked.current=Math.abs(dx)>Math.abs(dy)?"x":"y";
+        }
+        if(axisLocked.current==="y"){dragging.current=false;return;}
+        e.preventDefault();
+        var now=Date.now(); var dt=now-lastT.current||1;
+        vel.current=(e.touches[0].clientX-lastX.current)/dt;
+        lastX.current=e.touches[0].clientX; lastT.current=now;
+        var raw=offset+dx; // delta from current position? No — from start
+        // simple: track from startX relative to current open offset
+        var base=offset===(-REVEAL)?-REVEAL:0;
+        var next=base+dx;
+        setOffset(Math.max(-REVEAL,Math.min(0,next)));
+      }
+      function onTouchEnd(){
+        if(!dragging.current){return;}
+        dragging.current=false;
+        var snap;
+        if(vel.current<-0.3){snap=-REVEAL;}
+        else if(vel.current>0.3){snap=0;}
+        else{snap=offset<-REVEAL/2?-REVEAL:0;}
+        setOffset(snap);
+        if(snap===-REVEAL&&props.onOpen){props.onOpen(props.rowId);}
+        if(snap===0&&props.onOpen&&props.openId===props.rowId){props.onOpen(null);}
+      }
+      function close(){setOffset(0);if(props.onOpen){props.onOpen(null);}}
+      return (
+        <div style={{position:"relative",overflow:"hidden",borderBottom:"1px solid "+T.border}}>
+          <div style={{position:"absolute",top:0,right:0,bottom:0,display:"flex",alignItems:"stretch"}}>
+            {props.onEdit&&<button onClick={function(){close();props.onEdit();}} style={{width:72,background:"#2563eb",border:"none",color:"#fff",fontSize:13,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer",fontFamily:"inherit"}}>✎</button>}
+            <button onClick={function(){close();props.onDelete();}} style={{width:72,background:"#dc2626",border:"none",color:"#fff",fontSize:22,cursor:"pointer"}}>×</button>
+          </div>
+          <div
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            style={{transform:"translateX("+offset+"px)",transition:dragging.current?"none":"transform 0.28s cubic-bezier(0.25,0.46,0.45,0.94)",background:props.background||T.surface,willChange:"transform",touchAction:"pan-y"}}
+          >{props.children}</div>
+        </div>
+      );
+    }
+    function Btn(props) {
+      var bg = props.accent?T.accent:props.danger?T.danger:"none";
+      var border = props.accent?"1px solid "+T.accent:props.danger?"1px solid "+T.danger:"1px solid "+T.border;
+      var color = (props.accent||props.danger)?"#fff":T.textMid;
+      return <button onClick={props.onClick} style={{padding:"9px 16px",fontSize:11,background:bg,border:border,color:color,textTransform:"uppercase",letterSpacing:0.5,fontFamily:"inherit",borderRadius:6,...(props.style||{})}}>{props.children}</button>;
+    }
+
+    var iS = {background:T.bg,border:"1px solid "+T.border,color:T.text,padding:"8px 10px",fontSize:13,outline:"none",borderRadius:6,width:"100%"};
+    var lS = {fontSize:9,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5};
+
+    function PatternPicker(props) {
+      return (
+        <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:6}}>
+          {PATTERNS.map(function(p){
+            return <button key={p} onClick={function(){props.onChange(p);}} style={{padding:"5px 10px",fontSize:11,borderRadius:6,background:props.value===p?PC[p]:T.surface,border:"1px solid "+(props.value===p?PC[p]:T.border),color:props.value===p?"#fff":T.textMid,textTransform:"uppercase",letterSpacing:0.4}}>{p}</button>;
+          })}
+        </div>
+      );
+    }
+
+    function PatternTags(props) {
+      var patterns = [];
+      props.exercises.forEach(function(e){ if(e.pattern&&patterns.indexOf(e.pattern)===-1){patterns.push(e.pattern);} });
+      if (!patterns.length) { return null; }
+      return (
+        <div style={{display:"flex",gap:4,marginTop:5,flexWrap:"wrap"}}>
+          {patterns.map(function(p){ return <span key={p} style={{fontSize:9,padding:"2px 6px",textTransform:"uppercase",letterSpacing:0.4,background:(PC[p]||"#999")+"18",color:PC[p]||"#999",border:"1px solid "+(PC[p]||"#999")+"40",borderRadius:6}}>{p}</span>; })}
+        </div>
+      );
+    }
+
+    function AutocompleteInput(props) {
+      var [open,setOpen] = useState(false);
+      var suggestions = props.suggestions||[];
+      var value = props.value||"";
+      var filtered = value.length>0?suggestions.filter(function(s){return s.toLowerCase().includes(value.toLowerCase())&&s.toLowerCase()!==value.toLowerCase();}).slice(0,6):[];
+      return (
+        <div style={{position:"relative"}}>
+          <input ref={props.inputRef} value={value} onChange={function(e){props.onChange(e.target.value);setOpen(true);}} onBlur={function(){setTimeout(function(){setOpen(false);},150);}} onFocus={function(){setOpen(true);}} placeholder={props.placeholder} style={{...iS,...(props.style||{})}}/>
+          {open&&filtered.length>0&&(
+            <div style={{position:"absolute",top:"100%",left:0,right:0,background:T.surface,border:"1px solid "+T.border,borderTop:"none",zIndex:20,maxHeight:160,overflowY:"auto",borderRadius:"0 0 8px 8px",boxShadow:"0 4px 12px rgba(0,0,0,0.08)"}}>
+              {filtered.map(function(s,i){ return <div key={i} className="rh" onMouseDown={function(){props.onChange(s);}} style={{padding:"9px 12px",fontSize:13,cursor:"pointer",borderBottom:i<filtered.length-1?"1px solid "+T.border:"none"}}>{s}</div>; })}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function ClientList(props) {
+      var data = props.data;
+      var [search,setSearch] = useState("");
+      var [editingId,setEditingId] = useState(null);
+      var [editName,setEditName] = useState("");
+      var [openRowId,setOpenRowId] = useState(null);
+      var filtered = data.clients.filter(function(c){return c.name.toLowerCase().includes(search.toLowerCase());}).sort(function(a,b){return a.name.localeCompare(b.name);});
+
+      function saveEdit(id) {
+        if (!editName.trim()) { setEditingId(null); return; }
+        var updated = data.clients.map(function(c){ return c.id===id ? {...c, name:editName.trim()} : c; });
+        props.onRename(updated);
+        setEditingId(null);
+      }
+
+      return (
+        <div>
+          {data.clients.length>0&&(
+            <div style={{padding:"12px 20px",borderBottom:"1px solid "+T.border,background:T.surface}}>
+              <input value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Zoek cliënt..." style={iS}/>
+            </div>
+          )}
+          {filtered.length===0&&data.clients.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"48px 20px",textAlign:"center"}}>Nog geen cliënten.</div>}
+          {filtered.length===0&&data.clients.length>0&&<div style={{color:T.textMuted,fontSize:13,padding:"32px 20px",textAlign:"center"}}>Geen cliënten gevonden.</div>}
+          {filtered.map(function(c){
+            var cs=data.sessions.filter(function(s){return s.clientId===c.id||(s.clientIds&&s.clientIds.indexOf(c.id)!==-1);});
+            var last=cs.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);})[0];
+            var isEditing = editingId===c.id;
+            return (
+              <SwipeRow key={c.id} rowId={c.id} openId={openRowId} onOpen={setOpenRowId} onEdit={function(){setEditingId(c.id);setEditName(c.name);}} onDelete={function(){props.onDelete(c.id);}}>
+                {isEditing ? (
+                  <div style={{padding:"14px 20px",display:"flex",gap:8,alignItems:"center"}}>
+                    <input autoFocus value={editName}
+                      onChange={function(e){setEditName(e.target.value);}}
+                      onKeyDown={function(e){if(e.key==="Enter"){saveEdit(c.id);}if(e.key==="Escape"){setEditingId(null);}}}
+                      style={{...iS,flex:1,padding:"6px 10px"}}/>
+                    <button onClick={function(){saveEdit(c.id);}} style={{background:T.accent,border:"none",color:"#fff",padding:"6px 12px",fontSize:11,borderRadius:6,cursor:"pointer",textTransform:"uppercase",letterSpacing:0.4}}>Ok</button>
+                    <button onClick={function(){setEditingId(null);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"6px 10px",fontSize:11,borderRadius:6,cursor:"pointer"}}>×</button>
+                  </div>
+                ) : (
+                  <div className="rh" onClick={function(){props.onSelect(c.id);}} style={{padding:"14px 20px",cursor:"pointer"}}>
+                    <div style={{fontWeight:500,fontSize:14}}>{c.name}</div>
+                    <div style={{color:T.textMuted,fontSize:11,marginTop:3}}>{cs.length} sessie{cs.length!==1?"s":""}{last?" · "+fmtDate(last.date):""}</div>
+                  </div>
+                )}
+              </SwipeRow>
+            );
+          })}
+        </div>
+      );
+    }
+
+    function AddClientInline(props) {
+      var [newName,setNewName]=useState(""); var [adding,setAdding]=useState(false);
+      function addClient(){if(!newName.trim()){return;}var c={id:uid(),name:newName.trim(),createdAt:new Date().toISOString()};props.persist({...props.data,clients:props.data.clients.concat([c])});setNewName("");setAdding(false);props.showToast(c.name+" toegevoegd ✓");}
+      return (
+        <div style={{padding:"16px 20px"}}>
+          {adding?(
+            <div style={{display:"flex",gap:8}}>
+              <input autoFocus value={newName} onChange={function(e){setNewName(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter"){addClient();}}} placeholder="Naam cliënt..." style={{...iS,flex:1}}/>
+              <Btn accent onClick={addClient}>Voeg toe</Btn>
+              <Btn onClick={function(){setAdding(false);}}>×</Btn>
+            </div>
+          ):(
+            <Btn accent onClick={function(){setAdding(true);}}>+ Nieuwe cliënt</Btn>
+          )}
+        </div>
+      );
+    }
+
+    function LogoutBar() {
+      return (
+        <div style={{padding:"32px 20px 24px",textAlign:"center"}}>
+          <button onClick={function(){ window._fbLogout(); }} style={{background:"none",border:"none",color:T.textMuted,fontSize:11,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer",opacity:0.6}}>Uitloggen</button>
+        </div>
+      );
+    }
+
+    function ExerciseLibrary(props) {
+      var data=props.data; var library=data.exerciseLibrary||[];
+      var [newName,setNewName]=useState(""); var [newPat,setNewPat]=useState("Push"); var [newUni,setNewUni]=useState(false); var [adding,setAdding]=useState(false); var [search,setSearch]=useState("");
+      var [editingId,setEditingId]=useState(null); var [editName,setEditName]=useState(""); var [editPat,setEditPat]=useState("Push"); var [editUni,setEditUni]=useState(false);
+      var [openRowId,setOpenRowId]=useState(null);
+      var inputRef=useRef(null);
+      function addExercise(){if(!newName.trim()){return;}if(library.some(function(e){return e.name.toLowerCase()===newName.trim().toLowerCase();})){props.showToast("Oefening bestaat al");return;}var ex={id:uid(),name:newName.trim(),pattern:newPat,unilateral:newUni};props.persist({...data,exerciseLibrary:library.concat([ex])});setNewName("");setNewUni(false);props.showToast(ex.name+" toegevoegd ✓");}
+      function startEdit(ex){setEditingId(ex.id);setEditName(ex.name);setEditPat(ex.pattern);setEditUni(ex.unilateral||false);}
+      function saveEdit(){
+        if(!editName.trim()){return;}
+        var oldEx=library.find(function(e){return e.id===editingId;});
+        var newName=editName.trim();
+        var updated=library.map(function(e){return e.id===editingId?{...e,name:newName,pattern:editPat,unilateral:editUni}:e;});
+        var updatedSessions=data.sessions.map(function(s){
+          var changed=false;
+          var exs=s.exercises.map(function(ex){
+            if(ex.name.toLowerCase()!==oldEx.name.toLowerCase()){return ex;}
+            changed=true;
+            return {...ex,name:newName,pattern:editPat,unilateral:editUni};
+          });
+          return changed?{...s,exercises:exs}:s;
+        });
+        props.persist({...data,exerciseLibrary:updated,sessions:updatedSessions});
+        props.showToast("Opgeslagen ✓");setEditingId(null);
+      }
+      var filtered=library.filter(function(e){return e.name.toLowerCase().includes(search.toLowerCase());}).sort(function(a,b){return a.name.localeCompare(b.name);});
+      var grouped={};filtered.forEach(function(e){if(!grouped[e.pattern]){grouped[e.pattern]=[];}grouped[e.pattern].push(e);});
+      return (
+        <div className="ai" style={{paddingBottom:32}}>
+          <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface}}><input value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Zoek oefening..." style={iS}/></div>
+          <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}>
+            {!adding?(
+              <Btn accent onClick={function(){setAdding(true);setTimeout(function(){if(inputRef.current){inputRef.current.focus();}},50);}}>+ Oefening toevoegen</Btn>
+            ):(
+              <div>
+                <div style={{marginBottom:10}}><Label>Naam oefening</Label><AutocompleteInput inputRef={inputRef} value={newName} onChange={setNewName} suggestions={library.map(function(e){return e.name;})} placeholder="bijv. Deadlift..." style={{marginTop:5}}/></div>
+                <div style={{marginBottom:10}}><Label>Bewegingspatroon</Label><PatternPicker value={newPat} onChange={setNewPat}/></div>
+                <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,cursor:"pointer",fontSize:13,color:T.textMid}}><input type="checkbox" checked={newUni} onChange={function(e){setNewUni(e.target.checked);}}/>Unilateraal</label>
+                <div style={{display:"flex",gap:8}}><Btn accent onClick={addExercise}>Toevoegen</Btn><Btn onClick={function(){setAdding(false);setNewName("");}}>Annuleer</Btn></div>
+              </div>
+            )}
+          </div>
+          {library.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>Nog geen oefeningen.</div>}
+          {PATTERNS.map(function(pattern){
+            var exs=grouped[pattern]; if(!exs||!exs.length){return null;} var color=PC[pattern];
+            return (
+              <div key={pattern}>
+                <div style={{padding:"8px 20px 6px",fontSize:10,textTransform:"uppercase",letterSpacing:0.8,color:color,fontWeight:500,borderBottom:"1px solid "+T.border,background:T.bg}}>{pattern}</div>
+                {exs.map(function(ex){return(
+                  <SwipeRow key={ex.id} rowId={ex.id} openId={openRowId} onOpen={setOpenRowId} background={T.surface} onEdit={function(){startEdit(ex);}} onDelete={function(){props.onDelete(ex.id);}}>
+                    <div style={{background:color+"0d"}}>
+                      {editingId===ex.id?(
+                        <div style={{padding:"12px 20px"}}>
+                          <div style={{marginBottom:10}}><Label>Naam oefening</Label><input value={editName} onChange={function(e){setEditName(e.target.value);}} style={{...iS,marginTop:5}}/></div>
+                          <div style={{marginBottom:10}}><Label>Bewegingspatroon</Label><PatternPicker value={editPat} onChange={setEditPat}/></div>
+                          <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,cursor:"pointer",fontSize:13,color:T.textMid}}><input type="checkbox" checked={editUni} onChange={function(e){setEditUni(e.target.checked);}}/>Unilateraal</label>
+                          <div style={{display:"flex",gap:8}}><Btn accent onClick={saveEdit}>Opslaan</Btn><Btn onClick={function(){setEditingId(null);}}>Annuleer</Btn></div>
+                        </div>
+                      ):(
+                        <div style={{padding:"12px 20px",fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</div>
+                      )}
+                    </div>
+                  </SwipeRow>
+                );})}
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    function TemplateList(props) {
+      var templates=props.data.templates||[];
+      return (
+        <div className="ai" style={{paddingBottom:32}}>
+          <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}><Btn accent onClick={props.onNew}>+ Nieuw schema</Btn></div>
+          {templates.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>Nog geen schema's.<br/>Maak een schema met vaste oefeningen, sets, kg en reps.</div>}
+          {templates.map(function(tpl){return(
+            <div key={tpl.id} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:500,fontSize:14}}>{tpl.name}</div>
+                <div style={{fontSize:11,color:T.textMuted,marginTop:3}}>{tpl.exercises.length} oefening{tpl.exercises.length!==1?"en":""}</div>
+                <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>
+                  {tpl.exercises.slice(0,5).map(function(e,i){var col=PC[e.pattern]||"#999";return <span key={i} style={{fontSize:9,padding:"2px 7px",background:col+"18",color:col,border:"1px solid "+col+"40",borderRadius:6}}>{e.name}</span>;})}
+                  {tpl.exercises.length>5&&<span style={{fontSize:9,padding:"2px 6px",color:T.textMuted}}>+{tpl.exercises.length-5}</span>}
+                </div>
+              </div>
+              <div style={{display:"flex",gap:8,marginLeft:12,alignItems:"center"}}>
+                <button onClick={function(){props.onEdit(tpl);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:11,borderRadius:6,textTransform:"uppercase",letterSpacing:0.4}}>Bewerk</button>
+                <button onClick={function(){props.onDelete(tpl.id);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 4px",lineHeight:1}}>×</button>
+              </div>
+            </div>
+          );})}
+        </div>
+      );
+    }
+
+    function TemplateEditor(props) {
+      var library=props.library||[]; var tpl=props.template; var setTpl=props.onChange;
+      var [showAdd,setShowAdd]=useState(false); var [search,setSearch]=useState("");
+      function addFromLib(ex){setTpl({...tpl,exercises:tpl.exercises.concat([{id:uid(),name:ex.name,pattern:ex.pattern,unilateral:ex.unilateral||false,sets:[{weight:"",reps:""}]}])});setSearch("");setShowAdd(false);}
+      function removeEx(idx){setTpl({...tpl,exercises:tpl.exercises.filter(function(_,i){return i!==idx;})});}
+      function addSet(idx){var exs=tpl.exercises.map(function(e,i){if(i!==idx){return e;}var last=e.sets[e.sets.length-1];return {...e,sets:e.sets.concat([{weight:last?last.weight:"",reps:last?last.reps:""}])};});setTpl({...tpl,exercises:exs});}
+      function updateSet(exIdx,sIdx,field,val){var exs=tpl.exercises.map(function(e,i){if(i!==exIdx){return e;}var sets=e.sets.map(function(s,j){return j===sIdx?{...s,[field]:val}:s;});return {...e,sets:sets};});setTpl({...tpl,exercises:exs});}
+      function removeSet(exIdx,sIdx){var exs=tpl.exercises.map(function(e,i){if(i!==exIdx){return e;}return {...e,sets:e.sets.filter(function(_,j){return j!==sIdx;})};});setTpl({...tpl,exercises:exs});}
+      function moveUp(idx){if(idx===0){return;}var exs=tpl.exercises.slice();var tmp=exs[idx-1];exs[idx-1]=exs[idx];exs[idx]=tmp;setTpl({...tpl,exercises:exs});}
+      function moveDown(idx){if(idx===tpl.exercises.length-1){return;}var exs=tpl.exercises.slice();var tmp=exs[idx];exs[idx]=exs[idx+1];exs[idx+1]=tmp;setTpl({...tpl,exercises:exs});}
+      var filtLib=library.filter(function(e){var inTpl=tpl.exercises.some(function(x){return x.name.toLowerCase()===e.name.toLowerCase();});return !inTpl&&e.name.toLowerCase().includes(search.toLowerCase());}).sort(function(a,b){return a.name.localeCompare(b.name);});
+      return (
+        <div className="ai" style={{paddingBottom:40}}>
+          <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}><Label>Naam schema</Label><input autoFocus value={tpl.name} onChange={function(e){setTpl({...tpl,name:e.target.value});}} placeholder="bijv. Kracht A, Push dag..." style={{...iS,marginTop:5}}/></div>
+          {tpl.exercises.length===0&&!showAdd&&<div style={{padding:"28px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Voeg oefeningen toe via de knop hieronder.</div>}
+          {tpl.exercises.map(function(ex,idx){
+            var color=PC[ex.pattern]||T.textMuted;
+            return (
+              <div key={ex.id} style={{borderBottom:"1px solid "+T.border,background:color+"0d"}}>
+                <div style={{padding:"10px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"1px solid "+T.border}}>
+                  <div><div style={{fontSize:13,fontWeight:500}}>{ex.name}{ex.unilateral&&<UniTag/>}</div><div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:1}}>{ex.pattern}</div></div>
+                  <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                    <button onClick={function(){moveUp(idx);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14,padding:"2px 5px"}}>↑</button>
+                    <button onClick={function(){moveDown(idx);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14,padding:"2px 5px"}}>↓</button>
+                    <button onClick={function(){removeEx(idx);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 5px",lineHeight:1}}>×</button>
+                  </div>
+                </div>
+                <div style={{padding:"10px 20px 14px"}}>
+                  <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:5}}><span style={lS}>#</span><span style={lS}>kg</span><span style={lS}>reps</span><span/></div>
+                  {ex.sets.map(function(s,si){return(
+                    <div key={si} style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:6}}>
+                      <span style={{color:T.textMuted,fontSize:12,paddingTop:8,textAlign:"center"}}>{si+1}</span>
+                      <Stepper value={s.weight} step={0.5} placeholder="kg" onChange={function(v){updateSet(idx,si,"weight",v);}}/>
+                      <Stepper value={s.reps} step={1} placeholder="reps" onChange={function(v){updateSet(idx,si,"reps",v);}}/>
+                      <button onClick={function(){removeSet(idx,si);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14}}>×</button>
+                    </div>
+                  );})}
+                  <button onClick={function(){addSet(idx);}} style={{background:"none",border:"1px dashed "+T.borderStrong,color:T.textMuted,padding:"5px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",width:"100%",borderRadius:6}}>+ Set</button>
+                </div>
+              </div>
+            );
+          })}
+          <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border}}>
+            {!showAdd?(<Btn accent onClick={function(){setShowAdd(true);}}>+ Oefening toevoegen</Btn>):(
+              <div style={{background:T.surface,border:"1px solid "+T.border,borderRadius:4,overflow:"hidden"}}>
+                <input autoFocus value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Zoek in bibliotheek..." style={{...iS,borderRadius:0,borderLeft:"none",borderRight:"none",borderTop:"none"}}/>
+                <div style={{maxHeight:200,overflowY:"auto"}}>
+                  {library.length===0&&<div style={{padding:14,fontSize:12,color:T.textMuted,textAlign:"center"}}>Bibliotheek is leeg.</div>}
+                  {filtLib.length===0&&library.length>0&&<div style={{padding:14,fontSize:12,color:T.textMuted,textAlign:"center"}}>Geen resultaten</div>}
+                  {filtLib.map(function(ex){var color=PC[ex.pattern]||T.textMuted;return(
+                    <div key={ex.id} className="rh" onClick={function(){addFromLib(ex);}} style={{padding:"10px 14px",borderBottom:"1px solid "+T.border,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",background:color+"0d"}}>
+                      <span style={{fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</span>
+                      <span style={{fontSize:9,color:color,textTransform:"uppercase",letterSpacing:0.4}}>{ex.pattern}</span>
+                    </div>
+                  );})}
+                </div>
+                <div style={{padding:10}}><button onClick={function(){setShowAdd(false);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:11,textTransform:"uppercase",letterSpacing:0.5}}>Sluiten</button></div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function ClientDetail(props) {
+      var client=props.client; var sessions=props.sessions; var data=props.data;
+      var [tab,setTab]=useState("sessies");
+      function startSession(){
+        props.onStartSession({id:uid(),clientId:client.id,clientIds:[client.id],date:new Date().toISOString(),exercises:[],notes:""});
+      }
+      return (
+        <div className="ai">
+          <div style={{padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid "+T.border,background:T.surface}}>
+            <Btn accent onClick={startSession}>▶ Nieuwe sessie</Btn>
+            <button onClick={props.onExport} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:10,borderRadius:6,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer"}}>Exporteer</button>
+          </div>
+          <div style={{display:"flex",background:T.surface,borderBottom:"1px solid "+T.border}}>
+            {["sessies","progressie"].map(function(t){return <button key={t} onClick={function(){setTab(t);}} style={{flex:1,padding:"11px 0",background:"none",border:"none",color:tab===t?T.text:T.textMuted,borderBottom:tab===t?"2px solid "+T.accent:"2px solid transparent",fontSize:11,textTransform:"uppercase",letterSpacing:0.8}}>{t}</button>;})}
+          </div>
+          {tab==="sessies"&&(
+            <div>
+              {sessions.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>Nog geen sessies.</div>}
+              {sessions.map(function(s){return(
+                <div key={s.id} className="rh" onClick={function(){props.onViewSession(s.id);}} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:500,display:"flex",alignItems:"center",gap:6}}>
+                      {fmtDate(s.date)}
+                      {isDuo(s)&&<span style={{fontSize:9,padding:"1px 5px",background:"#ede9fe",color:"#7c3aed",borderRadius:6,textTransform:"uppercase",letterSpacing:0.3}}>DUO</span>}
+                    </div>
+                    <div style={{fontSize:11,color:T.textMuted,marginTop:3}}>{s.exercises.filter(function(ex){return exForClient(ex,s,client.id);}).length} oefening{s.exercises.filter(function(ex){return exForClient(ex,s,client.id);}).length!==1?"en":""}{s.notes?" · notitie":""}</div>
+                    <PatternTags exercises={s.exercises.filter(function(ex){return exForClient(ex,s,client.id);})}/>
+                  </div>
+                  <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                    <button onClick={function(e){e.stopPropagation();props.onDeleteSession(s.id);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 4px",lineHeight:1}}>×</button>
+                  </div>
+                </div>
+              );})}
+            </div>
+          )}
+          {tab==="progressie"&&<ProgressView sessions={sessions} onExHistory={props.onExHistory} clientId={client.id}/>}
+        </div>
+      );
+    }
+
+    function SessionEditor(props) {
+      var session=props.session; var onChange=props.onChange; var library=props.library||[]; var templates=props.templates||[]; var prevByName=props.prevByName||{}; var prevByNameB=props.prevByNameB||{}; var duoClients=props.duoClients||null;
+      var allClients=props.allClients||[]; var onDuoPick=props.onDuoPick||null;
+      var [showAdd,setShowAdd]=useState(false); var [showTemplates,setShowTemplates]=useState(false);
+      var [showSuperset,setShowSuperset]=useState(false); var [showDuoPicker,setShowDuoPicker]=useState(false);
+      function updateEx(idx,upd){var exs=session.exercises.map(function(e,i){return i===idx?{...e,...upd}:e;});onChange({...session,exercises:exs});}
+      function deleteEx(idx){onChange({...session,exercises:session.exercises.filter(function(_,i){return i!==idx;})});}
+      function deleteSuperset(ssId){onChange({...session,exercises:session.exercises.filter(function(e){return e.supersetId!==ssId;})});}
+      function withDuoDefaults(ex){if(!isDuo(session)){return ex;}return {...ex,clientLabel:"A",setsB:ex.sets.map(function(s){return {weight:"",reps:""};})};}
+      function addEx(ex){onChange({...session,exercises:session.exercises.concat([withDuoDefaults(ex)])});setShowAdd(false);props.showToast(ex.name+" toegevoegd");}
+      function addSuperset(exA,exB){var ssId=uid();onChange({...session,exercises:session.exercises.concat([{...withDuoDefaults(exA),supersetId:ssId},{...withDuoDefaults(exB),supersetId:ssId}])});setShowSuperset(false);props.showToast("Superset toegevoegd");}
+      function moveUp(idx){if(idx===0){return;}var exs=session.exercises.slice();var tmp=exs[idx-1];exs[idx-1]=exs[idx];exs[idx]=tmp;onChange({...session,exercises:exs});}
+      function moveDown(idx){if(idx===session.exercises.length-1){return;}var exs=session.exercises.slice();var tmp=exs[idx];exs[idx]=exs[idx+1];exs[idx+1]=tmp;onChange({...session,exercises:exs});}
+      function moveSupersetUp(idxA,idxB){var lo=Math.min(idxA,idxB);if(lo===0){return;}var exs=session.exercises.slice();var pair=[exs[lo],exs[lo+1]];exs.splice(lo,2);exs.splice(lo-1,0,pair[0],pair[1]);onChange({...session,exercises:exs});}
+      function moveSupersetDown(idxA,idxB){var lo=Math.min(idxA,idxB);var hi=Math.max(idxA,idxB);if(hi>=session.exercises.length-1){return;}var exs=session.exercises.slice();var pair=[exs[lo],exs[lo+1]];exs.splice(lo,2);exs.splice(lo+1,0,pair[0],pair[1]);onChange({...session,exercises:exs});}
+      function loadTemplate(tpl){var exercises=tpl.exercises.map(function(e){return {id:uid(),name:e.name,pattern:e.pattern,unilateral:e.unilateral||false,isUnilateralExercise:e.unilateral||false,performedUnilateral:false,sets:(e.sets||[{weight:"",reps:""}]).map(function(s){return {weight:s.weight||"",reps:s.reps||""};}),notes:""};});onChange({...session,exercises:exercises});setShowTemplates(false);props.showToast('Schema "'+tpl.name+'" geladen ✓');}
+      var localDateValue=session.date?toLocalISO(session.date):"";
+      function handleDateChange(e){if(!e.target.value||!session.date){return;}var orig=new Date(session.date);var parts=e.target.value.split("-");orig.setFullYear(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));onChange({...session,date:orig.toISOString()});}
+
+      // Bouw render-lijst: groepeer superset-oefeningen per ssId
+      var renderList=[];
+      var usedIds={};
+      session.exercises.forEach(function(ex,idx){
+        if(usedIds[ex.id]){return;}
+        usedIds[ex.id]=true;
+        if(!ex.supersetId){
+          renderList.push({type:"single",ex:ex,idx:idx});
+        } else {
+          var partnerIdx=-1; var partner=null;
+          for(var j=0;j<session.exercises.length;j++){
+            if(!usedIds[session.exercises[j].id]&&session.exercises[j].supersetId===ex.supersetId){partnerIdx=j;partner=session.exercises[j];break;}
+          }
+          if(partner){usedIds[partner.id]=true;renderList.push({type:"superset",exA:ex,idxA:idx,exB:partner,idxB:partnerIdx,ssId:ex.supersetId});}
+          else{renderList.push({type:"single",ex:ex,idx:idx});}
+        }
+      });
+
+      return (
+        <div className="ai" style={{paddingBottom:20}}>
+          <div style={{padding:"10px 20px",background:T.surfaceAlt,borderBottom:"1px solid "+T.border,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <Label>Datum</Label>
+              <input type="date" value={localDateValue} onChange={handleDateChange} style={{...iS,width:"auto",fontSize:13,padding:"5px 10px",background:T.surface,cursor:"pointer"}}/>
+            </div>
+            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              {templates.length>0&&<button onClick={function(){setShowTemplates(!showTemplates);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:10,borderRadius:6,textTransform:"uppercase",letterSpacing:0.5}}>{showTemplates?"Sluiten":"Schema laden"}</button>}
+              {!isDuo(session)&&onDuoPick&&<button onClick={function(){setShowDuoPicker(!showDuoPicker);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:10,borderRadius:6,textTransform:"uppercase",letterSpacing:0.5}}>Duo +</button>}
+              {isDuo(session)&&duoClients&&<span style={{fontSize:10,color:"#7c3aed",padding:"5px 8px",border:"1px solid #ede9fe",borderRadius:6,textTransform:"uppercase",letterSpacing:0.4}}>DUO: {duoClients[0].name.split(" ")[0]} + {duoClients[1].name.split(" ")[0]}</span>}
+            </div>
+          </div>
+          {showAdd&&<div style={{position:"sticky",top:48,zIndex:9,background:T.surface,borderBottom:"2px solid "+T.accent,boxShadow:"0 4px 12px rgba(0,0,0,0.08)"}}><AddExerciseForm library={library} onAdd={addEx} onCancel={function(){setShowAdd(false);}}/></div>}
+          {showSuperset&&<div style={{position:"sticky",top:48,zIndex:9,background:T.surface,borderBottom:"2px solid "+T.accent,boxShadow:"0 4px 12px rgba(0,0,0,0.08)"}}><AddSupersetForm library={library} onAdd={addSuperset} onCancel={function(){setShowSuperset(false);}}/></div>}
+          {showDuoPicker&&(
+            <div style={{padding:"10px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}>
+              <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.6,marginBottom:8}}>Kies tweede klant voor duo-sessie</div>
+              {allClients.filter(function(c){return c.id!==session.clientIds[0];}).map(function(c){return(
+                <div key={c.id} className="rh" onClick={function(){onDuoPick(c.id);setShowDuoPicker(false);}} style={{padding:"9px 12px",borderBottom:"1px solid "+T.border,cursor:"pointer",fontSize:13,background:T.surface,borderRadius:6,marginBottom:4}}>{c.name}</div>
+              );})}
+              <button onClick={function(){setShowDuoPicker(false);}} style={{marginTop:6,background:"none",border:"none",color:T.textMuted,fontSize:11,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer"}}>Annuleer</button>
+            </div>
+          )}
+          {showTemplates&&(
+            <div style={{borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}>
+              {templates.map(function(tpl){return <div key={tpl.id} className="rh" onClick={function(){loadTemplate(tpl);}} style={{padding:"12px 20px",borderBottom:"1px solid "+T.border,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><div style={{fontSize:13,fontWeight:500}}>{tpl.name}</div><div style={{fontSize:11,color:T.textMuted,marginTop:2}}>{tpl.exercises.map(function(e){return e.name;}).join(", ")}</div></div><span style={{color:T.accent,fontSize:11,textTransform:"uppercase",letterSpacing:0.4}}>Laden →</span></div>;})}
+            </div>
+          )}
+          {session.exercises.length===0&&!showAdd&&!showSuperset&&<div style={{padding:"36px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Voeg een oefening toe om te beginnen.</div>}
+          {renderList.map(function(item){
+            if(item.type==="single"){
+              return <ExerciseRow key={item.ex.id} ex={item.ex}
+                onChange={function(upd){updateEx(item.idx,upd);}}
+                onDelete={function(){deleteEx(item.idx);}}
+                onMoveUp={item.idx>0?function(){moveUp(item.idx);}:null}
+                onMoveDown={item.idx<session.exercises.length-1?function(){moveDown(item.idx);}:null}
+                prevData={prevByName[item.ex.name]}
+                prevDataB={prevByNameB[item.ex.name]}
+                duoClients={duoClients}
+                onViewHistory={function(){var k=(item.ex.performedUnilateral&&item.ex.isUnilateralExercise)?item.ex.name+"__uni":item.ex.name;props.onViewExHistory(k);}}
+              />;
+            }
+            var ssLo=Math.min(item.idxA,item.idxB);var ssHi=Math.max(item.idxA,item.idxB);
+            return <SupersetBlock key={item.ssId}
+              exA={item.exA} idxA={item.idxA}
+              exB={item.exB} idxB={item.idxB}
+              onChangeA={function(upd){updateEx(item.idxA,upd);}}
+              onChangeB={function(upd){updateEx(item.idxB,upd);}}
+              onDelete={function(){deleteSuperset(item.ssId);}}
+              onMoveUp={ssLo>0?function(){moveSupersetUp(item.idxA,item.idxB);}:null}
+              onMoveDown={ssHi<session.exercises.length-1?function(){moveSupersetDown(item.idxA,item.idxB);}:null}
+              prevByName={prevByName}
+              duoClients={duoClients}
+              onViewHistory={props.onViewExHistory}
+            />;
+          })}
+          <div style={{padding:"0 20px 20px"}}>
+            <Label>Notities sessie</Label>
+            <textarea value={session.notes} onChange={function(e){onChange({...session,notes:e.target.value});}} placeholder="Opmerkingen over de hele sessie..." rows={3} style={{...iS,marginTop:5,resize:"none"}}/>
+          </div>
+          <div style={{height:64}}/>
+          <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,padding:"12px 20px",background:T.surface,borderTop:"1px solid "+T.border,display:"flex",gap:8,zIndex:50,boxShadow:"0 -4px 16px rgba(0,0,0,0.08)"}}>
+            <Btn accent onClick={function(){setShowAdd(true);setShowSuperset(false);}}>+ Oefening</Btn>
+            <Btn onClick={function(){setShowSuperset(true);setShowAdd(false);}}>+ Superset</Btn>
+          </div>
+        </div>
+      );
+    }
+
+    function AddExerciseForm(props) {
+      var library=props.library||[];
+      var [search,setSearch]=useState(""); var [pattern,setPattern]=useState("Push"); var [customName,setCustomName]=useState(""); var [unilateral,setUnilateral]=useState(false);
+      var [mode,setMode]=useState(library.length>0?"library":"custom");
+      var [activePatterns,setActivePatterns]=useState({});
+      var inputRef=useRef(null);
+      useEffect(function(){if(inputRef.current){inputRef.current.focus();}}, []);
+      function togglePattern(p){setActivePatterns(function(prev){var next=Object.assign({},prev);var numOff=Object.keys(next).filter(function(k){return next[k]===false;}).length;if(numOff===0){PATTERNS.forEach(function(x){next[x]=false;});next[p]=true;}else if(next[p]===false){next[p]=true;var stillOff=PATTERNS.filter(function(x){return next[x]===false;});if(stillOff.length===0){return{};}}else{next[p]=false;}return next;});}
+      var patternActive=function(p){return Object.keys(activePatterns).length===0||activePatterns[p]!==false;};
+      var filtered=library.filter(function(e){return e.name.toLowerCase().includes(search.toLowerCase())&&patternActive(e.pattern);}).sort(function(a,b){return a.name.localeCompare(b.name);});
+      function selectLib(ex){props.onAdd({id:uid(),name:ex.name,pattern:ex.pattern,unilateral:ex.unilateral||false,isUnilateralExercise:ex.unilateral||false,performedUnilateral:false,sets:[{weight:"",reps:""}],notes:""});}
+      function addCustom(){if(!customName.trim()){return;}props.onAdd({id:uid(),name:customName.trim(),pattern:pattern,unilateral:unilateral,isUnilateralExercise:unilateral,performedUnilateral:false,sets:[{weight:"",reps:""}],notes:""});}
+      return (
+        <div style={{background:T.surface,border:"1px solid "+T.border,borderRadius:4}}>
+          <div style={{display:"flex",borderBottom:"1px solid "+T.border}}>
+            {["library","custom"].map(function(m){return <button key={m} onClick={function(){setMode(m);}} style={{flex:1,padding:"9px 0",background:"none",border:"none",color:mode===m?T.text:T.textMuted,borderBottom:mode===m?"2px solid "+T.accent:"2px solid transparent",fontSize:11,textTransform:"uppercase",letterSpacing:0.6}}>{m==="library"?"Uit bibliotheek":"Nieuwe oefening"}</button>;})}
+          </div>
+          {mode==="library"&&(
+            <div style={{padding:14}}>
+              {library.length===0?<div style={{color:T.textMuted,fontSize:12,padding:"12px 0",textAlign:"center"}}>Geen oefeningen in bibliotheek.</div>:(
+                <div>
+                  <input ref={inputRef} value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Zoek oefening..." style={{...iS,marginBottom:8}}/>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8,alignItems:"center"}}>
+                    {PATTERNS.map(function(p){var on=patternActive(p);var col=PC[p]||"#999";return <button key={p} onClick={function(){togglePattern(p);}} style={{padding:"3px 8px",fontSize:9,borderRadius:6,background:on?col+"18":"none",border:"1px solid "+(on?col:T.border),color:on?col:T.textMuted,textTransform:"uppercase",letterSpacing:0.3}}>{p}</button>;})}
+                    <button onClick={function(){setActivePatterns({});}} style={{padding:"3px 8px",fontSize:9,borderRadius:6,marginLeft:2,background:"none",border:"1px solid "+T.border,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.3,display:PATTERNS.filter(function(p){return activePatterns[p]===false;}).length===0?"none":"inline-block"}}>Alles</button>
+                  </div>
+                  <div style={{maxHeight:200,overflowY:"auto"}}>
+                    {filtered.length===0&&<div style={{color:T.textMuted,fontSize:12,padding:"12px 0",textAlign:"center"}}>Geen resultaten</div>}
+                    {filtered.map(function(ex){var color=PC[ex.pattern]||T.textMuted;return <div key={ex.id} className="rh" onClick={function(){selectLib(ex);}} style={{padding:"10px",borderBottom:"1px solid "+T.border,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",background:color+"0d"}}><span style={{fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</span><span style={{fontSize:9,color:color,textTransform:"uppercase",letterSpacing:0.4}}>{ex.pattern}</span></div>;})}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {mode==="custom"&&(
+            <div style={{padding:14}}>
+              <div style={{marginBottom:10}}><Label>Naam oefening</Label><AutocompleteInput inputRef={inputRef} value={customName} onChange={setCustomName} suggestions={library.map(function(e){return e.name;})} placeholder="bijv. Deadlift..." style={{marginTop:5}}/></div>
+              <div style={{marginBottom:10}}><Label>Bewegingspatroon</Label><PatternPicker value={pattern} onChange={setPattern}/></div>
+              <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,cursor:"pointer",fontSize:13,color:T.textMid}}><input type="checkbox" checked={unilateral} onChange={function(e){setUnilateral(e.target.checked);}}/>Unilateraal</label>
+              <Btn accent onClick={addCustom}>Toevoegen</Btn>
+            </div>
+          )}
+          <div style={{padding:"10px 14px",borderTop:"1px solid "+T.border}}><button onClick={props.onCancel} style={{background:"none",border:"none",color:T.textMuted,fontSize:12,textTransform:"uppercase",letterSpacing:0.5}}>Annuleer</button></div>
+        </div>
+      );
+    }
+
+    function AddSupersetForm(props) {
+      var library=props.library||[];
+      var [step,setStep]=useState(1);
+      var [exA,setExA]=useState(null);
+      var [search,setSearch]=useState("");
+      var [activePatterns,setActivePatterns]=useState({});
+      var inputRef=useRef(null);
+      useEffect(function(){if(inputRef.current){inputRef.current.focus();}}, [step]);
+      function togglePattern(p){setActivePatterns(function(prev){var next=Object.assign({},prev);var numOff=Object.keys(next).filter(function(k){return next[k]===false;}).length;if(numOff===0){PATTERNS.forEach(function(x){next[x]=false;});next[p]=true;}else if(next[p]===false){next[p]=true;var stillOff=PATTERNS.filter(function(x){return next[x]===false;});if(stillOff.length===0){return{};}}else{next[p]=false;}return next;});}
+      var patternActive=function(p){return Object.keys(activePatterns).length===0||activePatterns[p]!==false;};
+      function makeEx(ex){return {id:uid(),name:ex.name,pattern:ex.pattern,unilateral:ex.unilateral||false,isUnilateralExercise:ex.unilateral||false,performedUnilateral:false,sets:[{weight:"",reps:""}],notes:""};}
+      function selectA(ex){setExA(makeEx(ex));setStep(2);setSearch("");setActivePatterns({});}
+      function selectB(ex){props.onAdd(exA,makeEx(ex));}
+      var filtered=library.filter(function(e){
+        if(step===2&&exA&&e.name.toLowerCase()===exA.name.toLowerCase()){return false;}
+        return e.name.toLowerCase().includes(search.toLowerCase())&&patternActive(e.pattern);
+      }).sort(function(a,b){return a.name.localeCompare(b.name);});
+      return (
+        <div style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:4,overflow:"hidden"}}>
+          <div style={{padding:"10px 14px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div>
+              <div style={{fontSize:11,fontWeight:500,textTransform:"uppercase",letterSpacing:0.5,color:T.accent}}>Superset</div>
+              <div style={{fontSize:11,color:T.textMuted,marginTop:2}}>{step===1?"Stap 1: kies oefening A":"Stap 2: kies oefening B"}</div>
+            </div>
+            {step===2&&<div style={{fontSize:12,color:T.textMid,padding:"4px 8px",background:T.accentBg,borderRadius:6,border:"1px solid "+T.accent+"40"}}>A: {exA.name}</div>}
+          </div>
+          <div style={{padding:14}}>
+            <input ref={inputRef} value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Zoek oefening..." style={{...iS,marginBottom:8}}/>
+            <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8,alignItems:"center"}}>
+              {PATTERNS.map(function(p){var on=patternActive(p);var col=PC[p]||"#999";return <button key={p} onClick={function(){togglePattern(p);}} style={{padding:"3px 8px",fontSize:9,borderRadius:6,background:on?col+"18":"none",border:"1px solid "+(on?col:T.border),color:on?col:T.textMuted,textTransform:"uppercase",letterSpacing:0.3}}>{p}</button>;})}
+              <button onClick={function(){setActivePatterns({});}} style={{padding:"3px 8px",fontSize:9,borderRadius:6,marginLeft:2,background:"none",border:"1px solid "+T.border,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.3,display:PATTERNS.filter(function(p){return activePatterns[p]===false;}).length===0?"none":"inline-block"}}>Alles</button>
+            </div>
+            <div style={{maxHeight:200,overflowY:"auto"}}>
+              {filtered.length===0&&<div style={{color:T.textMuted,fontSize:12,padding:"12px 0",textAlign:"center"}}>Geen resultaten</div>}
+              {filtered.map(function(ex){var color=PC[ex.pattern]||T.textMuted;return(
+                <div key={ex.id} className="rh" onClick={function(){step===1?selectA(ex):selectB(ex);}} style={{padding:"10px",borderBottom:"1px solid "+T.border,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",background:color+"0d"}}>
+                  <span style={{fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</span>
+                  <span style={{fontSize:9,color:color,textTransform:"uppercase",letterSpacing:0.4}}>{ex.pattern}</span>
+                </div>
+              );})}
+            </div>
+          </div>
+          <div style={{padding:"10px 14px",borderTop:"1px solid "+T.border,display:"flex",gap:10,alignItems:"center"}}>
+            {step===2&&<button onClick={function(){setStep(1);setExA(null);setSearch("");}} style={{background:"none",border:"none",color:T.textMuted,fontSize:12,textTransform:"uppercase",letterSpacing:0.5}}>← Terug</button>}
+            <button onClick={props.onCancel} style={{background:"none",border:"none",color:T.textMuted,fontSize:12,textTransform:"uppercase",letterSpacing:0.5}}>Annuleer</button>
+          </div>
+        </div>
+      );
+    }
+
+    function SupersetBlock(props) {
+      var exA=props.exA; var exB=props.exB; var duoClients=props.duoClients||null;
+      var [open,setOpen]=useState(true);
+      var colA=PC[exA.pattern]||T.textMuted;
+      var colB=PC[exB.pattern]||T.textMuted;
+      function addSetA(){var last=exA.sets[exA.sets.length-1];props.onChangeA({...exA,sets:exA.sets.concat([{weight:last?last.weight:"",reps:last?last.reps:""}])});}
+      function addSetB(){var last=exB.sets[exB.sets.length-1];props.onChangeB({...exB,sets:exB.sets.concat([{weight:last?last.weight:"",reps:last?last.reps:""}])});}
+      function updateSetA(i,f,v){props.onChangeA({...exA,sets:exA.sets.map(function(s,idx){return idx===i?{...s,[f]:v}:s;})});}
+      function updateSetB(i,f,v){props.onChangeB({...exB,sets:exB.sets.map(function(s,idx){return idx===i?{...s,[f]:v}:s;})});}
+      function removeSetA(i){props.onChangeA({...exA,sets:exA.sets.filter(function(_,idx){return idx!==i;})});}
+      function removeSetB(i){props.onChangeB({...exB,sets:exB.sets.filter(function(_,idx){return idx!==i;})});}
+      return (
+        <div style={{borderBottom:"1px solid "+T.border,background:T.accentBg+"80"}}>
+          <div style={{padding:"10px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",background:T.accentBg,borderBottom:"1px solid "+T.border+"80"}} onClick={function(){setOpen(!open);}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:9,fontWeight:600,textTransform:"uppercase",letterSpacing:0.8,color:T.accent,background:"#fff",border:"1px solid "+T.accent,borderRadius:6,padding:"2px 5px"}}>SS</span>
+              <span style={{fontSize:12,color:T.textMid}}>{exA.name} <span style={{color:T.textMuted}}>+</span> {exB.name}</span>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:2}}>
+              {props.onMoveUp&&<button onClick={function(e){e.stopPropagation();props.onMoveUp();}} style={{background:"none",border:"none",color:T.textMuted,fontSize:16,padding:"4px 6px",lineHeight:1}}>↑</button>}
+              {props.onMoveDown&&<button onClick={function(e){e.stopPropagation();props.onMoveDown();}} style={{background:"none",border:"none",color:T.textMuted,fontSize:16,padding:"4px 6px",lineHeight:1}}>↓</button>}
+              <button onClick={function(e){e.stopPropagation();props.onDelete();}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 4px",lineHeight:1}}>×</button>
+            </div>
+          </div>
+          {open&&(
+            <div>
+              {[{ex:exA,col:colA,label:"A",addSet:addSetA,updateSet:updateSetA,removeSet:removeSetA,onChange:props.onChangeA,prevData:props.prevByName[exA.name]},
+                {ex:exB,col:colB,label:"B",addSet:addSetB,updateSet:updateSetB,removeSet:removeSetB,onChange:props.onChangeB,prevData:props.prevByName[exB.name]}
+              ].map(function(item,ri){
+                return (
+                  <div key={item.label} style={{borderTop:ri===1?"1px dashed "+T.borderStrong:"none"}}>
+                    <div style={{padding:"10px 20px 0",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                      <span style={{fontSize:10,fontWeight:600,color:item.col,background:item.col+"18",border:"1px solid "+item.col+"40",borderRadius:6,padding:"1px 6px",textTransform:"uppercase"}}>{item.label}</span>
+                      <span style={{fontSize:13,fontWeight:500}}>{item.ex.name}</span>
+                      <span style={{fontSize:10,color:item.col,textTransform:"uppercase",letterSpacing:0.4}}>{item.ex.pattern}</span>
+                      {duoClients&&(
+                        <div style={{display:"flex",gap:0,border:"1px solid "+T.border,borderRadius:6,overflow:"hidden",marginLeft:4}}>
+                          {["A","B"].map(function(lbl){
+                            var curLbl=item.ex.clientLabel||"A";
+                            var active=curLbl===lbl||(!["A","B"].includes(curLbl)&&lbl==="A");
+                            var name=lbl==="A"?duoClients[0].name.split(" ")[0]:duoClients[1].name.split(" ")[0];
+                            return <button key={lbl} onClick={function(e){e.stopPropagation();item.onChange({...item.ex,clientLabel:lbl});}} style={{padding:"2px 7px",fontSize:9,background:active?T.accent:"none",border:"none",color:active?"#fff":T.textMuted,textTransform:"uppercase",letterSpacing:0.3,cursor:"pointer",fontFamily:"inherit"}}>{name}</button>;
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{padding:"8px 20px 12px"}}>
+                      <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:5}}><span style={lS}>#</span><span style={lS}>kg</span><span style={lS}>reps</span><span/></div>
+                      {item.ex.sets.map(function(s,i){return(
+                        <div key={i} style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:6}}>
+                          <span style={{color:T.textMuted,fontSize:12,paddingTop:10,textAlign:"center"}}>{i+1}</span>
+                          <Stepper value={s.weight} step={0.5} placeholder="kg" onChange={function(v){item.updateSet(i,"weight",v);}}/>
+                          <Stepper value={s.reps} step={1} placeholder="reps" onChange={function(v){item.updateSet(i,"reps",v);}}/>
+                          <button onClick={function(){item.removeSet(i);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14}}>×</button>
+                        </div>
+                      );})}
+                      <button onClick={item.addSet} style={{background:"none",border:"1px dashed "+T.borderStrong,color:T.textMuted,padding:"5px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",width:"100%",borderRadius:6}}>+ Set</button>
+                      {item.prevData&&(
+                        <div style={{marginTop:8,padding:"7px 10px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:8}}>
+                          <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Vorige · {fmtDate(item.prevData.date)}</div>
+                          <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                            {item.prevData.sets.map(function(s,i){return <span key={i} style={{fontSize:11,padding:"3px 7px",background:T.surface,border:"1px solid "+T.border,borderRadius:6,color:T.textMid}}>{i+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function ExerciseRow(props) {
+      var ex=props.ex;
+      var duoClients=props.duoClients||null;
+      var lbl=duoClients?(ex.clientLabel||"A"):(ex.clientLabel||"AB");
+      var isB=duoClients&&lbl==="B";
+      var isAB=duoClients&&lbl==="AB";
+      var prevData=isB?(props.prevDataB||null):props.prevData;
+      var [open,setOpen]=useState(true);
+      var color=PC[ex.pattern]||T.textMuted;
+      var activeSets=isB?(ex.setsB||[{weight:"",reps:""}]):ex.sets;
+      function getSetsB(){return ex.setsB||ex.sets.map(function(){return {weight:"",reps:""};});}
+      function addSet(){
+        var last=activeSets[activeSets.length-1];
+        var newSet={weight:last?last.weight:"",reps:last?last.reps:""};
+        if(isB){props.onChange({...ex,setsB:getSetsB().concat([newSet])});}
+        else if(isAB){var ns=ex.sets.concat([newSet]);props.onChange({...ex,sets:ns,setsB:ns.map(function(s){return {...s};})});}
+        else{props.onChange({...ex,sets:ex.sets.concat([newSet])});}
+      }
+      function updateSet(i,field,val){
+        if(isB){var nb=getSetsB().map(function(s,idx){return idx===i?{...s,[field]:val}:s;});props.onChange({...ex,setsB:nb});}
+        else if(isAB){var ns=ex.sets.map(function(s,idx){return idx===i?{...s,[field]:val}:s;});props.onChange({...ex,sets:ns,setsB:ns.map(function(s){return {...s};})});}
+        else{props.onChange({...ex,sets:ex.sets.map(function(s,idx){return idx===i?{...s,[field]:val}:s;})});}
+      }
+      function removeSet(i){
+        if(isB){props.onChange({...ex,setsB:getSetsB().filter(function(_,idx){return idx!==i;})});}
+        else if(isAB){var ns=ex.sets.filter(function(_,idx){return idx!==i;});props.onChange({...ex,sets:ns,setsB:ns.map(function(s){return {...s};})});}
+        else{props.onChange({...ex,sets:ex.sets.filter(function(_,idx){return idx!==i;})});}
+      }
+      function setLabel(newLbl){
+        var upd={...ex,clientLabel:newLbl};
+        if(newLbl==="AB"){upd.setsB=ex.sets.map(function(s){return {...s};});}
+        if(newLbl==="B"&&!ex.setsB){upd.setsB=ex.sets.map(function(){return {weight:"",reps:""};});}
+        props.onChange(upd);
+      }
+      return (
+        <div style={{borderBottom:"1px solid "+T.border,background:color+"0d"}}>
+          <div style={{padding:"12px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={function(){setOpen(!open);}}>
+            <div>
+              <div style={{fontWeight:500,fontSize:14}}>{ex.name}</div>
+              <div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:2,display:"flex",alignItems:"center",gap:8}}>
+                <span>{ex.pattern} · {activeSets.length} set{activeSets.length!==1?"s":""}</span>
+                {ex.isUnilateralExercise&&(
+                  <button onClick={function(e){e.stopPropagation();props.onChange({...ex,performedUnilateral:!ex.performedUnilateral});}} style={{padding:"2px 7px",fontSize:9,borderRadius:6,background:ex.performedUnilateral?T.accent+"18":"none",border:"1px solid "+(ex.performedUnilateral?T.accent:T.border),color:ex.performedUnilateral?T.accent:T.textMuted,textTransform:"uppercase",letterSpacing:0.3,cursor:"pointer",fontFamily:"inherit"}}>uni</button>
+                )}
+                {props.duoClients&&(
+                  <div style={{display:"flex",gap:0,border:"1px solid "+T.border,borderRadius:6,overflow:"hidden",marginLeft:4}}>
+                    {["A","B"].map(function(l){
+                      var active=lbl===l||(!["A","B"].includes(lbl)&&l==="A");
+                      var name=l==="A"?props.duoClients[0].name.split(" ")[0]:props.duoClients[1].name.split(" ")[0];
+                      return <button key={l} onClick={function(e){e.stopPropagation();setLabel(l);}} style={{padding:"2px 7px",fontSize:9,background:active?T.accent:"none",border:"none",color:active?"#fff":T.textMuted,textTransform:"uppercase",letterSpacing:0.3,cursor:"pointer",fontFamily:"inherit"}}>{name}</button>;
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div style={{display:"flex",gap:2,alignItems:"center"}}>
+              {props.onMoveUp&&<button onClick={function(e){e.stopPropagation();props.onMoveUp();}} style={{background:"none",border:"none",color:T.textMuted,fontSize:16,padding:"8px 10px",lineHeight:1}}>↑</button>}
+              {props.onMoveDown&&<button onClick={function(e){e.stopPropagation();props.onMoveDown();}} style={{background:"none",border:"none",color:T.textMuted,fontSize:16,padding:"8px 10px",lineHeight:1}}>↓</button>}
+              <button onClick={function(e){e.stopPropagation();props.onDelete();}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"8px 10px",lineHeight:1}}>×</button>
+            </div>
+          </div>
+          {open&&(
+            <div style={{padding:"0 20px 14px"}}>
+              <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:5}}><span style={lS}>#</span><span style={lS}>kg</span><span style={lS}>reps</span><span/></div>
+              {activeSets.map(function(s,i){return(
+                <div key={i} style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:6}}>
+                  <span style={{color:T.textMuted,fontSize:12,paddingTop:10,textAlign:"center"}}>{i+1}</span>
+                  <Stepper value={s.weight} step={0.5} placeholder="kg" onChange={function(v){updateSet(i,"weight",v);}}/>
+                  <Stepper value={s.reps} step={1} placeholder="reps" onChange={function(v){updateSet(i,"reps",v);}}/>
+                  <button onClick={function(){removeSet(i);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14}}>×</button>
+                </div>
+              );})}
+              <button onClick={addSet} style={{background:"none",border:"1px dashed "+T.borderStrong,color:T.textMuted,padding:"6px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,marginTop:2,cursor:"pointer",width:"100%",borderRadius:6}}>+ Set toevoegen</button>
+              <div style={{marginTop:10}}><textarea value={ex.notes||""} onChange={function(e){props.onChange({...ex,notes:e.target.value});}} placeholder="Opmerking bij deze oefening..." rows={2} style={{...iS,resize:"none",fontSize:12,color:T.textMid,background:T.surfaceAlt,marginTop:2}}/></div>
+              {prevData&&(
+                <div style={{marginTop:10,padding:"8px 10px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:8}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
+                    <span style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5}}>Vorige · {fmtDate(prevData.date)}</span>
+                    <button onClick={props.onViewHistory} style={{background:"none",border:"none",color:T.accent,fontSize:10,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",padding:0}}>Volledige historie →</button>
+                  </div>
+                  <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                    {prevData.sets.map(function(s,i){return <span key={i} style={{fontSize:11,padding:"3px 7px",background:T.surface,border:"1px solid "+T.border,borderRadius:6,color:T.textMid}}>{i+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function ExerciseHistoryPage(props) {
+      var entries=props.entries||[];
+      if(entries.length===0){return <div style={{padding:"40px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Nog geen data voor deze oefening.</div>;}
+      var sorted=entries.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+      var maxWeight=Math.max.apply(null,sorted.map(function(e){return e.maxWeight;}));
+      if(!maxWeight){maxWeight=1;}
+      return (
+        <div className="ai" style={{paddingBottom:40}}>
+          <div style={{padding:"16px 20px",background:T.surfaceAlt,borderBottom:"1px solid "+T.border}}>
+            <div style={{fontSize:10,color:T.textMuted,marginBottom:10,textTransform:"uppercase",letterSpacing:0.5}}>Max gewicht per sessie (kg)</div>
+            <div style={{display:"flex",alignItems:"flex-end",gap:3,height:80}}>
+              {sorted.map(function(e,i){return(
+                <div key={i} style={{minWidth:24,flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                  <div style={{fontSize:9,color:T.textMuted,whiteSpace:"nowrap"}}>{e.maxWeight>0?e.maxWeight:""}</div>
+                  <div style={{width:"100%",background:T.accent,height:((e.maxWeight/maxWeight)*58)+"px",opacity:0.4+(i/Math.max(sorted.length-1,1))*0.6,minHeight:e.maxWeight>0?4:0,borderRadius:1}}/>
+                  <div style={{fontSize:8,color:T.textMuted,transform:"rotate(-40deg)",transformOrigin:"top left",marginLeft:6,whiteSpace:"nowrap"}}>{new Date(e.date).toLocaleDateString("nl-NL",{day:"2-digit",month:"short"})}</div>
+                </div>
+              );})}
+            </div>
+          </div>
+          {entries.map(function(e,i){return(
+            <div key={i} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                <div style={{fontSize:13,fontWeight:500}}>{fmtDate(e.date)}</div>
+                <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:500}}>{e.maxWeight>0?e.maxWeight+" kg":"—"}</div>{e.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{e.totalVol.toLocaleString("nl-NL")} vol.</div>}</div>
+              </div>
+              <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                {e.sets.map(function(s,si){return <span key={si} style={{fontSize:11,padding:"3px 7px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:6,color:T.textMid}}>{si+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
+              </div>
+            </div>
+          );})}
+        </div>
+      );
+    }
+
+    function SessionView(props) {
+      var session=props.session; var client=props.client; var allEntriesByName=props.allEntriesByName||{};
+      var duoClients=null;
+      if(isDuo(session)&&props.data){
+        var cA2=props.data.clients.find(function(c){return c.id===session.clientIds[0];});
+        var cB2=props.data.clients.find(function(c){return c.id===session.clientIds[1];});
+        if(cA2&&cB2){duoClients=[cA2,cB2];}
+      }
+      return (
+        <div className="ai" style={{paddingBottom:40}}>
+          <div style={{padding:"10px 20px",background:T.surfaceAlt,borderBottom:"1px solid "+T.border,fontSize:11,color:T.textMuted,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+            <span>{client?client.name+' · ':''}{fmtDate(session.date)}</span>
+            {duoClients&&<span style={{fontSize:10,color:"#7c3aed"}}>A: {duoClients[0].name} / B: {duoClients[1].name}</span>}
+          </div>
+          {session.exercises.map(function(ex){
+            var color=PC[ex.pattern]||T.textMuted;
+            var viewSets=client?setsForClient(ex,session,client.id):ex.sets;
+            var totalVol=viewSets.reduce(function(sum,s){return sum+(parseFloat(s.weight)||0)*(parseInt(s.reps)||0);},0);
+            var performed=ex.performedUnilateral||false;
+            var exKey=performed?ex.name+"__uni":ex.name;
+            var prevEntry=null; var allEntries=allEntriesByName[exKey]||[];
+            for(var ei=0;ei<allEntries.length;ei++){if(new Date(allEntries[ei].date)<new Date(session.date)){if(!prevEntry||new Date(allEntries[ei].date)>new Date(prevEntry.date)){prevEntry=allEntries[ei];}}}
+            var clientLbl=isDuo(session)?(ex.clientLabel||"AB"):null;
+            var badgeColor=clientLbl==="A"?"#2563eb":clientLbl==="B"?"#059669":"#7c3aed";
+            return (
+              <div key={ex.id} style={{borderBottom:"1px solid "+T.border,background:color+"0d"}}>
+                <div style={{padding:"12px 20px 6px"}}>
+                  <div style={{fontWeight:500,fontSize:14,display:"flex",alignItems:"center",gap:6}}>{ex.name}{ex.performedUnilateral&&<UniTag/>}{clientLbl&&<span style={{fontSize:9,padding:"1px 5px",background:badgeColor+"18",color:badgeColor,borderRadius:6,textTransform:"uppercase",letterSpacing:0.3}}>{clientLbl==="AB"?"A+B":clientLbl}</span>}</div>
+                  <div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:2}}>{ex.pattern}{totalVol>0?" · "+totalVol.toLocaleString("nl-NL")+" kg vol.":""}</div>
+                </div>
+                <div style={{padding:"0 20px 8px"}}>
+                  <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr",gap:6,marginBottom:5}}><span style={lS}>#</span><span style={lS}>kg</span><span style={lS}>reps</span></div>
+                  {viewSets.map(function(s,i){return(
+                    <div key={i} style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr",gap:6,marginBottom:4}}>
+                      <span style={{color:T.textMuted,fontSize:12,paddingTop:6,textAlign:"center"}}>{i+1}</span>
+                      <div style={{...iS,textAlign:"center",color:T.text,cursor:"default"}}>{s.weight||"—"}</div>
+                      <div style={{...iS,textAlign:"center",color:T.text,cursor:"default"}}>{s.reps||"—"}</div>
+                    </div>
+                  );})}
+                  {ex.notes&&<div style={{marginTop:6,fontSize:12,color:T.textMid,fontStyle:"italic",background:T.surfaceAlt,padding:"6px 10px",borderRadius:6}}>{ex.notes}</div>}
+                  {prevEntry&&(
+                    <div style={{marginTop:8,padding:"8px 10px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:8}}>
+                      <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Vorige sessie · {fmtDate(prevEntry.date)}</div>
+                      <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{prevEntry.sets.map(function(s,i){return <span key={i} style={{fontSize:11,padding:"3px 7px",background:T.surface,border:"1px solid "+T.border,borderRadius:6,color:T.textMid}}>{i+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {session.notes&&<div style={{padding:"16px 20px",background:T.surface}}><Label>Notities sessie</Label><div style={{marginTop:6,fontSize:13,color:T.textMid,lineHeight:1.7}}>{session.notes}</div></div>}
+        </div>
+      );
+    }
+
+    function ProgressView(props) {
+      var sessions=props.sessions;
+      var clientId=props.clientId||null;
+      var [period,setPeriod]=useState("all");
+      var now=new Date(); var cutoff=null;
+      if(period==="1m"){cutoff=new Date(now);cutoff.setMonth(cutoff.getMonth()-1);}
+      if(period==="3m"){cutoff=new Date(now);cutoff.setMonth(cutoff.getMonth()-3);}
+      if(period==="6m"){cutoff=new Date(now);cutoff.setMonth(cutoff.getMonth()-6);}
+      if(period==="1y"){cutoff=new Date(now);cutoff.setFullYear(cutoff.getFullYear()-1);}
+      var filteredSessions=cutoff?sessions.filter(function(s){return new Date(s.date)>=cutoff;}):sessions;
+
+      // performed=false → main entry only
+      // performed=true  → sub-entry (uni) only, NOT in main
+      var exerciseMap={};
+      filteredSessions.forEach(function(s){
+        s.exercises.forEach(function(ex){
+          if(!exForClient(ex, s, clientId)){return;}
+          if(ex.pattern==="Mobiliteit"){return;}
+          var sets=setsForClient(ex, s, clientId);
+          var maxWeight=Math.max.apply(null,sets.map(function(st){return parseFloat(st.weight)||0;}));
+          var maxReps=Math.max.apply(null,sets.map(function(st){return parseInt(st.reps)||0;}));
+          var maxRepsAtMax=Math.max.apply(null,sets.filter(function(st){return (parseFloat(st.weight)||0)===maxWeight;}).map(function(st){return parseInt(st.reps)||0;}));
+          var vol=sets.reduce(function(sum,st){return sum+(parseFloat(st.weight)||0)*(parseInt(st.reps)||0);},0);
+          var entry={date:s.date,maxWeight:maxWeight,maxReps:maxReps,maxRepsAtMax:maxRepsAtMax,totalVol:vol,sets:ex.sets};
+          var performed=ex.performedUnilateral||false;
+          if(performed){
+            // Uni sessions go only into the (uni) sub-entry
+            var uniKey=ex.name+"__uni";
+            if(!exerciseMap[uniKey]){exerciseMap[uniKey]={key:uniKey,name:ex.name+" (uni)",baseName:ex.name,pattern:ex.pattern,isSubEntry:true,entries:[]};}
+            exerciseMap[uniKey].entries.push(entry);
+          } else {
+            // Non-uni sessions go only into the main entry
+            if(!exerciseMap[ex.name]){exerciseMap[ex.name]={key:ex.name,name:ex.name,baseName:ex.name,pattern:ex.pattern,isSubEntry:false,entries:[]};}
+            exerciseMap[ex.name].entries.push(entry);
+          }
+        });
+      });
+
+      var exercises=Object.values(exerciseMap).sort(function(a,b){return a.name.localeCompare(b.name);});
+      var periods=[["all","Alles"],["1m","1 mnd"],["3m","3 mnd"],["6m","6 mnd"],["1y","1 jaar"]];
+      return (
+        <div>
+          <div style={{display:"flex",gap:5,padding:"12px 20px",borderBottom:"1px solid "+T.border,background:T.surface,flexWrap:"wrap"}}>
+            {periods.map(function(item){var k=item[0],label=item[1],active=period===k;return <button key={k} onClick={function(){setPeriod(k);}} style={{padding:"5px 10px",fontSize:11,borderRadius:6,background:active?T.accent:"none",border:"1px solid "+(active?T.accent:T.border),color:active?"#fff":T.textMid,textTransform:"uppercase",letterSpacing:0.4}}>{label}</button>;})}
+          </div>
+          {exercises.length===0&&<div style={{padding:"40px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Geen data in deze periode.</div>}
+          {exercises.map(function(ex){
+            var sorted=ex.entries.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+            var hasWeight=sorted.some(function(e){return e.maxWeight>0;});
+            var best=sorted.reduce(function(prev,cur){
+              if(hasWeight){
+                if(cur.maxWeight>prev.maxWeight){return cur;}
+                if(cur.maxWeight===prev.maxWeight&&(cur.maxRepsAtMax||0)>(prev.maxRepsAtMax||0)){return cur;}
+                return prev;
+              }
+              return cur.maxReps>prev.maxReps?cur:prev;
+            },sorted[0]);
+            var last=sorted[sorted.length-1],first=sorted[0];
+            var diff=null;
+            if(sorted.length>1){
+              if(hasWeight){
+                var wDiff=+(last.maxWeight-first.maxWeight).toFixed(1);
+                var rDiff=(last.maxRepsAtMax||0)-(first.maxRepsAtMax||0);
+                diff={w:wDiff,r:rDiff};
+              } else {diff=last.maxReps-first.maxReps;}
+            }
+            var color=PC[ex.pattern]||T.textMuted;
+            var bestLabel=hasWeight?best.maxWeight+"kg × "+(best.maxRepsAtMax||best.maxReps):best.maxReps+" reps";
+            var diffLabel=hasWeight
+              ?(diff&&(diff.w!==0||diff.r!==0)?((diff.w>0?"+":diff.w<0?"":"")+diff.w+"kg"+(diff.r!==0?" "+(diff.r>0?"+":"")+diff.r+" reps":"")):null)
+              :(diff?(diff>0?"+":"")+diff+" reps":null);
+            var indent=ex.isSubEntry;
+            return (
+              <div key={ex.key} className="rh" onClick={function(){props.onExHistory(ex.key);}} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,cursor:"pointer",background:indent?color+"0d":color+"08",display:"flex",justifyContent:"space-between",alignItems:"center",paddingLeft:indent?32:20}}>
+                <div>
+                  <div style={{fontWeight:indent?400:500,fontSize:indent?13:14,color:indent?T.textMid:T.text}}>{ex.isSubEntry?ex.baseName:ex.name}{ex.isSubEntry&&<UniTag/>}</div>
+                  <div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:2}}>{ex.pattern} · {ex.entries.length}×</div>
+                </div>
+                <div style={{textAlign:"right"}}><div style={{fontSize:indent?13:15,fontWeight:500}}>{bestLabel}</div>{diffLabel&&<div style={{fontSize:11,color:(hasWeight?diff&&diff.w>0:diff>0)?"#059669":T.accent}}>{diffLabel}</div>}</div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    function ExportView(props) {
+      var client=props.client; var sessions=props.sessions;
+      var [period,setPeriod]=useState("all"); var [copied,setCopied]=useState(false);
+      var sorted=sessions.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+      var filtered=sorted.filter(function(s){if(period==="all"){return true;}var d=new Date(s.date),now=new Date();if(period==="month"){return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}if(period==="3m"){return(now-d)/(1000*60*60*24*30)<=3;}return true;});
+      var bestMap={};
+      filtered.forEach(function(s){s.exercises.forEach(function(ex){var maxWeight=Math.max.apply(null,ex.sets.map(function(st){return parseFloat(st.weight)||0;}));var maxReps=Math.max.apply(null,ex.sets.map(function(st){return parseInt(st.reps)||0;}));var totalVol=ex.sets.reduce(function(sum,st){return sum+(parseFloat(st.weight)||0)*(parseInt(st.reps)||0);},0);var existing=bestMap[ex.name];var isBetter=!existing||(maxWeight>0&&maxWeight>existing.maxWeight)||(maxWeight===0&&existing.maxWeight===0&&maxReps>existing.maxReps);if(isBetter){bestMap[ex.name]={name:ex.name,pattern:ex.pattern,unilateral:ex.unilateral||false,maxWeight:maxWeight,maxReps:maxReps,totalVol:totalVol,sets:ex.sets,date:s.date};}});});
+      var bestList=Object.values(bestMap).sort(function(a,b){return a.name.localeCompare(b.name);});
+      function buildText(){var rangeLabel=period==="all"?"Alles":period==="month"?"Deze maand":"Afgelopen 3 maanden";var txt="BESTE RESULTATEN — "+(client?client.name.toUpperCase():"")+"\n";txt+="Periode: "+rangeLabel+" · "+fmtDate(new Date().toISOString())+"\n";txt+="─".repeat(44)+"\n\n";bestList.forEach(function(ex){var bestVal=ex.maxWeight>0?ex.maxWeight+"kg":(ex.maxReps>0?ex.maxReps+" reps":"—");txt+=ex.name+(ex.unilateral?" [uni]":"")+" ("+ex.pattern+")\n";txt+="  Beste sessie: "+fmtDate(ex.date)+" · best "+bestVal+"\n";ex.sets.forEach(function(s,i){txt+="  Set "+(i+1)+": "+(s.weight?s.weight+"kg":"—")+" × "+(s.reps||"—")+" reps\n";});txt+="\n";});return txt;}
+      async function copy(){await navigator.clipboard.writeText(buildText());setCopied(true);setTimeout(function(){setCopied(false);},2000);}
+      return (
+        <div className="ai" style={{padding:20,paddingBottom:40}}>
+          <div style={{fontSize:12,color:T.textMid,marginBottom:14,lineHeight:1.6}}>Beste resultaat per oefening (hoogste max gewicht) in de geselecteerde periode.</div>
+          <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
+            {[["all","Alles"],["month","Deze maand"],["3m","Afgelopen 3 mnd"]].map(function(item){return <button key={item[0]} onClick={function(){setPeriod(item[0]);}} style={{padding:"6px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,borderRadius:6,background:period===item[0]?T.accent:T.surface,border:"1px solid "+(period===item[0]?T.accent:T.border),color:period===item[0]?"#fff":T.textMid}}>{item[1]}</button>;})}
+          </div>
+          <Btn accent onClick={copy} style={{marginBottom:16}}>{copied?"✓ Gekopieerd!":"Kopieer tekst"}</Btn>
+          {bestList.length===0&&<div style={{color:T.textMuted,fontSize:13,textAlign:"center",padding:"20px 0"}}>Geen sessies in deze periode.</div>}
+          {bestList.map(function(ex,i){var color=PC[ex.pattern]||T.textMuted;return(
+            <div key={i} style={{background:T.surface,border:"1px solid "+T.border,borderLeft:"3px solid "+color,marginBottom:8,padding:"12px 16px",borderRadius:6}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                <div><div style={{fontWeight:500,fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</div><div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:1}}>{ex.pattern}</div><div style={{fontSize:10,color:T.textMuted,marginTop:2}}>Beste sessie: {fmtDate(ex.date)}</div></div>
+                <div style={{textAlign:"right"}}><div style={{fontSize:16,fontWeight:600}}>{ex.maxWeight>0?ex.maxWeight+" kg":(ex.maxReps>0?ex.maxReps+" reps":"—")}</div>{ex.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{ex.totalVol.toLocaleString("nl-NL")} vol.</div>}</div>
+              </div>
+              <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:8}}>{ex.sets.map(function(s,si){return <span key={si} style={{fontSize:11,padding:"3px 7px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:6,color:T.textMid}}>{si+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}</div>
+            </div>
+          );})}
+        </div>
+      );
+    }
+
+    // ── Login screen ──────────────────────────────────────────────────────────
+    function LoginScreen(props) {
+      var [email,setEmail]       = useState("");
+      var [password,setPassword] = useState("");
+      var [error,setError]       = useState("");
+      var [loading,setLoading]   = useState(false);
+
+      async function handleLogin(e) {
+        e.preventDefault();
+        if (!email.trim() || !password) { return; }
+        setLoading(true); setError("");
+        try {
+          await window._fbLogin(email.trim(), password);
+        } catch(err) {
+          setError("Verkeerd e-mailadres of wachtwoord.");
+          setLoading(false);
+        }
+      }
+
+      return (
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:24,fontFamily:"'Space Grotesk','DM Mono',sans-serif",overflow:"hidden"}}>
+          <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Barlow+Condensed:wght@700;800&family=Space+Grotesk:wght@400;500;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}input:focus{outline:none;border-color:#6366f1!important}`}}/>
+          <div style={{width:"100%",maxWidth:360}}>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:32,letterSpacing:1,textTransform:"uppercase",color:T.text,marginBottom:8}}>Trainer App</div>
+            <div style={{fontSize:12,color:T.textMuted,marginBottom:32,letterSpacing:0.3}}>Log in om door te gaan</div>
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.6,marginBottom:5}}>E-mailadres</div>
+              <input type="email" value={email} onChange={function(e){setEmail(e.target.value);}} placeholder="jouw@email.com" style={{...iS}} autoComplete="email"/>
+            </div>
+            <div style={{marginBottom:20}}>
+              <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.6,marginBottom:5}}>Wachtwoord</div>
+              <input type="password" value={password} onChange={function(e){setPassword(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter"){handleLogin(e);}}} placeholder="••••••••" style={{...iS}} autoComplete="current-password"/>
+            </div>
+            {error && <div style={{fontSize:12,color:T.danger,marginBottom:14}}>{error}</div>}
+            <button onClick={handleLogin} disabled={loading} style={{width:"100%",padding:"12px",fontSize:12,background:T.accent,border:"none",color:"#fff",textTransform:"uppercase",letterSpacing:0.8,cursor:"pointer",borderRadius:6,opacity:loading?0.6:1}}>
+              {loading?"Inloggen...":"Inloggen"}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // ── Root — handles auth state ──────────────────────────────────────────────
+    function Root() {
+      var [user, setUser] = useState(undefined);
+
+      useEffect(function() {
+        window._fbOnAuth(function(u) {
+          setUser(u);
+          if (u) { window.scrollTo(0,0); }
+        });
+      }, []);
+
+      // Swipe down from top = reload
+      useEffect(function() {
+        var startX=0, startY=0;
+        function onStart(e){if(!e.touches||!e.touches[0]){return;}startX=e.touches[0].clientX;startY=e.touches[0].clientY;}
+        function onEnd(e){
+          if(!e.changedTouches||!e.changedTouches[0]){return;}
+          var dx=e.changedTouches[0].clientX-startX;
+          var dy=e.changedTouches[0].clientY-startY;
+          if(dy>80&&Math.abs(dy)>Math.abs(dx)*1.5&&startY<80){window.location.reload();}
+        }
+        document.addEventListener("touchstart",onStart,{passive:true});
+        document.addEventListener("touchend",onEnd,{passive:true});
+        return function(){document.removeEventListener("touchstart",onStart);document.removeEventListener("touchend",onEnd);};
+      }, []);
+
+      if (user === undefined) {
+        return <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8}}><div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:48,letterSpacing:1,color:T.text,textTransform:"uppercase"}}>Trainer App</div><div style={{fontFamily:"'DM Mono','Courier New',monospace",fontWeight:300,fontSize:11,color:T.textMuted,letterSpacing:2,textTransform:"uppercase"}}>by MVDRPT</div></div>;
+      }
+      if (!user) { return <LoginScreen/>; }
+      return <App onLogout={function(){ window._fbLogout(); }}/>;
+    }
+
+    // ── Mount ──────────────────────────────────────────────────────────────────
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<Root/>);
+  </script>
+</body>
+</html>
