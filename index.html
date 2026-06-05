@@ -612,7 +612,7 @@
       var [offset,setOffset]=useState(0);
       var dragging=useRef(false); var startX=useRef(0); var startY=useRef(0);
       var lastX=useRef(0); var lastT=useRef(0); var vel=useRef(0); var axisLocked=useRef(null);
-      var REVEAL=props.onEdit?144:72;
+      var REVEAL=props.onEdit?160:80;
 
       // close when another row opens
       useEffect(function(){
@@ -660,8 +660,8 @@
       return (
         <div style={{position:"relative",overflow:"hidden",borderBottom:"1px solid "+T.border}}>
           <div style={{position:"absolute",top:0,right:0,bottom:0,display:"flex",alignItems:"stretch"}}>
-            {props.onEdit&&<button onClick={function(){close();props.onEdit();}} style={{width:72,background:"#2563eb",border:"none",color:"#fff",fontSize:13,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer",fontFamily:"inherit"}}>✎</button>}
-            <button onClick={function(){close();props.onDelete();}} style={{width:72,background:"#dc2626",border:"none",color:"#fff",fontSize:22,cursor:"pointer"}}>×</button>
+            {props.onEdit&&<button onClick={function(){close();props.onEdit();}} style={{width:80,background:"#2563eb",border:"none",color:"#fff",fontSize:22,cursor:"pointer",fontFamily:"inherit"}}>✎</button>}
+            <button onClick={function(){close();props.onDelete();}} style={{width:80,background:"#dc2626",border:"none",color:"#fff",fontSize:26,cursor:"pointer"}}>×</button>
           </div>
           <div
             onTouchStart={onTouchStart}
@@ -1046,6 +1046,12 @@
             </div>
           )}
           {session.exercises.length===0&&!showAdd&&!showSuperset&&<div style={{padding:"36px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Voeg een oefening toe om te beginnen.</div>}
+          <div id="add-ex-anchor" style={{padding:"12px 20px",borderBottom:"1px solid "+T.border,display:"flex",gap:8,flexWrap:"wrap",background:T.surfaceAlt}}>
+            {!showAdd&&!showSuperset&&<Btn accent onClick={function(){setShowAdd(true);}}>+ Oefening</Btn>}
+            {!showAdd&&!showSuperset&&<Btn onClick={function(){setShowSuperset(true);}}>+ Superset</Btn>}
+            {showAdd&&<AddExerciseForm library={library} onAdd={addEx} onCancel={function(){setShowAdd(false);}}/>}
+            {showSuperset&&<AddSupersetForm library={library} onAdd={addSuperset} onCancel={function(){setShowSuperset(false);}}/>}
+          </div>
           {renderList.map(function(item){
             if(item.type==="single"){
               return <ExerciseRow key={item.ex.id} ex={item.ex}
@@ -1070,12 +1076,6 @@
               onViewHistory={props.onViewExHistory}
             />;
           })}
-          <div id="add-ex-anchor" style={{padding:"16px 20px",display:"flex",gap:8,flexWrap:"wrap"}}>
-            {!showAdd&&!showSuperset&&<Btn accent onClick={function(){setShowAdd(true);setTimeout(function(){var el=document.getElementById("add-ex-anchor");if(el){el.scrollIntoView({behavior:"smooth",block:"start"});}},50);}}>+ Oefening</Btn>}
-            {!showAdd&&!showSuperset&&<Btn onClick={function(){setShowSuperset(true);setTimeout(function(){var el=document.getElementById("add-ex-anchor");if(el){el.scrollIntoView({behavior:"smooth",block:"start"});}},50);}}>+ Superset</Btn>}
-            {showAdd&&<AddExerciseForm library={library} onAdd={addEx} onCancel={function(){setShowAdd(false);}}/>}
-            {showSuperset&&<AddSupersetForm library={library} onAdd={addSuperset} onCancel={function(){setShowSuperset(false);}}/>}
-          </div>
           <div style={{padding:"0 20px 20px"}}>
             <Label>Notities sessie</Label>
             <textarea value={session.notes} onChange={function(e){onChange({...session,notes:e.target.value});}} placeholder="Opmerkingen over de hele sessie..." rows={3} style={{...iS,marginTop:5,resize:"none"}}/>
