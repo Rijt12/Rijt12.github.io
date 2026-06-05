@@ -1038,16 +1038,26 @@
 
       return (
         <div className="ai" style={{paddingBottom:20}}>
-          <div style={{padding:"10px 20px",background:T.surfaceAlt,borderBottom:"1px solid "+T.border,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <Label>Datum</Label>
-              <input type="date" value={localDateValue} onChange={handleDateChange} style={{...iS,width:"auto",fontSize:13,padding:"5px 10px",background:T.surface,cursor:"pointer"}}/>
+          <div style={{position:"sticky",top:48,zIndex:9,background:T.surfaceAlt,borderBottom:"1px solid "+T.border}}>
+            <div style={{padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <Label>Datum</Label>
+                <input type="date" value={localDateValue} onChange={handleDateChange} style={{...iS,width:"auto",fontSize:13,padding:"5px 10px",background:T.surface,cursor:"pointer"}}/>
+              </div>
+              <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                {templates.length>0&&<button onClick={function(){setShowTemplates(!showTemplates);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:10,borderRadius:2,textTransform:"uppercase",letterSpacing:0.5}}>{showTemplates?"Sluiten":"Schema laden"}</button>}
+                {!isDuo(session)&&onDuoPick&&<button onClick={function(){setShowDuoPicker(!showDuoPicker);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:10,borderRadius:2,textTransform:"uppercase",letterSpacing:0.5}}>Duo +</button>}
+                {isDuo(session)&&duoClients&&<span style={{fontSize:10,color:"#7c3aed",padding:"5px 8px",border:"1px solid #ede9fe",borderRadius:2,textTransform:"uppercase",letterSpacing:0.4}}>DUO: {duoClients[0].name.split(" ")[0]} + {duoClients[1].name.split(" ")[0]}</span>}
+              </div>
             </div>
-            <div style={{display:"flex",gap:6,alignItems:"center"}}>
-              {templates.length>0&&<button onClick={function(){setShowTemplates(!showTemplates);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:10,borderRadius:2,textTransform:"uppercase",letterSpacing:0.5}}>{showTemplates?"Sluiten":"Schema laden"}</button>}
-              {!isDuo(session)&&onDuoPick&&<button onClick={function(){setShowDuoPicker(!showDuoPicker);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:10,borderRadius:2,textTransform:"uppercase",letterSpacing:0.5}}>Duo +</button>}
-              {isDuo(session)&&duoClients&&<span style={{fontSize:10,color:"#7c3aed",padding:"5px 8px",border:"1px solid #ede9fe",borderRadius:2,textTransform:"uppercase",letterSpacing:0.4}}>DUO: {duoClients[0].name.split(" ")[0]} + {duoClients[1].name.split(" ")[0]}</span>}
-            </div>
+            {!showAdd&&!showSuperset&&(
+              <div style={{padding:"10px 20px",borderTop:"1px solid "+T.border,display:"flex",gap:8}}>
+                <Btn accent onClick={function(){setShowAdd(true);}}>+ Oefening</Btn>
+                <Btn onClick={function(){setShowSuperset(true);}}>+ Superset</Btn>
+              </div>
+            )}
+            {showAdd&&<div style={{borderTop:"1px solid "+T.border}}><AddExerciseForm library={library} onAdd={addEx} onCancel={function(){setShowAdd(false);}}/></div>}
+            {showSuperset&&<div style={{borderTop:"1px solid "+T.border}}><AddSupersetForm library={library} onAdd={addSuperset} onCancel={function(){setShowSuperset(false);}}/></div>}
           </div>
           {showDuoPicker&&(
             <div style={{padding:"10px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}>
@@ -1092,16 +1102,6 @@
             <Label>Notities sessie</Label>
             <textarea value={session.notes} onChange={function(e){onChange({...session,notes:e.target.value});}} placeholder="Opmerkingen over de hele sessie..." rows={3} style={{...iS,marginTop:5,resize:"none"}}/>
           </div>
-          <div style={{height:72}}/>
-          {/* Floating add bar */}
-          {!showAdd&&!showSuperset&&(
-            <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,padding:"12px 20px",background:T.surface,borderTop:"1px solid "+T.border,display:"flex",gap:8,zIndex:50,boxShadow:"0 -4px 16px rgba(0,0,0,0.08)"}}>
-              <Btn accent onClick={function(){setShowAdd(true);}}>+ Oefening</Btn>
-              <Btn onClick={function(){setShowSuperset(true);}}>+ Superset</Btn>
-            </div>
-          )}
-          {showAdd&&<div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,background:T.surface,borderTop:"1px solid "+T.border,zIndex:50,boxShadow:"0 -4px 16px rgba(0,0,0,0.08)",maxHeight:"70vh",overflowY:"auto"}}><AddExerciseForm library={library} onAdd={addEx} onCancel={function(){setShowAdd(false);}}/></div>}
-          {showSuperset&&<div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,background:T.surface,borderTop:"1px solid "+T.border,zIndex:50,boxShadow:"0 -4px 16px rgba(0,0,0,0.08)",maxHeight:"70vh",overflowY:"auto"}}><AddSupersetForm library={library} onAdd={addSuperset} onCancel={function(){setShowSuperset(false);}}/></div>}
         </div>
       );
     }
