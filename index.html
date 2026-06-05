@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, interactive-widget=resizes-content"/>
   <title>Trainer App</title>
   <!-- PWA / Home screen -->
   <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -18,6 +18,24 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script>
+    // Scroll focused input above keyboard
+    function scrollFocusedAboveKeyboard() {
+      var el = document.activeElement;
+      if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) { return; }
+      setTimeout(function() {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 120);
+    }
+    document.addEventListener('focusin', scrollFocusedAboveKeyboard);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', function() {
+        var el = document.activeElement;
+        if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) { return; }
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    }
+  </script>
   <script>
     (function() {
       var config = {
@@ -612,7 +630,7 @@
       var [offset,setOffset]=useState(0);
       var dragging=useRef(false); var startX=useRef(0); var startY=useRef(0);
       var lastX=useRef(0); var lastT=useRef(0); var vel=useRef(0); var axisLocked=useRef(null);
-      var REVEAL=props.onEdit?160:80;
+      var REVEAL=props.onEdit?144:72;
 
       // close when another row opens
       useEffect(function(){
@@ -660,8 +678,8 @@
       return (
         <div style={{position:"relative",overflow:"hidden",borderBottom:"1px solid "+T.border}}>
           <div style={{position:"absolute",top:0,right:0,bottom:0,display:"flex",alignItems:"stretch"}}>
-            {props.onEdit&&<button onClick={function(){close();props.onEdit();}} style={{width:80,background:"#2563eb",border:"none",color:"#fff",fontSize:22,cursor:"pointer",fontFamily:"inherit"}}>✎</button>}
-            <button onClick={function(){close();props.onDelete();}} style={{width:80,background:"#dc2626",border:"none",color:"#fff",fontSize:26,cursor:"pointer"}}>×</button>
+            {props.onEdit&&<button onClick={function(){close();props.onEdit();}} style={{width:72,background:"#2563eb",border:"none",color:"#fff",fontSize:13,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer",fontFamily:"inherit"}}>✎</button>}
+            <button onClick={function(){close();props.onDelete();}} style={{width:72,background:"#dc2626",border:"none",color:"#fff",fontSize:22,cursor:"pointer"}}>×</button>
           </div>
           <div
             onTouchStart={onTouchStart}
