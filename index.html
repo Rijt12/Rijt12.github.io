@@ -1064,12 +1064,6 @@
             </div>
           )}
           {session.exercises.length===0&&!showAdd&&!showSuperset&&<div style={{padding:"36px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Voeg een oefening toe om te beginnen.</div>}
-          <div id="add-ex-anchor" style={{padding:"12px 20px",borderBottom:"1px solid "+T.border,display:"flex",gap:8,flexWrap:"wrap",background:T.surfaceAlt}}>
-            {!showAdd&&!showSuperset&&<Btn accent onClick={function(){setShowAdd(true);}}>+ Oefening</Btn>}
-            {!showAdd&&!showSuperset&&<Btn onClick={function(){setShowSuperset(true);}}>+ Superset</Btn>}
-            {showAdd&&<AddExerciseForm library={library} onAdd={addEx} onCancel={function(){setShowAdd(false);}}/>}
-            {showSuperset&&<AddSupersetForm library={library} onAdd={addSuperset} onCancel={function(){setShowSuperset(false);}}/>}
-          </div>
           {renderList.map(function(item){
             if(item.type==="single"){
               return <ExerciseRow key={item.ex.id} ex={item.ex}
@@ -1098,6 +1092,16 @@
             <Label>Notities sessie</Label>
             <textarea value={session.notes} onChange={function(e){onChange({...session,notes:e.target.value});}} placeholder="Opmerkingen over de hele sessie..." rows={3} style={{...iS,marginTop:5,resize:"none"}}/>
           </div>
+          <div style={{height:72}}/>
+          {/* Floating add bar */}
+          {!showAdd&&!showSuperset&&(
+            <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,padding:"12px 20px",background:T.surface,borderTop:"1px solid "+T.border,display:"flex",gap:8,zIndex:50,boxShadow:"0 -4px 16px rgba(0,0,0,0.08)"}}>
+              <Btn accent onClick={function(){setShowAdd(true);}}>+ Oefening</Btn>
+              <Btn onClick={function(){setShowSuperset(true);}}>+ Superset</Btn>
+            </div>
+          )}
+          {showAdd&&<div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,background:T.surface,borderTop:"1px solid "+T.border,zIndex:50,boxShadow:"0 -4px 16px rgba(0,0,0,0.08)",maxHeight:"70vh",overflowY:"auto"}}><AddExerciseForm library={library} onAdd={addEx} onCancel={function(){setShowAdd(false);}}/></div>}
+          {showSuperset&&<div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,background:T.surface,borderTop:"1px solid "+T.border,zIndex:50,boxShadow:"0 -4px 16px rgba(0,0,0,0.08)",maxHeight:"70vh",overflowY:"auto"}}><AddSupersetForm library={library} onAdd={addSuperset} onCancel={function(){setShowSuperset(false);}}/></div>}
         </div>
       );
     }
