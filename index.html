@@ -113,6 +113,14 @@
       catch(e) { console.error(e); }
     }
 
+    // Parses weight strings like "37,5" or "2x16" → numeric value
+    function parseW(str) {
+      if(!str){return 0;}
+      var s=String(str).replace(",",".").trim();
+      if(/^2x/i.test(s)){s=s.slice(2);}
+      return parseFloat(s)||0;
+    }
+
     // ── Constants ──────────────────────────────────────────────────────────────
     const PATTERNS = ["Push","Pull","Hinge","Squat","Carry","Core","Isolatie","Mobiliteit","Machine"];
     const PC = {
@@ -439,8 +447,8 @@
           if (!allEntriesByName[key]) { allEntriesByName[key]=[]; }
           allEntriesByName[key].push({
             date:s.date, sets:sets,
-            maxWeight:Math.max.apply(null,sets.map(function(st){return parseFloat(st.weight)||0;})),
-            totalVol:sets.reduce(function(sum,st){return sum+(parseFloat(st.weight)||0)*(parseInt(st.reps)||0);},0),
+            maxWeight:Math.max.apply(null,sets.map(function(st){return parseW(st.weight)||0;})),
+            totalVol:sets.reduce(function(sum,st){return sum+(parseW(st.weight)||0)*(parseInt(st.reps)||0);},0),
           });
         });
       });
@@ -1411,7 +1419,7 @@
             <div key={i} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:isBest?"#fffbeb":T.surface}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
                 <div style={{fontSize:13,fontWeight:500,display:"flex",alignItems:"center",gap:6}}>{fmtDate(e.date)}{isBest&&<span style={{fontSize:14}}>⭐</span>}</div>
-                <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:500}}>{e.maxWeight>0?parseFloat(e.maxWeight).toFixed(1)+" kg":"—"}</div>{e.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{e.totalVol.toLocaleString("nl-NL")} vol.</div>}</div>
+                <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:500}}>{e.maxWeight>0?parseW(e.maxWeight).toFixed(1)+" kg":"—"}</div>{e.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{e.totalVol.toLocaleString("nl-NL")} vol.</div>}</div>
               </div>
               <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
                 {e.sets.map(function(s,si){return <span key={si} style={{fontSize:11,padding:"3px 7px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:4,color:T.textMid}}>{si+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
@@ -1439,7 +1447,7 @@
           {session.exercises.map(function(ex){
             var color=PC[ex.pattern]||T.textMuted;
             var viewSets=client?setsForClient(ex,session,client.id):ex.sets;
-            var totalVol=viewSets.reduce(function(sum,s){return sum+(parseFloat(s.weight)||0)*(parseInt(s.reps)||0);},0);
+            var totalVol=viewSets.reduce(function(sum,s){return sum+(parseW(s.weight)||0)*(parseInt(s.reps)||0);},0);
             var performed=ex.performedUnilateral||false;
             var exKey=performed?ex.name+"__uni":ex.name;
             var prevEntry=null; var allEntries=allEntriesByName[exKey]||[];
@@ -1496,10 +1504,10 @@
           if(!exForClient(ex, s, clientId)){return;}
           if(ex.pattern==="Mobiliteit"){return;}
           var sets=setsForClient(ex, s, clientId);
-          var maxWeight=Math.max.apply(null,sets.map(function(st){return parseFloat(st.weight)||0;}));
+          var maxWeight=Math.max.apply(null,sets.map(function(st){return parseW(st.weight)||0;}));
           var maxReps=Math.max.apply(null,sets.map(function(st){return parseInt(st.reps)||0;}));
-          var maxRepsAtMax=Math.max.apply(null,sets.filter(function(st){return (parseFloat(st.weight)||0)===maxWeight;}).map(function(st){return parseInt(st.reps)||0;}));
-          var vol=sets.reduce(function(sum,st){return sum+(parseFloat(st.weight)||0)*(parseInt(st.reps)||0);},0);
+          var maxRepsAtMax=Math.max.apply(null,sets.filter(function(st){return (parseW(st.weight)||0)===maxWeight;}).map(function(st){return parseInt(st.reps)||0;}));
+          var vol=sets.reduce(function(sum,st){return sum+(parseW(st.weight)||0)*(parseInt(st.reps)||0);},0);
           var entry={date:s.date,maxWeight:maxWeight,maxReps:maxReps,maxRepsAtMax:maxRepsAtMax,totalVol:vol,sets:ex.sets};
           var performed=ex.performedUnilateral||false;
           if(performed){
@@ -1569,7 +1577,7 @@
       var sorted=sessions.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
       var filtered=sorted.filter(function(s){if(period==="all"){return true;}var d=new Date(s.date),now=new Date();if(period==="month"){return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}if(period==="3m"){return(now-d)/(1000*60*60*24*30)<=3;}return true;});
       var bestMap={};
-      filtered.forEach(function(s){s.exercises.forEach(function(ex){var maxWeight=Math.max.apply(null,ex.sets.map(function(st){return parseFloat(st.weight)||0;}));var maxReps=Math.max.apply(null,ex.sets.map(function(st){return parseInt(st.reps)||0;}));var totalVol=ex.sets.reduce(function(sum,st){return sum+(parseFloat(st.weight)||0)*(parseInt(st.reps)||0);},0);var existing=bestMap[ex.name];var isBetter=!existing||(maxWeight>0&&maxWeight>existing.maxWeight)||(maxWeight===0&&existing.maxWeight===0&&maxReps>existing.maxReps);if(isBetter){bestMap[ex.name]={name:ex.name,pattern:ex.pattern,unilateral:ex.unilateral||false,maxWeight:maxWeight,maxReps:maxReps,totalVol:totalVol,sets:ex.sets,date:s.date};}});});
+      filtered.forEach(function(s){s.exercises.forEach(function(ex){var maxWeight=Math.max.apply(null,ex.sets.map(function(st){return parseW(st.weight)||0;}));var maxReps=Math.max.apply(null,ex.sets.map(function(st){return parseInt(st.reps)||0;}));var totalVol=ex.sets.reduce(function(sum,st){return sum+(parseW(st.weight)||0)*(parseInt(st.reps)||0);},0);var existing=bestMap[ex.name];var isBetter=!existing||(maxWeight>0&&maxWeight>existing.maxWeight)||(maxWeight===0&&existing.maxWeight===0&&maxReps>existing.maxReps);if(isBetter){bestMap[ex.name]={name:ex.name,pattern:ex.pattern,unilateral:ex.unilateral||false,maxWeight:maxWeight,maxReps:maxReps,totalVol:totalVol,sets:ex.sets,date:s.date};}});});
       var bestList=Object.values(bestMap).sort(function(a,b){return a.name.localeCompare(b.name);});
       function buildText(){var rangeLabel=period==="all"?"Alles":period==="month"?"Deze maand":"Afgelopen 3 maanden";var txt="BESTE RESULTATEN — "+(client?client.name.toUpperCase():"")+"\n";txt+="Periode: "+rangeLabel+" · "+fmtDate(new Date().toISOString())+"\n";txt+="─".repeat(44)+"\n\n";bestList.forEach(function(ex){var bestVal=ex.maxWeight>0?ex.maxWeight+"kg":(ex.maxReps>0?ex.maxReps+" reps":"—");txt+=ex.name+(ex.unilateral?" [uni]":"")+" ("+ex.pattern+")\n";txt+="  Beste sessie: "+fmtDate(ex.date)+" · best "+bestVal+"\n";ex.sets.forEach(function(s,i){txt+="  Set "+(i+1)+": "+(s.weight?s.weight+"kg":"—")+" × "+(s.reps||"—")+" reps\n";});txt+="\n";});return txt;}
       async function copy(){await navigator.clipboard.writeText(buildText());setCopied(true);setTimeout(function(){setCopied(false);},2000);}
