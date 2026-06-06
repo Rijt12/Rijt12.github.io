@@ -1404,10 +1404,12 @@
               );})}
             </div>
           </div>
-          {entries.map(function(e,i){return(
-            <div key={i} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface}}>
+          {entries.map(function(e,i){
+            var isBest=e.maxWeight>0&&e.maxWeight===maxWeight;
+            return(
+            <div key={i} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:isBest?"#fffbeb":T.surface}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                <div style={{fontSize:13,fontWeight:500}}>{fmtDate(e.date)}</div>
+                <div style={{fontSize:13,fontWeight:500,display:"flex",alignItems:"center",gap:6}}>{fmtDate(e.date)}{isBest&&<span style={{fontSize:14}}>⭐</span>}</div>
                 <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:500}}>{e.maxWeight>0?e.maxWeight+" kg":"—"}</div>{e.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{e.totalVol.toLocaleString("nl-NL")} vol.</div>}</div>
               </div>
               <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
