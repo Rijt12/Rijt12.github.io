@@ -176,7 +176,7 @@
       var [navKey, setNavKey]                 = useState(0);
 
       useEffect(function() {
-        Promise.all([loadData(), new Promise(function(r){ setTimeout(r, 1500); })]).then(function(res){ setData(res[0]); });
+        Promise.all([loadData(), new Promise(function(r){ setTimeout(r, 800); })]).then(function(res){ setData(res[0]); });
       }, []);
 
       // Seed on first load
