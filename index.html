@@ -896,7 +896,7 @@
           {templates.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>Nog geen schema's.<br/>Maak een schema met vaste oefeningen, sets, kg en reps.</div>}
           {templates.map(function(tpl){return(
             <SwipeRow key={tpl.id} rowId={tpl.id} openId={openRowId} onOpen={setOpenRowId} background={T.surface} onEdit={function(){props.onEdit(tpl);}} onDelete={function(){props.onDelete(tpl.id);}}>
-            <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface}}>
+            <div className="rh" onClick={function(){props.onEdit(tpl);}} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,cursor:"pointer"}}>
               <div style={{fontWeight:500,fontSize:14}}>{tpl.name}</div>
               <div style={{fontSize:11,color:T.textMuted,marginTop:3}}>{tpl.exercises.length} oefening{tpl.exercises.length!==1?"en":""}</div>
               <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>
