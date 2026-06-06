@@ -8,17 +8,29 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <style>
     body { font-family: sans-serif; max-width: 480px; margin: 60px auto; padding: 20px; }
-    button { padding: 14px 28px; font-size: 16px; background: #2563eb; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+    input { display: block; width: 100%; padding: 10px; margin-bottom: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { padding: 12px 24px; font-size: 15px; background: #2563eb; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
     button:disabled { background: #94a3b8; cursor: not-allowed; }
-    #log { margin-top: 24px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
+    #log { margin-top: 20px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
     .ok  { color: #059669; }
     .err { color: #dc2626; }
   </style>
 </head>
 <body>
   <h2>Import: Carolyn Whelan</h2>
-  <p>Klik op de knop om Carolyn aan te maken als klant en haar trainingsdata te importeren.</p>
-  <button id="btn" onclick="runImport()">Start import</button>
+
+  <div id="loginForm">
+    <p>Log eerst in met je app-account:</p>
+    <input id="email" type="email" placeholder="E-mailadres"/>
+    <input id="password" type="password" placeholder="Wachtwoord"/>
+    <button onclick="doLogin()">Inloggen & importeren</button>
+  </div>
+
+  <div id="importSection" style="display:none">
+    <p>Ingelogd. Klik om de import te starten.</p>
+    <button id="btn" onclick="runImport()">Start import</button>
+  </div>
+
   <div id="log"></div>
 
 <script>
@@ -30,10 +42,10 @@
     messagingSenderId: "376018012060",
     appId: "1:376018012060:web:5fe266522a06f76f816a59"
   });
-  var db  = firebase.firestore();
-  var ref = db.collection("app").doc("data");
+  var db   = firebase.firestore();
+  var auth = firebase.auth();
+  var ref  = db.collection("app").doc("data");
 
-  function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
   function log(msg, cls) {
     var el = document.getElementById("log");
     var span = document.createElement("span");
@@ -42,57 +54,67 @@
     el.appendChild(span);
   }
 
+  async function doLogin() {
+    var email = document.getElementById("email").value.trim();
+    var pw    = document.getElementById("password").value;
+    if (!email || !pw) { log("Vul e-mail en wachtwoord in.", "err"); return; }
+    try {
+      await auth.signInWithEmailAndPassword(email, pw);
+      document.getElementById("loginForm").style.display = "none";
+      document.getElementById("importSection").style.display = "block";
+      log("✓ Ingelogd", "ok");
+    } catch(e) {
+      log("✗ Inlogfout: " + e.message, "err");
+    }
+  }
+
+  function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
   function makeEx(name, pattern, unilateral, sets, notes) {
-    return {
-      id: uid(), name: name, pattern: pattern,
+    return { id: uid(), name: name, pattern: pattern,
       unilateral: !!unilateral, isUnilateralExercise: !!unilateral,
-      performedUnilateral: false,
-      sets: sets, notes: notes || ""
-    };
+      performedUnilateral: false, sets: sets, notes: notes || "" };
   }
   function s(w, r) { return { weight: w, reps: r }; }
 
   async function runImport() {
     document.getElementById("btn").disabled = true;
-    log("Bezig met laden van huidige data...");
+    log("Laden huidige data...");
 
     var snap = await ref.get();
-    var data = snap.exists ? snap.data() : { clients:[], sessions:[], exerciseLibrary:[], templates:[] };
+    var data = snap.exists ? (snap.data().payload || { clients:[], sessions:[], exerciseLibrary:[], templates:[] })
+                           : { clients:[], sessions:[], exerciseLibrary:[], templates:[] };
 
-    // Check if Carolyn already exists
     if (data.clients.some(function(c){ return c.name === "Carolyn Whelan"; })) {
-      log("⚠ Carolyn Whelan bestaat al als klant. Import gestopt.", "err");
+      log("⚠ Carolyn Whelan bestaat al. Import gestopt.", "err");
       document.getElementById("btn").disabled = false;
       return;
     }
 
     var clientId = uid();
-    var carolyn = { id: clientId, name: "Carolyn Whelan", createdAt: new Date().toISOString() };
-    log("✓ Klant aangemaakt: Carolyn Whelan", "ok");
+    var carolyn  = { id: clientId, name: "Carolyn Whelan", createdAt: new Date().toISOString() };
+    log("✓ Klant aangemaakt", "ok");
 
     function session(date, notes, exercises) {
-      return {
-        id: uid(), clientId: clientId, clientIds: [clientId],
-        date: new Date(date).toISOString(), notes: notes, exercises: exercises
-      };
+      return { id: uid(), clientId: clientId, clientIds: [clientId],
+               date: new Date(date).toISOString(), notes: notes, exercises: exercises };
     }
 
     var sessions = [
 
       session("2023-12-31", "Jaaroverzicht 2023", [
-        makeEx("Bulgarian Split Squat", "Squat",    true,  [s("2x10","")]),
-        makeEx("Linear Leg Press",      "Machine",  false, [s("75","")]),
-        makeEx("Leg Extension",         "Machine",  true,  [s("10","")]),
-        makeEx("Hip Thrust",            "Hinge",    false, [s("12,5","")]),
-        makeEx("RDL",                   "Hinge",    false, [s("2x7,5","")]),
-        makeEx("Leg Curl",              "Machine",  true,  [s("12,5","")], "Prone, unilateraal"),
-        makeEx("Chin Up",               "Pull",     false, [s("","")],    "4-2-1-0 tempo"),
-        makeEx("Lat Pulldown",          "Pull",     false, [s("22,5","")]),
-        makeEx("Cable Row",             "Pull",     false, [s("25","")]),
-        makeEx("Shoulder Press",        "Push",     true,  [s("4","")]),
-        makeEx("DB Bench Press",        "Push",     false, [s("2x8","")]),
-        makeEx("Incline Push Up",       "Push",     false, [s("","")],    "4-2-1-1 tempo, 5 reps negatief"),
-        makeEx("Tricep Extension Cable","Isolatie", false, [s("6","")])
+        makeEx("Bulgarian Split Squat",  "Squat",    true,  [s("2x10","")]),
+        makeEx("Linear Leg Press",       "Machine",  false, [s("75","")]),
+        makeEx("Leg Extension",          "Machine",  true,  [s("10","")]),
+        makeEx("Hip Thrust",             "Hinge",    false, [s("12,5","")]),
+        makeEx("RDL",                    "Hinge",    false, [s("2x7,5","")]),
+        makeEx("Leg Curl",               "Machine",  true,  [s("12,5","")], "Prone, unilateraal"),
+        makeEx("Chin Up",                "Pull",     false, [s("","")],     "4-2-1-0 tempo"),
+        makeEx("Lat Pulldown",           "Pull",     false, [s("22,5","")]),
+        makeEx("Cable Row",              "Pull",     false, [s("25","")]),
+        makeEx("Shoulder Press",         "Push",     true,  [s("4","")]),
+        makeEx("DB Bench Press",         "Push",     false, [s("2x8","")]),
+        makeEx("Incline Push Up",        "Push",     false, [s("","")],     "4-2-1-1 tempo, 5 reps negatief"),
+        makeEx("Tricep Extension Cable", "Isolatie", false, [s("6","")])
       ]),
 
       session("2024-12-31", "Jaaroverzicht 2024", [
@@ -102,7 +124,7 @@
         makeEx("Leg Extension",          "Machine",  false, [s("22,5","")]),
         makeEx("Hip Thrust",             "Hinge",    false, [s("25","")]),
         makeEx("Leg Curl",               "Machine",  false, [s("25","")]),
-        makeEx("Chin Up",                "Pull",     false, [s("","")],   "3 reps! → 6-8 reps (zwarte + blauwe dunne band)"),
+        makeEx("Chin Up",                "Pull",     false, [s("","")],     "3 reps! → 6-8 reps (zwarte + blauwe dunne band)"),
         makeEx("Lat Pulldown",           "Pull",     false, [s("15","10"),s("15","10")]),
         makeEx("Cable Row",              "Pull",     false, [s("25","")]),
         makeEx("Face Pull",              "Pull",     false, [s("12,5","")]),
@@ -119,12 +141,12 @@
         makeEx("Leg Extension",          "Machine",  false, [s("25","12")]),
         makeEx("Hip Thrust",             "Hinge",    false, [s("35","12"),s("35","12")]),
         makeEx("Leg Curl",               "Machine",  false, [s("27,5","10"),s("27,5","10"),s("27,5","10")]),
-        makeEx("Chin Up",                "Pull",     false, [s("","")],   "5 reps rode band → 6 reps rode band, 6-8 reps"),
+        makeEx("Chin Up",                "Pull",     false, [s("","")],     "5 reps rode band → 6 reps rode band, 6-8 reps"),
         makeEx("Lat Pulldown",           "Pull",     false, [s("22,5","")], "High to low"),
         makeEx("Cable Row",              "Pull",     false, [s("16","10"),s("16","10"),s("16","10")]),
         makeEx("Face Pull",              "Pull",     false, [s("15","12"),s("15","12"),s("15","12")]),
         makeEx("DB Bench Press",         "Push",     false, [s("2x10","12"),s("2x10","12"),s("2x10","12")]),
-        makeEx("Incline Push Up",        "Push",     false, [s("","12"),s("","12"),s("","12")], "Negatief 4"),
+        makeEx("Incline Push Up",        "Push",     false, [s("","12"),s("","12"),s("","12")],  "Negatief 4"),
         makeEx("Bicep Curls Cable",      "Isolatie", false, [s("12,5","10")]),
         makeEx("Lateral Raise",          "Isolatie", false, [s("2x4","12")])
       ]),
@@ -133,7 +155,7 @@
         makeEx("Bulgarian Split Squat",  "Squat",    true,  [s("2x18","8"),s("2x18","8")]),
         makeEx("Hip Thrust",             "Hinge",    false, [s("40","12"),s("40","12")]),
         makeEx("Leg Extension",          "Machine",  false, [s("22,5","12"),s("22,5","12"),s("22,5","12")]),
-        makeEx("Chin Up",                "Pull",     false, [s("","")],   "E(30s)MOM 10x1rep + EMOM 5x3reps"),
+        makeEx("Chin Up",                "Pull",     false, [s("","")],     "E(30s)MOM 10x1rep + EMOM 5x3reps"),
         makeEx("Lat Pulldown",           "Pull",     false, [s("15","10"),s("15","10"),s("15","10")]),
         makeEx("DB Bench Press",         "Push",     false, [s("2x12","8"),s("2x12","8")]),
         makeEx("Push Up",                "Push",     false, [s("","10")])
@@ -145,7 +167,7 @@
         makeEx("Linear Leg Press",       "Machine",  false, [s("120","12")]),
         makeEx("Hip Thrust",             "Hinge",    false, [s("45","10"),s("45","10")]),
         makeEx("Leg Curl",               "Machine",  false, [s("27,5","10"),s("27,5","10"),s("27,5","10")]),
-        makeEx("Chin Up",                "Pull",     false, [s("","")],   "EMOM 6x3 + tempo 3/3/1, 6-8 reps"),
+        makeEx("Chin Up",                "Pull",     false, [s("","")],     "EMOM 6x3 + tempo 3/3/1, 6-8 reps"),
         makeEx("Lat Pulldown",           "Pull",     false, [s("37,5","8")], "Neutral grip"),
         makeEx("Cable Row",              "Pull",     false, [s("30","10"),s("30","10"),s("30","10")]),
         makeEx("Face Pull",              "Pull",     false, [s("12,5","10"),s("12,5","10")]),
@@ -158,7 +180,7 @@
         makeEx("Goblet Squat",           "Squat",    false, [s("24","12"),s("24","12")]),
         makeEx("Hip Thrust",             "Hinge",    false, [s("40","10"),s("40","10"),s("40","10")]),
         makeEx("Leg Curl",               "Machine",  false, [s("27,5","8"),s("27,5","8"),s("27,5","8")]),
-        makeEx("Chin Up",                "Pull",     false, [s("","")],   "6-8 reps, gele band"),
+        makeEx("Chin Up",                "Pull",     false, [s("","")],     "6-8 reps, gele band"),
         makeEx("Lat Pulldown",           "Pull",     false, [s("15","10"),s("15","10")], "High to low"),
         makeEx("Cable Row",              "Pull",     false, [s("30","12"),s("30","12")]),
         makeEx("Tricep Extension Cable", "Isolatie", false, [s("10","12"),s("10","12"),s("10","12")])
@@ -174,7 +196,7 @@
         makeEx("Linear Leg Press",       "Machine",  false, [s("100","12"),s("100","12"),s("100","12")]),
         makeEx("Hip Thrust",             "Hinge",    false, [s("40","10"),s("40","10"),s("40","10")]),
         makeEx("Leg Curl",               "Machine",  false, [s("27,5","12"),s("27,5","12"),s("27,5","12")]),
-        makeEx("Chin Up",                "Pull",     false, [s("","")],   "Gele band, 6-8 reps"),
+        makeEx("Chin Up",                "Pull",     false, [s("","")],     "Gele band, 6-8 reps"),
         makeEx("Lat Pulldown",           "Pull",     false, [s("37,5","8"),s("37,5","8")], "Neutral grip"),
         makeEx("Bent Over Row",          "Pull",     false, [s("16","10"),s("16","10"),s("16","10")]),
         makeEx("DB Bench Press",         "Push",     false, [s("2x10","10"),s("2x10","10"),s("2x10","10")]),
@@ -193,62 +215,58 @@
         makeEx("Linear Leg Press",       "Machine",  false, [s("100","12"),s("100","12"),s("100","12")]),
         makeEx("Leg Extension",          "Machine",  false, [s("15","10"),s("15","10")]),
         makeEx("Hip Thrust",             "Hinge",    false, [s("50","12")]),
-        makeEx("Chin Up",                "Pull",     false, [s("","")],   "Gele band, 6-8 reps"),
+        makeEx("Chin Up",                "Pull",     false, [s("","")],     "Gele band, 6-8 reps"),
         makeEx("Lat Pulldown",           "Pull",     false, [s("35","8"),s("35","8"),s("35","8")], "Neutral grip"),
         makeEx("Bent Over Row",          "Pull",     false, [s("16","10"),s("16","10"),s("16","10")]),
-        makeEx("Incline Push Up",        "Push",     false, [s("","15"),s("","15"),s("","15")], "Negatief 5")
+        makeEx("Incline Push Up",        "Push",     false, [s("","15"),s("","15"),s("","15")],    "Negatief 5")
       ]),
 
       session("2026-06-06", "Juni 2026 — sessie 2", [
         makeEx("Push Up",                "Push",     false, [s("","10")])
       ])
-
     ];
 
-    log("✓ " + sessions.length + " sessies voorbereid", "ok");
-
-    // New library entries (exercises not likely in library)
     var newLibExercises = [
-      { id: uid(), name: "Bulgarian Split Squat", pattern: "Squat",    unilateral: true  },
-      { id: uid(), name: "Goblet Squat",           pattern: "Squat",    unilateral: false },
-      { id: uid(), name: "Linear Leg Press",       pattern: "Machine",  unilateral: false },
-      { id: uid(), name: "Leg Extension",          pattern: "Machine",  unilateral: false },
-      { id: uid(), name: "Hip Thrust",             pattern: "Hinge",    unilateral: false },
-      { id: uid(), name: "RDL",                    pattern: "Hinge",    unilateral: false },
-      { id: uid(), name: "Leg Curl",               pattern: "Machine",  unilateral: false },
-      { id: uid(), name: "Chin Up",                pattern: "Pull",     unilateral: false },
-      { id: uid(), name: "Lat Pulldown",           pattern: "Pull",     unilateral: false },
-      { id: uid(), name: "Cable Row",              pattern: "Pull",     unilateral: false },
-      { id: uid(), name: "Bent Over Row",          pattern: "Pull",     unilateral: false },
-      { id: uid(), name: "Face Pull",              pattern: "Pull",     unilateral: false },
-      { id: uid(), name: "Shoulder Press",         pattern: "Push",     unilateral: false },
-      { id: uid(), name: "DB Bench Press",         pattern: "Push",     unilateral: false },
-      { id: uid(), name: "Incline Push Up",        pattern: "Push",     unilateral: false },
-      { id: uid(), name: "Push Up",                pattern: "Push",     unilateral: false },
-      { id: uid(), name: "Landmine Press",         pattern: "Push",     unilateral: false },
-      { id: uid(), name: "Tricep Extension Cable", pattern: "Isolatie", unilateral: false },
-      { id: uid(), name: "Bicep Curls Cable",      pattern: "Isolatie", unilateral: false },
-      { id: uid(), name: "Lateral Raise",          pattern: "Isolatie", unilateral: false }
+      { id:uid(), name:"Bulgarian Split Squat",  pattern:"Squat",    unilateral:true  },
+      { id:uid(), name:"Goblet Squat",            pattern:"Squat",    unilateral:false },
+      { id:uid(), name:"Linear Leg Press",        pattern:"Machine",  unilateral:false },
+      { id:uid(), name:"Leg Extension",           pattern:"Machine",  unilateral:false },
+      { id:uid(), name:"Hip Thrust",              pattern:"Hinge",    unilateral:false },
+      { id:uid(), name:"RDL",                     pattern:"Hinge",    unilateral:false },
+      { id:uid(), name:"Leg Curl",                pattern:"Machine",  unilateral:false },
+      { id:uid(), name:"Chin Up",                 pattern:"Pull",     unilateral:false },
+      { id:uid(), name:"Lat Pulldown",            pattern:"Pull",     unilateral:false },
+      { id:uid(), name:"Cable Row",               pattern:"Pull",     unilateral:false },
+      { id:uid(), name:"Bent Over Row",           pattern:"Pull",     unilateral:false },
+      { id:uid(), name:"Face Pull",               pattern:"Pull",     unilateral:false },
+      { id:uid(), name:"Shoulder Press",          pattern:"Push",     unilateral:false },
+      { id:uid(), name:"DB Bench Press",          pattern:"Push",     unilateral:false },
+      { id:uid(), name:"Incline Push Up",         pattern:"Push",     unilateral:false },
+      { id:uid(), name:"Push Up",                 pattern:"Push",     unilateral:false },
+      { id:uid(), name:"Landmine Press",          pattern:"Push",     unilateral:false },
+      { id:uid(), name:"Tricep Extension Cable",  pattern:"Isolatie", unilateral:false },
+      { id:uid(), name:"Bicep Curls Cable",       pattern:"Isolatie", unilateral:false },
+      { id:uid(), name:"Lateral Raise",           pattern:"Isolatie", unilateral:false }
     ];
 
-    var existingNames = (data.exerciseLibrary || []).map(function(e){ return e.name.toLowerCase(); });
+    var existingNames = (data.exerciseLibrary||[]).map(function(e){ return e.name.toLowerCase(); });
     var toAdd = newLibExercises.filter(function(e){ return !existingNames.includes(e.name.toLowerCase()); });
-    log("✓ " + toAdd.length + " nieuwe oefeningen toegevoegd aan bibliotheek", "ok");
 
     var newData = {
-      clients:         (data.clients || []).concat([carolyn]),
-      sessions:        (data.sessions || []).concat(sessions),
-      exerciseLibrary: (data.exerciseLibrary || []).concat(toAdd),
-      templates:       data.templates || []
+      clients:         (data.clients||[]).concat([carolyn]),
+      sessions:        (data.sessions||[]).concat(sessions),
+      exerciseLibrary: (data.exerciseLibrary||[]).concat(toAdd),
+      templates:       data.templates||[]
     };
 
+    log("Opslaan naar Firebase...");
     try {
-      await ref.set(newData);
-      log("✓ Data succesvol opgeslagen in Firebase!", "ok");
-      log("\nImport voltooid. Je kunt deze pagina sluiten en de app verversen.");
+      await ref.set({ payload: newData });
+      log("✓ Import voltooid! " + sessions.length + " sessies + " + toAdd.length + " bibliotheek-oefeningen toegevoegd.", "ok");
+      log("\nJe kunt deze pagina sluiten en de app verversen.");
       document.getElementById("btn").textContent = "Import voltooid ✓";
     } catch(e) {
-      log("✗ Fout bij opslaan: " + e.message, "err");
+      log("✗ Fout: " + e.message, "err");
       document.getElementById("btn").disabled = false;
     }
   }
