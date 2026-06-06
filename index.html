@@ -1425,7 +1425,7 @@
             <div key={i} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:isBest?"#fffbeb":T.surface}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
                 <div style={{fontSize:13,fontWeight:500}}>{fmtDate(e.date)}</div>
-                <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:500,display:"flex",alignItems:"center",justifyContent:"flex-end",gap:4}}>{isBest&&<span style={{fontSize:14}}>⭐</span>}{e.maxWeight>0?parseW(e.maxWeight).toFixed(1)+" kg":"—"}</div>{e.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{e.totalVol.toLocaleString("nl-NL")} vol.</div>}</div>
+                <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:500,display:"flex",alignItems:"center",justifyContent:"flex-end",gap:4}}>{isBest&&<span style={{fontSize:14}}>⭐</span>}{e.maxWeight>0?parseW(e.maxWeight).toFixed(1).replace(".",",")+" kg":"—"}</div>{e.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{e.totalVol.toLocaleString("nl-NL")} vol.</div>}</div>
               </div>
               <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
                 {e.sets.map(function(s,si){return <span key={si} style={{fontSize:11,padding:"3px 7px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:4,color:T.textMid}}>{si+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
@@ -1495,6 +1495,7 @@
       var sessions=props.sessions;
       var clientId=props.clientId||null;
       var [period,setPeriod]=useState("all");
+      var [search,setSearch]=useState("");
       var now=new Date(); var cutoff=null;
       if(period==="1m"){cutoff=new Date(now);cutoff.setMonth(cutoff.getMonth()-1);}
       if(period==="3m"){cutoff=new Date(now);cutoff.setMonth(cutoff.getMonth()-3);}
@@ -1530,14 +1531,18 @@
       });
 
       var exercises=Object.values(exerciseMap).sort(function(a,b){return a.name.localeCompare(b.name);});
+      var filteredEx=search.trim()?exercises.filter(function(ex){return ex.name.toLowerCase().includes(search.toLowerCase());}):exercises;
       var periods=[["all","Alles"],["1m","1 mnd"],["3m","3 mnd"],["6m","6 mnd"],["1y","1 jaar"]];
       return (
         <div>
           <div style={{display:"flex",gap:5,padding:"12px 20px",borderBottom:"1px solid "+T.border,background:T.surface,flexWrap:"wrap"}}>
             {periods.map(function(item){var k=item[0],label=item[1],active=period===k;return <button key={k} onClick={function(){setPeriod(k);}} style={{padding:"5px 10px",fontSize:11,borderRadius:4,background:active?T.accent:"none",border:"1px solid "+(active?T.accent:T.border),color:active?"#fff":T.textMid,textTransform:"uppercase",letterSpacing:0.4}}>{label}</button>;})}
           </div>
-          {exercises.length===0&&<div style={{padding:"40px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Geen data in deze periode.</div>}
-          {exercises.map(function(ex){
+          <div style={{padding:"10px 20px",borderBottom:"1px solid "+T.border,background:T.surface}}>
+            <input value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Zoek oefening..." style={{...iS,margin:0}}/>
+          </div>
+          {filteredEx.length===0&&<div style={{padding:"40px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>{search?"Geen resultaten.":"Geen data in deze periode."}</div>}
+          {filteredEx.map(function(ex){
             var sorted=ex.entries.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
             var hasWeight=sorted.some(function(e){return e.maxWeight>0;});
             var best=sorted.reduce(function(prev,cur){
@@ -1558,9 +1563,9 @@
               } else {diff=last.maxReps-first.maxReps;}
             }
             var color=PC[ex.pattern]||T.textMuted;
-            var bestLabel=hasWeight?best.maxWeight+"kg × "+(best.maxRepsAtMax||best.maxReps):best.maxReps+" reps";
+            var bestLabel=hasWeight?String(parseW(best.maxWeight).toFixed(1)).replace(".",",")+"kg × "+(best.maxRepsAtMax||best.maxReps):best.maxReps+" reps";
             var diffLabel=hasWeight
-              ?(diff&&(diff.w!==0||diff.r!==0)?((diff.w>0?"+":diff.w<0?"":"")+diff.w+"kg"+(diff.r!==0?" "+(diff.r>0?"+":"")+diff.r+" reps":"")):null)
+              ?(diff&&(diff.w!==0||diff.r!==0)?((diff.w>0?"+":diff.w<0?"":"")+String(diff.w).replace(".",",")+"kg"+(diff.r!==0?" "+(diff.r>0?"+":"")+diff.r+" reps":"")):null)
               :(diff?(diff>0?"+":"")+diff+" reps":null);
             var indent=ex.isSubEntry;
             return (
