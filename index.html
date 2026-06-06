@@ -1390,6 +1390,7 @@
       var sorted=entries.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
       var maxWeight=Math.max.apply(null,sorted.map(function(e){return e.maxWeight;}));
       if(!maxWeight){maxWeight=1;}
+      var bestDate=maxWeight>1?sorted.find(function(e){return e.maxWeight===maxWeight;}).date:null;
       return (
         <div className="ai" style={{paddingBottom:40}}>
           <div style={{padding:"16px 20px",background:T.surfaceAlt,borderBottom:"1px solid "+T.border}}>
@@ -1405,7 +1406,7 @@
             </div>
           </div>
           {entries.map(function(e,i){
-            var isBest=e.maxWeight>0&&e.maxWeight===maxWeight;
+            var isBest=bestDate&&e.date===bestDate;
             return(
             <div key={i} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:isBest?"#fffbeb":T.surface}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
