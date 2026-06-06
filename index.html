@@ -1411,7 +1411,7 @@
             <div key={i} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:isBest?"#fffbeb":T.surface}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
                 <div style={{fontSize:13,fontWeight:500,display:"flex",alignItems:"center",gap:6}}>{fmtDate(e.date)}{isBest&&<span style={{fontSize:14}}>⭐</span>}</div>
-                <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:500}}>{e.maxWeight>0?e.maxWeight+" kg":"—"}</div>{e.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{e.totalVol.toLocaleString("nl-NL")} vol.</div>}</div>
+                <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:500}}>{e.maxWeight>0?parseFloat(e.maxWeight).toFixed(1)+" kg":"—"}</div>{e.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{e.totalVol.toLocaleString("nl-NL")} vol.</div>}</div>
               </div>
               <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
                 {e.sets.map(function(s,si){return <span key={si} style={{fontSize:11,padding:"3px 7px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:4,color:T.textMid}}>{si+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
