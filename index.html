@@ -916,6 +916,7 @@
     function TemplateEditor(props) {
       var library=props.library||[]; var tpl=props.template; var setTpl=props.onChange;
       var [showAdd,setShowAdd]=useState(false); var [search,setSearch]=useState("");
+      var [openRowId,setOpenRowId]=useState(null);
       function addFromLib(ex){setTpl({...tpl,exercises:tpl.exercises.concat([{id:uid(),name:ex.name,pattern:ex.pattern,unilateral:ex.unilateral||false,sets:[{weight:"",reps:""}]}])});setSearch("");setShowAdd(false);}
       function removeEx(idx){setTpl({...tpl,exercises:tpl.exercises.filter(function(_,i){return i!==idx;})});}
       function addSet(idx){var exs=tpl.exercises.map(function(e,i){if(i!==idx){return e;}var last=e.sets[e.sets.length-1];return {...e,sets:e.sets.concat([{weight:last?last.weight:"",reps:last?last.reps:""}])};});setTpl({...tpl,exercises:exs});}
@@ -931,16 +932,17 @@
           {tpl.exercises.map(function(ex,idx){
             var color=PC[ex.pattern]||T.textMuted;
             return (
-              <div key={ex.id} style={{borderBottom:"1px solid "+T.border,borderLeft:"3px solid "+color,background:T.surface}}>
+              <SwipeRow key={ex.id} rowId={ex.id} openId={openRowId} onOpen={setOpenRowId} background={T.surface} onDelete={function(){removeEx(idx);}}>
+              <div style={{borderBottom:"1px solid "+T.border,borderLeft:"3px solid "+color,background:T.surface}}>
                 <div style={{padding:"10px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"1px solid "+T.border}}>
                   <div><div style={{fontSize:13,fontWeight:500}}>{ex.name}{ex.unilateral&&<UniTag/>}</div><div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:1}}>{ex.pattern}</div></div>
                   <div style={{display:"flex",gap:4,alignItems:"center"}}>
                     <button onClick={function(){moveUp(idx);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14,padding:"2px 5px"}}>↑</button>
                     <button onClick={function(){moveDown(idx);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14,padding:"2px 5px"}}>↓</button>
-                    <button onClick={function(){removeEx(idx);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 5px",lineHeight:1}}>×</button>
                   </div>
                 </div>
                 <div style={{padding:"10px 20px 14px"}}>
+                  <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,cursor:"pointer",fontSize:12,color:T.textMid}}><input type="checkbox" checked={!!ex.unilateral} onChange={function(e){var exs=tpl.exercises.map(function(x,i){return i===idx?{...x,unilateral:e.target.checked}:x;});setTpl({...tpl,exercises:exs});}}/>Unilateraal</label>
                   <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:5}}><span style={lS}>#</span><span style={lS}>kg</span><span style={lS}>reps</span><span/></div>
                   {ex.sets.map(function(s,si){return(
                     <div key={si} style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:6}}>
@@ -953,6 +955,7 @@
                   <button onClick={function(){addSet(idx);}} style={{background:"none",border:"1px dashed "+T.borderStrong,color:T.textMuted,padding:"5px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",width:"100%",borderRadius:4}}>+ Set</button>
                 </div>
               </div>
+              </SwipeRow>
             );
           })}
           <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border}}>
