@@ -1005,24 +1005,7 @@
             {["sessies","progressie"].map(function(t){return <button key={t} onClick={function(){setTab(t);}} style={{flex:1,padding:"11px 0",background:"none",border:"none",color:tab===t?T.text:T.textMuted,borderBottom:tab===t?"2px solid "+T.accent:"2px solid transparent",fontSize:11,textTransform:"uppercase",letterSpacing:0.8}}>{t}</button>;})}
           </div>
           {tab==="sessies"&&(
-            <div>
-              {sessions.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>Nog geen sessies.</div>}
-              {sessions.map(function(s){return(
-                <div key={s.id} className="rh" onClick={function(){props.onViewSession(s.id);}} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <div>
-                    <div style={{fontSize:14,fontWeight:500,display:"flex",alignItems:"center",gap:6}}>
-                      {fmtDate(s.date)}
-                      {isDuo(s)&&<span style={{fontSize:9,padding:"1px 5px",background:"#ede9fe",color:"#7c3aed",borderRadius:4,textTransform:"uppercase",letterSpacing:0.3}}>DUO</span>}
-                    </div>
-                    <div style={{fontSize:11,color:T.textMuted,marginTop:3}}>{s.exercises.filter(function(ex){return exForClient(ex,s,client.id);}).length} oefening{s.exercises.filter(function(ex){return exForClient(ex,s,client.id);}).length!==1?"en":""}{s.notes?" · notitie":""}</div>
-                    <PatternTags exercises={s.exercises.filter(function(ex){return exForClient(ex,s,client.id);})}/>
-                  </div>
-                  <div style={{display:"flex",gap:10,alignItems:"center"}}>
-                    <button onClick={function(e){e.stopPropagation();props.onDeleteSession(s.id);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 4px",lineHeight:1}}>×</button>
-                  </div>
-                </div>
-              );})}
-            </div>
+            <SessionSearch sessions={sessions} client={client} onViewSession={props.onViewSession} onDeleteSession={props.onDeleteSession}/>
           )}
           {tab==="progressie"&&<ProgressView sessions={sessions} onExHistory={props.onExHistory} clientId={client.id}/>}
         </div>
@@ -1414,17 +1397,46 @@
       var bestDate=bestEntry?bestEntry.date:null;
       return (
         <div className="ai" style={{paddingBottom:40}}>
-          <div style={{padding:"16px 20px",background:T.surfaceAlt,borderBottom:"1px solid "+T.border}}>
-            <div style={{fontSize:10,color:T.textMuted,marginBottom:10,textTransform:"uppercase",letterSpacing:0.5}}>Max gewicht per sessie (kg)</div>
-            <div style={{display:"flex",alignItems:"flex-end",gap:3,height:80}}>
-              {sorted.map(function(e,i){return(
-                <div key={i} style={{minWidth:24,flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
-                  <div style={{fontSize:9,color:T.textMuted,whiteSpace:"nowrap"}}>{e.maxWeight>0?e.maxWeight:""}</div>
-                  <div style={{width:"100%",background:T.accent,height:((e.maxWeight/maxWeight)*58)+"px",opacity:0.4+(i/Math.max(sorted.length-1,1))*0.6,minHeight:e.maxWeight>0?4:0,borderRadius:1}}/>
-                  <div style={{fontSize:8,color:T.textMuted,transform:"rotate(-40deg)",transformOrigin:"top left",marginLeft:6,whiteSpace:"nowrap"}}>{new Date(e.date).toLocaleDateString("nl-NL",{day:"2-digit",month:"short"})}</div>
-                </div>
-              );})}
-            </div>
+          <div style={{padding:"16px 20px 12px",background:T.surfaceAlt,borderBottom:"1px solid "+T.border}}>
+            <div style={{fontSize:10,color:T.textMuted,marginBottom:8,textTransform:"uppercase",letterSpacing:0.5}}>Max gewicht per sessie (kg)</div>
+            {(function(){
+              var PAD={t:16,r:16,b:32,l:36};
+              var W=Math.min(440,window.innerWidth-40);
+              var H=110;
+              var iW=W-PAD.l-PAD.r; var iH=H-PAD.t-PAD.b;
+              var minW=Math.min.apply(null,sorted.map(function(e){return e.maxWeight||0;}));
+              var maxW2=maxWeight;
+              var yMin=Math.max(0,minW-5);
+              var yMax=maxW2+(maxW2-yMin)*0.1||1;
+              var pts=sorted.map(function(e,i){
+                var x=PAD.l+(sorted.length<2?iW/2:i/(sorted.length-1)*iW);
+                var y=PAD.t+iH-(e.maxWeight>0?(e.maxWeight-yMin)/(yMax-yMin)*iH:0);
+                return {x:x,y:y,e:e};
+              });
+              var polyline=pts.map(function(p){return p.x+","+p.y;}).join(" ");
+              var area=pts.map(function(p,i){return (i===0?"M":"")+p.x+","+p.y;}).join(" ")+" L"+pts[pts.length-1].x+","+(PAD.t+iH)+" L"+pts[0].x+","+(PAD.t+iH)+" Z";
+              var yTicks=[yMin,yMin+(yMax-yMin)/2,yMax].map(Math.round).filter(function(v,i,a){return a.indexOf(v)===i;});
+              return (
+                <svg width={W} height={H} style={{display:"block",overflow:"visible"}}>
+                  {yTicks.map(function(v,i){
+                    var y=PAD.t+iH-(v-yMin)/(yMax-yMin)*iH;
+                    return <g key={i}><line x1={PAD.l} y1={y} x2={PAD.l+iW} y2={y} stroke={T.border} strokeWidth="1"/><text x={PAD.l-4} y={y+4} textAnchor="end" fontSize="9" fill={T.textMuted}>{Math.round(v)}</text></g>;
+                  })}
+                  <path d={area} fill={T.accent} fillOpacity="0.12"/>
+                  <polyline points={polyline} fill="none" stroke={T.accent} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+                  {pts.map(function(p,i){
+                    var isBestPt=bestDate&&p.e.date===bestDate;
+                    return (
+                      <g key={i}>
+                        <circle cx={p.x} cy={p.y} r={isBestPt?5:3} fill={isBestPt?"#f59e0b":T.accent} stroke={T.surface} strokeWidth="1.5"/>
+                        {(sorted.length<=8||isBestPt)&&p.e.maxWeight>0&&<text x={p.x} y={p.y-8} textAnchor="middle" fontSize="9" fill={isBestPt?"#d97706":T.textMid} fontWeight={isBestPt?"600":"400"}>{fmtW(p.e.maxWeight)}</text>}
+                        <text x={p.x} y={H-2} textAnchor="middle" fontSize="8" fill={T.textMuted}>{new Date(p.e.date).toLocaleDateString("nl-NL",{day:"2-digit",month:"short"})}</text>
+                      </g>
+                    );
+                  })}
+                </svg>
+              );
+            })()}
           </div>
           {entries.map(function(e,i){
             var isBest=bestDate&&e.date===bestDate;
@@ -1494,6 +1506,42 @@
             );
           })}
           {session.notes&&<div style={{padding:"16px 20px",background:T.surface}}><Label>Notities sessie</Label><div style={{marginTop:6,fontSize:13,color:T.textMid,lineHeight:1.7}}>{session.notes}</div></div>}
+        </div>
+      );
+    }
+
+    function SessionSearch(props) {
+      var sessions=props.sessions; var client=props.client;
+      var [q,setQ]=useState("");
+      var filtered=sessions.filter(function(s){
+        if(!q.trim()){return true;}
+        var lq=q.toLowerCase();
+        if(fmtDate(s.date).toLowerCase().includes(lq)){return true;}
+        if(s.notes&&s.notes.toLowerCase().includes(lq)){return true;}
+        if(s.exercises.some(function(ex){return exForClient(ex,s,client.id)&&ex.name.toLowerCase().includes(lq);})){return true;}
+        return false;
+      });
+      return (
+        <div>
+          <div style={{padding:"10px 16px",borderBottom:"1px solid "+T.border}}>
+            <input value={q} onChange={function(e){setQ(e.target.value);}} placeholder="Zoek sessie of oefening…" style={{width:"100%",padding:"7px 10px",fontSize:13,border:"1px solid "+T.border,borderRadius:6,background:T.surfaceAlt,color:T.text,outline:"none",boxSizing:"border-box"}}/>
+          </div>
+          {filtered.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>Geen sessies gevonden.</div>}
+          {filtered.map(function(s){return(
+            <div key={s.id} className="rh" onClick={function(){props.onViewSession(s.id);}} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div>
+                <div style={{fontSize:14,fontWeight:500,display:"flex",alignItems:"center",gap:6}}>
+                  {fmtDate(s.date)}
+                  {isDuo(s)&&<span style={{fontSize:9,padding:"1px 5px",background:"#ede9fe",color:"#7c3aed",borderRadius:4,textTransform:"uppercase",letterSpacing:0.3}}>DUO</span>}
+                </div>
+                <div style={{fontSize:11,color:T.textMuted,marginTop:3}}>{s.exercises.filter(function(ex){return exForClient(ex,s,client.id);}).length} oefening{s.exercises.filter(function(ex){return exForClient(ex,s,client.id);}).length!==1?"en":""}{s.notes?" · "+s.notes.slice(0,40):""}</div>
+                <PatternTags exercises={s.exercises.filter(function(ex){return exForClient(ex,s,client.id);})}/>
+              </div>
+              <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                <button onClick={function(e){e.stopPropagation();props.onDeleteSession(s.id);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"0 4px",lineHeight:1}}>×</button>
+              </div>
+            </div>
+          );})}
         </div>
       );
     }
