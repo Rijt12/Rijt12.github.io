@@ -121,6 +121,11 @@
       return parseFloat(s)||0;
     }
 
+    function fmtW(w) {
+      var n=parseW(w);
+      return n===Math.floor(n)?String(Math.floor(n)):String(n.toFixed(1)).replace(".",",");
+    }
+
     // ── Constants ──────────────────────────────────────────────────────────────
     const PATTERNS = ["Push","Pull","Hinge","Squat","Carry","Core","Isolatie","Mobiliteit","Machine"];
     const PC = {
@@ -178,6 +183,7 @@
       var [editingTpl, setEditingTpl]         = useState(null);
       var [exHistoryName, setExHistoryName]   = useState(null);
       var [prevView, setPrevView]             = useState("client");
+      var [clientTab, setClientTab]           = useState("sessies");
       var [toast, setToast]                   = useState(null);
       var [dlg, setDlg]                       = useState(null);
       var [saving, setSaving]                 = useState(false);
@@ -465,7 +471,7 @@
                 rightAction= {{label:"Bibliotheek",fn:function(){goView("library");}}}
               />
 
-              <ClientList data={data} onSelect={function(id){setActiveClientId(id);goView("client");}} onDelete={deleteClient}
+              <ClientList data={data} onSelect={function(id){setActiveClientId(id);setClientTab("sessies");goView("client");}} onDelete={deleteClient}
                 onRename={function(updatedClients){ persist({...data, clients:updatedClients}); showToast("Naam opgeslagen ✓"); }}
               />
               <AddClientInline data={data} persist={persist} showToast={showToast}/>
@@ -508,7 +514,8 @@
                 onViewSession={function(id){setViewSessionId(id);goView("viewSession");}}
                 onExport={function(){goView("export");}}
                 onDeleteSession={deleteSession}
-                onExHistory={function(name){setExHistoryName(name);setPrevView("client");goView("exHistory");}}
+                onExHistory={function(name){setExHistoryName(name);setClientTab("progressie");setPrevView("client");goView("exHistory");}}
+                initialTab={clientTab}
               />
             </div>
           )}
@@ -984,7 +991,7 @@
 
     function ClientDetail(props) {
       var client=props.client; var sessions=props.sessions; var data=props.data;
-      var [tab,setTab]=useState("sessies");
+      var [tab,setTab]=useState(props.initialTab||"sessies");
       function startSession(){
         props.onStartSession({id:uid(),clientId:client.id,clientIds:[client.id],date:new Date().toISOString(),exercises:[],notes:""});
       }
@@ -1120,8 +1127,8 @@
             <Label>Notities sessie</Label>
             <textarea value={session.notes} onChange={function(e){onChange({...session,notes:e.target.value});}} placeholder="Opmerkingen over de hele sessie..." rows={3} style={{...iS,marginTop:5,resize:"none"}}/>
           </div>
-          <div style={{height:64}}/>
-          <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,padding:"12px 20px",background:T.surface,borderTop:"1px solid "+T.border,display:"flex",gap:8,zIndex:50,boxShadow:"0 -4px 16px rgba(0,0,0,0.08)"}}>
+          <div style={{height:88}}/>
+          <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,padding:"18px 20px 24px",background:T.surface,borderTop:"1px solid "+T.border,display:"flex",gap:8,zIndex:50,boxShadow:"0 -4px 16px rgba(0,0,0,0.08)"}}>
             <Btn accent onClick={function(){setShowAdd(true);setShowSuperset(false);}}>+ Oefening</Btn>
             <Btn onClick={function(){setShowSuperset(true);setShowAdd(false);}}>+ Superset</Btn>
           </div>
@@ -1425,7 +1432,7 @@
             <div key={i} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:isBest?"#fffbeb":T.surface}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
                 <div style={{fontSize:13,fontWeight:500}}>{fmtDate(e.date)}</div>
-                <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:500,display:"flex",alignItems:"center",justifyContent:"flex-end",gap:4}}>{isBest&&<span style={{fontSize:14}}>⭐</span>}{e.maxWeight>0?parseW(e.maxWeight).toFixed(1).replace(".",",")+" kg":"—"}</div>{e.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{e.totalVol.toLocaleString("nl-NL")} vol.</div>}</div>
+                <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:500,display:"flex",alignItems:"center",justifyContent:"flex-end",gap:4}}>{isBest&&<span style={{fontSize:14}}>⭐</span>}{e.maxWeight>0?fmtW(e.maxWeight)+" kg":"—"}</div>{e.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{e.totalVol.toLocaleString("nl-NL")} vol.</div>}</div>
               </div>
               <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
                 {e.sets.map(function(s,si){return <span key={si} style={{fontSize:11,padding:"3px 7px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:4,color:T.textMid}}>{si+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
@@ -1563,9 +1570,9 @@
               } else {diff=last.maxReps-first.maxReps;}
             }
             var color=PC[ex.pattern]||T.textMuted;
-            var bestLabel=hasWeight?String(parseW(best.maxWeight).toFixed(1)).replace(".",",")+"kg × "+(best.maxRepsAtMax||best.maxReps):best.maxReps+" reps";
+            var bestLabel=hasWeight?fmtW(best.maxWeight)+"kg × "+(best.maxRepsAtMax||best.maxReps):best.maxReps+" reps";
             var diffLabel=hasWeight
-              ?(diff&&(diff.w!==0||diff.r!==0)?((diff.w>0?"+":diff.w<0?"":"")+String(diff.w).replace(".",",")+"kg"+(diff.r!==0?" "+(diff.r>0?"+":"")+diff.r+" reps":"")):null)
+              ?(diff&&(diff.w!==0||diff.r!==0)?((diff.w>0?"+":diff.w<0?"":"")+fmtW(diff.w)+"kg"+(diff.r!==0?" "+(diff.r>0?"+":"")+diff.r+" reps":"")):null)
               :(diff?(diff>0?"+":"")+diff+" reps":null);
             var indent=ex.isSubEntry;
             return (
