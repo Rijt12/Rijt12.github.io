@@ -1737,8 +1737,6 @@
           var setsHTML=ex.best?ex.best.sets.map(function(s,i){
             return '<span style="font-size:10px;padding:2px 6px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:3px;margin:2px;display:inline-block">'+(i+1)+'. '+(s.weight?s.weight+'kg':'—')+' × '+(s.reps||'—')+'</span>';
           }).join(""):"";
-          var chartSVG=ex.entries.length>1?buildChartSVG(ex,460,90):"";
-          var chartTitle=ex.isBodyweight?"Max reps per sessie":"Max gewicht per sessie (kg)";
           return '<div style="border:1px solid #e5e7eb;border-left:4px solid '+color+';border-radius:6px;padding:14px 16px;margin-bottom:12px;break-inside:avoid;background:#fff">'
                 +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
                 +'<div><div style="font-weight:600;font-size:13px;color:#111">'+(ex.name)+'</div>'
@@ -1748,8 +1746,7 @@
                 +'<div style="text-align:right"><div style="font-size:18px;font-weight:700;color:#111">'+bestVal+'</div>'
                 +(ex.best&&ex.best.totalVol>0?'<div style="font-size:10px;color:#9ca3af">'+ex.best.totalVol.toLocaleString("nl-NL")+' vol.</div>':"")
                 +'</div></div>'
-                +(setsHTML?'<div style="margin-bottom:8px">'+setsHTML+'</div>':"")
-                +(chartSVG?'<div style="margin-top:8px"><div style="font-size:8px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">'+chartTitle+'</div>'+chartSVG+'</div>':"")
+                +(setsHTML?'<div>'+setsHTML+'</div>':"")
                 +'</div>';
         }).join("");
         var html='<!DOCTYPE html><html><head><meta charset="utf-8">'
