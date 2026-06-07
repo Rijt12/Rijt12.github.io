@@ -1386,10 +1386,19 @@
       var entries=props.entries||[];
       if(entries.length===0){return <div style={{padding:"40px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Nog geen data voor deze oefening.</div>;}
       var sorted=entries.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
-      var maxWeight=Math.max.apply(null,sorted.map(function(e){return e.maxWeight;}));
-      if(!maxWeight){maxWeight=1;}
+      var isBodyweight=sorted.every(function(e){return !e.maxWeight||e.maxWeight===0;});
+      // For bodyweight: use max reps across all sets per entry
+      function entryMaxReps(e){return Math.max.apply(null,e.sets.map(function(s){return parseInt(s.reps)||0;}).concat([0]));}
+      var maxWeight=isBodyweight?0:Math.max.apply(null,sorted.map(function(e){return e.maxWeight;}));
+      if(!isBodyweight&&!maxWeight){maxWeight=1;}
       var bestEntry=sorted.reduce(function(prev,cur){
         if(!prev){return cur;}
+        if(isBodyweight){
+          var pr=entryMaxReps(prev); var cr=entryMaxReps(cur);
+          if(cr>pr){return cur;}
+          if(cr===pr&&cur.sets.length>prev.sets.length){return cur;}
+          return prev;
+        }
         if(cur.maxWeight>prev.maxWeight){return cur;}
         if(cur.maxWeight===prev.maxWeight&&cur.sets.length>prev.sets.length){return cur;}
         return prev;
@@ -1398,20 +1407,22 @@
       return (
         <div className="ai" style={{paddingBottom:40}}>
           <div style={{padding:"16px 20px 12px",background:T.surfaceAlt,borderBottom:"1px solid "+T.border}}>
-            <div style={{fontSize:10,color:T.textMuted,marginBottom:8,textTransform:"uppercase",letterSpacing:0.5}}>Max gewicht per sessie (kg)</div>
+            <div style={{fontSize:10,color:T.textMuted,marginBottom:8,textTransform:"uppercase",letterSpacing:0.5}}>{isBodyweight?"Max reps per sessie":"Max gewicht per sessie (kg)"}</div>
             {(function(){
               var PAD={t:16,r:16,b:32,l:36};
               var W=Math.min(440,window.innerWidth-40);
               var H=110;
               var iW=W-PAD.l-PAD.r; var iH=H-PAD.t-PAD.b;
-              var minW=Math.min.apply(null,sorted.map(function(e){return e.maxWeight||0;}));
-              var maxW2=maxWeight;
-              var yMin=Math.max(0,minW-5);
-              var yMax=maxW2+(maxW2-yMin)*0.1||1;
+              var vals=sorted.map(function(e){return isBodyweight?entryMaxReps(e):e.maxWeight||0;});
+              var minV=Math.min.apply(null,vals);
+              var maxV=Math.max.apply(null,vals)||1;
+              var yMin=Math.max(0,minV-Math.ceil((maxV-minV)*0.1||1));
+              var yMax=maxV+Math.ceil((maxV-yMin)*0.1||1);
               var pts=sorted.map(function(e,i){
+                var v=isBodyweight?entryMaxReps(e):e.maxWeight||0;
                 var x=PAD.l+(sorted.length<2?iW/2:i/(sorted.length-1)*iW);
-                var y=PAD.t+iH-(e.maxWeight>0?(e.maxWeight-yMin)/(yMax-yMin)*iH:0);
-                return {x:x,y:y,e:e};
+                var y=PAD.t+iH-(v>0?(v-yMin)/(yMax-yMin)*iH:0);
+                return {x:x,y:y,v:v,e:e};
               });
               var polyline=pts.map(function(p){return p.x+","+p.y;}).join(" ");
               var area=pts.map(function(p,i){return (i===0?"M":"")+p.x+","+p.y;}).join(" ")+" L"+pts[pts.length-1].x+","+(PAD.t+iH)+" L"+pts[0].x+","+(PAD.t+iH)+" Z";
@@ -1426,10 +1437,11 @@
                   <polyline points={polyline} fill="none" stroke={T.accent} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
                   {pts.map(function(p,i){
                     var isBestPt=bestDate&&p.e.date===bestDate;
+                    var lbl=isBodyweight?(p.v>0?p.v+" reps":""):(p.v>0?fmtW(p.v):"");
                     return (
                       <g key={i}>
                         <circle cx={p.x} cy={p.y} r={isBestPt?5:3} fill={isBestPt?"#f59e0b":T.accent} stroke={T.surface} strokeWidth="1.5"/>
-                        {(sorted.length<=8||isBestPt)&&p.e.maxWeight>0&&<text x={p.x} y={p.y-8} textAnchor="middle" fontSize="9" fill={isBestPt?"#d97706":T.textMid} fontWeight={isBestPt?"600":"400"}>{fmtW(p.e.maxWeight)}</text>}
+                        {(sorted.length<=8||isBestPt)&&lbl&&<text x={p.x} y={p.y-8} textAnchor="middle" fontSize="9" fill={isBestPt?"#d97706":T.textMid} fontWeight={isBestPt?"600":"400"}>{lbl}</text>}
                         <text x={p.x} y={H-2} textAnchor="middle" fontSize="8" fill={T.textMuted}>{new Date(p.e.date).toLocaleDateString("nl-NL",{day:"2-digit",month:"short"})}</text>
                       </g>
                     );
@@ -1440,11 +1452,12 @@
           </div>
           {entries.map(function(e,i){
             var isBest=bestDate&&e.date===bestDate;
+            var dispVal=isBodyweight?(entryMaxReps(e)>0?entryMaxReps(e)+" reps":"—"):(e.maxWeight>0?fmtW(e.maxWeight)+" kg":"—");
             return(
             <div key={i} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:isBest?"#fffbeb":T.surface}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
                 <div style={{fontSize:13,fontWeight:500}}>{fmtDate(e.date)}</div>
-                <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:500,display:"flex",alignItems:"center",justifyContent:"flex-end",gap:4}}>{isBest&&<span style={{fontSize:14}}>⭐</span>}{e.maxWeight>0?fmtW(e.maxWeight)+" kg":"—"}</div>{e.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{e.totalVol.toLocaleString("nl-NL")} vol.</div>}</div>
+                <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:500,display:"flex",alignItems:"center",justifyContent:"flex-end",gap:4}}>{isBest&&<span style={{fontSize:14}}>⭐</span>}{dispVal}</div>{!isBodyweight&&e.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{e.totalVol.toLocaleString("nl-NL")} vol.</div>}</div>
               </div>
               <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
                 {e.sets.map(function(s,si){return <span key={si} style={{fontSize:11,padding:"3px 7px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:4,color:T.textMid}}>{si+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
