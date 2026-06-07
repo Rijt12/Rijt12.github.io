@@ -1751,13 +1751,14 @@
         }).join("");
         var html='<!DOCTYPE html><html><head><meta charset="utf-8">'
           +'<title>Export '+client.name+'</title>'
-          +'<style>@import url(\'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap\");'
+          +'<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">'
+          +'<style>'
           +'*{box-sizing:border-box;margin:0;padding:0}'
-          +'body{font-family:Inter,sans-serif;background:#f9fafb;color:#111;padding:24px;max-width:560px;margin:0 auto}'
+          +'body{font-family:\'Inter\',sans-serif;background:#f9fafb;color:#111;padding:24px;max-width:560px;margin:0 auto}'
           +'@media print{body{background:#fff;padding:0}}'
           +'</style></head><body>'
           +'<div style="margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #e5e7eb">'
-          +'<div style="font-size:22px;font-weight:700;letter-spacing:0.5px">'+client.name+'</div>'
+          +'<div style="font-family:\'Raleway\',sans-serif;font-size:24px;font-weight:800;letter-spacing:1px;text-transform:uppercase">'+client.name+'</div>'
           +'<div style="font-size:11px;color:#6b7280;margin-top:4px">Progressierapport · '+rangeLabel+' · '+fmtDate(new Date().toISOString())+'</div>'
           +'</div>'
           +cardsHTML
