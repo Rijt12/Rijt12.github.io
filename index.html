@@ -1737,7 +1737,7 @@
           var setsHTML=ex.best?ex.best.sets.map(function(s,i){
             return '<span style="font-size:10px;padding:2px 6px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:3px;margin:2px;display:inline-block">'+(i+1)+'. '+(s.weight?s.weight+'kg':'—')+' × '+(s.reps||'—')+'</span>';
           }).join(""):"";
-          return '<div style="border:1px solid #e5e7eb;border-left:4px solid '+color+';border-radius:6px;padding:14px 16px;margin-bottom:12px;break-inside:avoid;background:#fff">'
+          return '<div style="border:1px solid #e5e7eb;border-left:4px solid '+color+';border-radius:6px;padding:14px 16px;break-inside:avoid;background:#fff">'
                 +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
                 +'<div><div style="font-weight:600;font-size:13px;color:#111">'+(ex.name)+'</div>'
                 +'<div style="font-size:10px;color:'+color+';text-transform:uppercase;letter-spacing:0.4px;margin-top:2px">'+ex.pattern+'</div>'
@@ -1754,14 +1754,15 @@
           +'<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">'
           +'<style>'
           +'*{box-sizing:border-box;margin:0;padding:0}'
-          +'body{font-family:\'Inter\',sans-serif;background:#f9fafb;color:#111;padding:24px;max-width:560px;margin:0 auto}'
-          +'@media print{body{background:#fff;padding:0}}'
+          +'body{font-family:\'Inter\',sans-serif;background:#f9fafb;color:#111;padding:24px;max-width:860px;margin:0 auto}'
+          +'.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}'
+          +'@media print{body{background:#fff;padding:16px}.grid{grid-template-columns:1fr 1fr}}'
           +'</style></head><body>'
           +'<div style="margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #e5e7eb">'
           +'<div style="font-family:\'Raleway\',sans-serif;font-size:24px;font-weight:800;letter-spacing:1px;text-transform:uppercase">'+client.name+'</div>'
           +'<div style="font-size:11px;color:#6b7280;margin-top:4px">Progressierapport · '+rangeLabel+' · '+fmtDate(new Date().toISOString())+'</div>'
           +'</div>'
-          +cardsHTML
+          +'<div class="grid">'+cardsHTML+'</div>'
           +'<script>window.onload=function(){window.print();}<\/script>'
           +'</body></html>';
         var win=window.open("","_blank");
