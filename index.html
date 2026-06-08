@@ -702,6 +702,7 @@
                     prevByNameB={prevByNameB}
                     duoClients={duoClients}
                     allClients={data.clients}
+                    allEntriesByName={allEntriesByName}
                     onDuoPick={function(secondId){
                       var ids=[activeSession.clientIds[0],secondId];
                       setActiveSession({...activeSession,clientIds:ids});
@@ -1243,7 +1244,7 @@
               {isDuo(session)&&duoClients&&<span style={{fontSize:10,color:"#7c3aed",padding:"5px 8px",border:"1px solid #ede9fe",borderRadius:4,textTransform:"uppercase",letterSpacing:0.4}}>DUO: {duoClients[0].name.split(" ")[0]} + {duoClients[1].name.split(" ")[0]}</span>}
             </div>
           </div>
-          {showAdd&&<div style={{position:"sticky",top:48,zIndex:9,background:T.surface,borderBottom:"2px solid "+T.accent,boxShadow:"0 4px 12px rgba(0,0,0,0.08)"}}><AddExerciseForm library={library} onAdd={addEx} onCancel={function(){setShowAdd(false);}}/></div>}
+          {showAdd&&<div style={{position:"sticky",top:48,zIndex:9,background:T.surface,borderBottom:"2px solid "+T.accent,boxShadow:"0 4px 12px rgba(0,0,0,0.08)"}}><AddExerciseForm library={library} allEntriesByName={props.allEntriesByName||{}} onAdd={addEx} onCancel={function(){setShowAdd(false);}}/></div>}
           {showSuperset&&<div style={{position:"sticky",top:48,zIndex:9,background:T.surface,borderBottom:"2px solid "+T.accent,boxShadow:"0 4px 12px rgba(0,0,0,0.08)"}}><AddSupersetForm library={library} onAdd={addSuperset} onCancel={function(){setShowSuperset(false);}}/></div>}
           {showDuoPicker&&(
             <div style={{padding:"10px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}>
@@ -1328,7 +1329,25 @@
                   </div>
                   <div style={{maxHeight:200,overflowY:"auto"}}>
                     {filtered.length===0&&<div style={{color:T.textMuted,fontSize:12,padding:"12px 0",textAlign:"center"}}>Geen resultaten</div>}
-                    {filtered.map(function(ex){var color=PC[ex.pattern]||T.textMuted;return <div key={ex.id} className="rh" onClick={function(){selectLib(ex);}} style={{padding:"10px",borderBottom:"1px solid "+T.border,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",borderLeft:"3px solid "+color}}><span style={{fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</span><span style={{fontSize:9,color:color,textTransform:"uppercase",letterSpacing:0.4}}>{ex.pattern}</span></div>;})}
+                    {filtered.map(function(ex){
+                      var color=PC[ex.pattern]||T.textMuted;
+                      var hist=(props.allEntriesByName||{})[ex.name.trim().toLowerCase()];
+                      var lastEntry=hist&&hist.entries&&hist.entries.length>0?hist.entries.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);})[0]:null;
+                      return (
+                        <div key={ex.id} className="rh" onClick={function(){selectLib(ex);}} style={{padding:"10px",borderBottom:"1px solid "+T.border,cursor:"pointer",borderLeft:"3px solid "+color}}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                            <span style={{fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</span>
+                            <span style={{fontSize:9,color:color,textTransform:"uppercase",letterSpacing:0.4}}>{ex.pattern}</span>
+                          </div>
+                          {lastEntry&&(
+                            <div style={{marginTop:5,display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
+                              <span style={{fontSize:9,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.3,marginRight:2}}>{fmtDate(lastEntry.date)}</span>
+                              {lastEntry.sets.map(function(s,i){return <span key={i} style={{fontSize:10,padding:"2px 6px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:3,color:T.textMid}}>{s.weight?s.weight+"kg":"—"}×{s.reps||"—"}</span>;})}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
