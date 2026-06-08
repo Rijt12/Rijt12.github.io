@@ -586,7 +586,7 @@
         s.exercises.forEach(function(ex){
           if (!exForClient(ex, s, activeClientId)) { return; }
           var sets = setsForClient(ex, s, activeClientId);
-          if (!prevByName[ex.name]) { prevByName[ex.name]={sets:sets,date:s.date}; }
+          var pkey=ex.name.trim().toLowerCase(); if (!prevByName[pkey]) { prevByName[pkey]={sets:sets,date:s.date}; }
         });
       });
 
@@ -601,7 +601,7 @@
           s.exercises.forEach(function(ex){
             if (!exForClient(ex, s, duoPartnerBId)) { return; }
             var sets = setsForClient(ex, s, duoPartnerBId);
-            if (!prevByNameB[ex.name]) { prevByNameB[ex.name]={sets:sets,date:s.date}; }
+            var pkeyB=ex.name.trim().toLowerCase(); if (!prevByNameB[pkeyB]) { prevByNameB[pkeyB]={sets:sets,date:s.date}; }
           });
         });
       }
@@ -1268,8 +1268,8 @@
                 onDelete={function(){deleteEx(item.idx);}}
                 onMoveUp={item.idx>0?function(){moveUp(item.idx);}:null}
                 onMoveDown={item.idx<session.exercises.length-1?function(){moveDown(item.idx);}:null}
-                prevData={prevByName[item.ex.name]}
-                prevDataB={prevByNameB[item.ex.name]}
+                prevData={prevByName[(item.ex.name||"").trim().toLowerCase()]}
+                prevDataB={prevByNameB[(item.ex.name||"").trim().toLowerCase()]}
                 duoClients={duoClients}
                 onViewHistory={function(){var k=(item.ex.performedUnilateral&&item.ex.isUnilateralExercise)?item.ex.name+"__uni":item.ex.name;props.onViewExHistory(k);}}
               />;
@@ -1329,25 +1329,7 @@
                   </div>
                   <div style={{maxHeight:200,overflowY:"auto"}}>
                     {filtered.length===0&&<div style={{color:T.textMuted,fontSize:12,padding:"12px 0",textAlign:"center"}}>Geen resultaten</div>}
-                    {filtered.map(function(ex){
-                      var color=PC[ex.pattern]||T.textMuted;
-                      var hist=(props.allEntriesByName||{})[ex.name.trim().toLowerCase()];
-                      var lastEntry=hist&&hist.entries&&hist.entries.length>0?hist.entries.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);})[0]:null;
-                      return (
-                        <div key={ex.id} className="rh" onClick={function(){selectLib(ex);}} style={{padding:"10px",borderBottom:"1px solid "+T.border,cursor:"pointer",borderLeft:"3px solid "+color}}>
-                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                            <span style={{fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</span>
-                            <span style={{fontSize:9,color:color,textTransform:"uppercase",letterSpacing:0.4}}>{ex.pattern}</span>
-                          </div>
-                          {lastEntry&&(
-                            <div style={{marginTop:5,display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
-                              <span style={{fontSize:9,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.3,marginRight:2}}>{fmtDate(lastEntry.date)}</span>
-                              {lastEntry.sets.map(function(s,i){return <span key={i} style={{fontSize:10,padding:"2px 6px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:3,color:T.textMid}}>{s.weight?s.weight+"kg":"—"}×{s.reps||"—"}</span>;})}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                    {filtered.map(function(ex){var color=PC[ex.pattern]||T.textMuted;return <div key={ex.id} className="rh" onClick={function(){selectLib(ex);}} style={{padding:"10px",borderBottom:"1px solid "+T.border,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",borderLeft:"3px solid "+color}}><span style={{fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</span><span style={{fontSize:9,color:color,textTransform:"uppercase",letterSpacing:0.4}}>{ex.pattern}</span></div>;})}
                   </div>
                 </div>
               )}
@@ -1442,8 +1424,9 @@
           </div>
           {open&&(
             <div>
-              {[{ex:exA,col:colA,label:"A",addSet:addSetA,updateSet:updateSetA,removeSet:removeSetA,onChange:props.onChangeA,prevData:props.prevByName[exA.name]},
-                {ex:exB,col:colB,label:"B",addSet:addSetB,updateSet:updateSetB,removeSet:removeSetB,onChange:props.onChangeB,prevData:props.prevByName[exB.name]}
+              {[{ex:exA,col:colA,label:"A",addSet:addSetA,updateSet:updateSetA,removeSet:removeSetA,onChange:props.onChangeA,prevData:props.prevByName[(exA.name||"").trim().toLowerCase()]},
+                {ex:exB,col:colB,label:"B",addSet:addSetB,updateSet:updateSetB,removeSet:removeSetB,onChange:props.onChangeB,prevData:props.prevByName[(exB.name||"").trim().toLowerCase()]}
+
               ].map(function(item,ri){
                 return (
                   <div key={item.label} style={{borderTop:ri===1?"1px dashed "+T.borderStrong:"none"}}>
