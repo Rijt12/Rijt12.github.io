@@ -90,18 +90,19 @@ const sessions = [
 
   session(clientId, "2025-12-31", "Jaaroverzicht 2025", [
     makeEx("Bulgarian Split Squat",  "Squat",    true,  [s("18","10")]),
-    makeEx("Goblet Squat",           "Squat",    false, [s("24","")]),
+    makeEx("Goblet Squat",           "Squat",    false, [s("24","10"),s("24","10")]),
     makeEx("Linear Leg Press",       "Machine",  false, [s("120","12"),s("120","12"),s("120","12")]),
     makeEx("Leg Extension",          "Machine",  false, [s("25","12")]),
     makeEx("Hip Thrust",             "Hinge",    false, [s("35","12"),s("35","12")]),
     makeEx("Leg Curl",               "Machine",  false, [s("27,5","10"),s("27,5","10"),s("27,5","10")]),
     makeEx("Chin Up",                "Pull",     false, [s("","")],     "5 reps rode band → 6 reps rode band, 6-8 reps"),
     makeEx("Lat Pulldown",           "Pull",     false, [s("22,5","")], "High to low"),
-    makeEx("Cable Row",              "Pull",     false, [s("16","10"),s("16","10"),s("16","10")]),
+    makeEx("Cable Row",              "Pull",     false, [s("30","10")]),
     makeEx("Face Pull",              "Pull",     false, [s("15","12"),s("15","12"),s("15","12")]),
     makeEx("DB Bench Press",         "Push",     false, [s("2x10","12"),s("2x10","12"),s("2x10","12")]),
     makeEx("Incline Push Up",        "Push",     false, [s("","12"),s("","12"),s("","12")],  "Negatief 4"),
     makeEx("Bicep Curls Cable",      "Isolatie", false, [s("12,5","10")]),
+    makeEx("DB Bicep Curls",         "Isolatie", false, [s("2x7","8")]),
     makeEx("Lateral Raise",          "Isolatie", false, [s("2x4","12")])
   ]),
 
