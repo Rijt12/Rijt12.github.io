@@ -126,6 +126,23 @@
       return n===Math.floor(n)?String(Math.floor(n)):String(n.toFixed(1)).replace(".",",");
     }
 
+    // Normalize exercise name: first letter of full name uppercase, rest lowercase,
+    // but preserve known all-caps tokens (DB, RDL, EMOM, …).
+    var CAPS_TOKENS=["DB","RDL","EMOM","BB","KB","TRX"];
+    function normalizeName(str){
+      if(!str){return "";}
+      var parts=str.trim().split(/\s+/);
+      var out=parts.map(function(w,i){
+        var up=w.toUpperCase();
+        if(CAPS_TOKENS.indexOf(up)!==-1){return up;}
+        var word=w.toLowerCase();
+        return i===0?word.charAt(0).toUpperCase()+word.slice(1):word;
+      });
+      return out.join(" ");
+    }
+    // Case-insensitive key for grouping
+    function exNameKey(name){return name.trim().toLowerCase();}
+
     // ── Constants ──────────────────────────────────────────────────────────────
     const PATTERNS = ["Push","Pull","Hinge","Squat","Carry","Core","Isolatie","Mobiliteit","Machine"];
     const PC = {
@@ -449,9 +466,9 @@
           if (!exForClient(ex, s, activeClientId)) { return; }
           var sets = setsForClient(ex, s, activeClientId);
           var performed = ex.performedUnilateral||false;
-          var key = performed ? ex.name+"__uni" : ex.name;
-          if (!allEntriesByName[key]) { allEntriesByName[key]=[]; }
-          allEntriesByName[key].push({
+          var key = performed ? exNameKey(ex.name)+"__uni" : exNameKey(ex.name);
+          if (!allEntriesByName[key]) { allEntriesByName[key]={entries:[],canonicalName:normalizeName(ex.name),pattern:ex.pattern}; }
+          allEntriesByName[key].entries.push({
             date:s.date, sets:sets,
             maxWeight:Math.max.apply(null,sets.map(function(st){return parseW(st.weight)||0;})),
             totalVol:sets.reduce(function(sum,st){return sum+(parseW(st.weight)||0)*(parseInt(st.reps)||0);},0),
@@ -560,8 +577,8 @@
 
           {view==="exHistory" && exHistoryName && (
             <div key={navKey} className="page-enter">
-              <Header title={exHistoryName.replace("__uni"," (uni)")} back={function(){goView(prevView);}}/>
-              <ExerciseHistoryPage entries={(allEntriesByName[exHistoryName]||[]).sort(function(a,b){return new Date(b.date)-new Date(a.date);})}/>
+              <Header title={(allEntriesByName[exHistoryName]&&allEntriesByName[exHistoryName].canonicalName?allEntriesByName[exHistoryName].canonicalName:exHistoryName).replace("__uni"," (uni)")} back={function(){goView(prevView);}}/>
+              <ExerciseHistoryPage entries={((allEntriesByName[exHistoryName]||{}).entries||[]).sort(function(a,b){return new Date(b.date)-new Date(a.date);})}/>
             </div>
           )}
 
@@ -1487,8 +1504,8 @@
             var viewSets=client?setsForClient(ex,session,client.id):ex.sets;
             var totalVol=viewSets.reduce(function(sum,s){return sum+(parseW(s.weight)||0)*(parseInt(s.reps)||0);},0);
             var performed=ex.performedUnilateral||false;
-            var exKey=performed?ex.name+"__uni":ex.name;
-            var prevEntry=null; var allEntries=allEntriesByName[exKey]||[];
+            var exKey=performed?exNameKey(ex.name)+"__uni":exNameKey(ex.name);
+            var prevEntry=null; var allEntries=(allEntriesByName[exKey]||{}).entries||[];
             for(var ei=0;ei<allEntries.length;ei++){if(new Date(allEntries[ei].date)<new Date(session.date)){if(!prevEntry||new Date(allEntries[ei].date)>new Date(prevEntry.date)){prevEntry=allEntries[ei];}}}
             var clientLbl=isDuo(session)?(ex.clientLabel||"AB"):null;
             var badgeColor=clientLbl==="A"?"#2563eb":clientLbl==="B"?"#059669":"#7c3aed";
@@ -1585,15 +1602,15 @@
           var vol=sets.reduce(function(sum,st){return sum+(parseW(st.weight)||0)*(parseInt(st.reps)||0);},0);
           var entry={date:s.date,maxWeight:maxWeight,maxReps:maxReps,maxRepsAtMax:maxRepsAtMax,totalVol:vol,sets:ex.sets};
           var performed=ex.performedUnilateral||false;
+          var normalized=normalizeName(ex.name);
           if(performed){
-            // Uni sessions go only into the (uni) sub-entry
-            var uniKey=ex.name+"__uni";
-            if(!exerciseMap[uniKey]){exerciseMap[uniKey]={key:uniKey,name:ex.name+" (uni)",baseName:ex.name,pattern:ex.pattern,isSubEntry:true,entries:[]};}
+            var uniKey=exNameKey(ex.name)+"__uni";
+            if(!exerciseMap[uniKey]){exerciseMap[uniKey]={key:uniKey,name:normalized+" (uni)",baseName:normalized,pattern:ex.pattern,isSubEntry:true,entries:[]};}
             exerciseMap[uniKey].entries.push(entry);
           } else {
-            // Non-uni sessions go only into the main entry
-            if(!exerciseMap[ex.name]){exerciseMap[ex.name]={key:ex.name,name:ex.name,baseName:ex.name,pattern:ex.pattern,isSubEntry:false,entries:[]};}
-            exerciseMap[ex.name].entries.push(entry);
+            var baseKey=exNameKey(ex.name);
+            if(!exerciseMap[baseKey]){exerciseMap[baseKey]={key:baseKey,name:normalized,baseName:normalized,pattern:ex.pattern,isSubEntry:false,entries:[]};}
+            exerciseMap[baseKey].entries.push(entry);
           }
         });
       });
@@ -1670,8 +1687,9 @@
           var maxWeight=Math.max.apply(null,ex.sets.map(function(st){return parseW(st.weight)||0;}));
           var maxReps=Math.max.apply(null,ex.sets.map(function(st){return parseInt(st.reps)||0;}));
           var totalVol=ex.sets.reduce(function(sum,st){return sum+(parseW(st.weight)||0)*(parseInt(st.reps)||0);},0);
-          if(!histMap[ex.name]){histMap[ex.name]={name:ex.name,pattern:ex.pattern,unilateral:ex.unilateral||false,entries:[]};}
-          histMap[ex.name].entries.push({date:s.date,maxWeight:maxWeight,maxReps:maxReps,totalVol:totalVol,sets:ex.sets});
+          var nk=exNameKey(ex.name);
+          if(!histMap[nk]){histMap[nk]={name:normalizeName(ex.name),pattern:ex.pattern,unilateral:ex.unilateral||false,entries:[]};}
+          histMap[nk].entries.push({date:s.date,maxWeight:maxWeight,maxReps:maxReps,totalVol:totalVol,sets:ex.sets});
         });
       });
       var exList=Object.values(histMap).sort(function(a,b){return a.name.localeCompare(b.name);});
