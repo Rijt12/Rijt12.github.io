@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Seed oefeningen bibliotheek</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 520px; margin: 60px auto; padding: 20px; }
+    input { display: block; width: 100%; padding: 10px; margin-bottom: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { padding: 12px 24px; font-size: 15px; background: #dc4f2a; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+    button:disabled { background: #94a3b8; cursor: not-allowed; }
+    #log { margin-top: 20px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
+    .ok   { color: #059669; }
+    .err  { color: #dc2626; }
+    .skip { color: #9ca3af; }
+  </style>
+</head>
+<body>
+  <h2>Seed: oefeningen bibliotheek</h2>
+  <p style="font-size:13px;color:#666">Voegt ontbrekende oefeningen toe aan Supabase. Bestaande oefeningen worden overgeslagen.</p>
+
+  <div id="loginForm">
+    <p>Log in met je Supabase app-account:</p>
+    <input id="email" type="email" placeholder="E-mailadres"/>
+    <input id="password" type="password" placeholder="Wachtwoord"/>
+    <button onclick="doLogin()">Inloggen</button>
+  </div>
+
+  <div id="importSection" style="display:none">
+    <button id="btn" onclick="runSeed()">Voeg oefeningen toe</button>
+  </div>
+
+  <div id="log"></div>
+
+<script>
+  var SUPABASE_URL      = 'https://skofblajffjorwprkknz.supabase.co';
+  var SUPABASE_ANON_KEY = 'sb_publishable_QQLElZxZJFOV4IHpbtgQLQ_L3R8SnOh';
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  function log(msg, cls) {
+    var el = document.getElementById("log");
+    var span = document.createElement("span");
+    span.className = cls || "";
+    span.textContent = msg + "\n";
+    el.appendChild(span);
+  }
+
+  function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
+
+  async function doLogin() {
+    var email = document.getElementById("email").value.trim();
+    var pw    = document.getElementById("password").value;
+    if (!email || !pw) { log("Vul e-mail en wachtwoord in.", "err"); return; }
+    var res = await sb.auth.signInWithPassword({ email: email, password: pw });
+    if (res.error) { log("✗ " + res.error.message, "err"); return; }
+    document.getElementById("loginForm").style.display = "none";
+    document.getElementById("importSection").style.display = "block";
+    log("✓ Ingelogd als " + res.data.user.email, "ok");
+  }
+
+  var EXERCISES = [
+    { name: "Bulgarian split squat",      pattern: "Squat",    unilateral: true  },
+    { name: "Goblet squat",               pattern: "Squat",    unilateral: false },
+    { name: "Linear leg press",           pattern: "Squat",    unilateral: false },
+    { name: "Leg extension",              pattern: "Isolatie", unilateral: true  },
+    { name: "Hip thrust",                 pattern: "Hinge",    unilateral: false },
+    { name: "RDL",                        pattern: "Hinge",    unilateral: false },
+    { name: "Leg curl",                   pattern: "Isolatie", unilateral: false },
+    { name: "Hip abductor",               pattern: "Isolatie", unilateral: false },
+    { name: "Chin up",                    pattern: "Pull",     unilateral: false },
+    { name: "Lat pulldown",               pattern: "Pull",     unilateral: false },
+    { name: "High to low cable row",      pattern: "Pull",     unilateral: false },
+    { name: "Cable row",                  pattern: "Pull",     unilateral: false },
+    { name: "Bent over row",              pattern: "Pull",     unilateral: false },
+    { name: "Face pull",                  pattern: "Pull",     unilateral: false },
+    { name: "Shoulder press",             pattern: "Push",     unilateral: true  },
+    { name: "DB bench press",             pattern: "Push",     unilateral: false },
+    { name: "Incline push up",            pattern: "Push",     unilateral: false },
+    { name: "Half kneeling landmine press", pattern: "Push",   unilateral: false },
+    { name: "Landmine press",             pattern: "Push",     unilateral: false },
+    { name: "Tricep extension cable",     pattern: "Isolatie", unilateral: true  },
+    { name: "Bicep curls cable",          pattern: "Isolatie", unilateral: true  },
+    { name: "DB bicep curls",             pattern: "Isolatie", unilateral: false },
+    { name: "Lateral raise cable",        pattern: "Isolatie", unilateral: false },
+    { name: "DB lateral raise",           pattern: "Isolatie", unilateral: false },
+    { name: "Swissball plank reach",      pattern: "Core",     unilateral: false },
+    { name: "Reverse cable fly",          pattern: "Pull",     unilateral: false },
+  ];
+
+  async function runSeed() {
+    document.getElementById("btn").disabled = true;
+
+    var userRes = await sb.auth.getUser();
+    if (userRes.error || !userRes.data.user) { log("Niet ingelogd.", "err"); return; }
+    var uid_user = userRes.data.user.id;
+
+    log("Bestaande bibliotheek ophalen...");
+    var existing = await sb.from("exercise_library").select("name").eq("user_id", uid_user);
+    if (existing.error) { log("✗ " + existing.error.message, "err"); return; }
+
+    var existingNames = (existing.data || []).map(function(e){ return e.name.toLowerCase(); });
+    log("Gevonden: " + existingNames.length + " bestaande oefeningen.", "skip");
+
+    var toInsert = EXERCISES.filter(function(e){
+      return !existingNames.includes(e.name.toLowerCase());
+    }).map(function(e){
+      return { id: uid(), name: e.name, pattern: e.pattern, unilateral: e.unilateral, user_id: uid_user };
+    });
+
+    var skipped = EXERCISES.length - toInsert.length;
+    if (skipped > 0) log("Overgeslagen (bestaan al): " + skipped, "skip");
+
+    if (toInsert.length === 0) {
+      log("✓ Alle oefeningen bestaan al. Niets te doen.", "ok");
+      document.getElementById("btn").textContent = "✓ Klaar";
+      return;
+    }
+
+    log("Toevoegen: " + toInsert.length + " oefeningen...");
+    var res = await sb.from("exercise_library").insert(toInsert);
+    if (res.error) { log("✗ " + res.error.message, "err"); document.getElementById("btn").disabled = false; return; }
+
+    log("", "");
+    toInsert.forEach(function(e){ log("  + " + e.name + (e.unilateral ? " [uni]" : "") + " — " + e.pattern, "ok"); });
+    log("", "");
+    log("✓ Klaar! Ververs de app om de bibliotheek te zien.", "ok");
+    document.getElementById("btn").textContent = "✓ Voltooid";
+  }
+</script>
+</body>
+</html>
