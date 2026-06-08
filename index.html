@@ -123,7 +123,11 @@
 
     function fmtW(w) {
       var n=parseW(w);
-      return n===Math.floor(n)?String(Math.floor(n)):String(n.toFixed(1)).replace(".",",");
+      if(n===Math.floor(n)){return String(Math.floor(n));}
+      var s=n.toFixed(2);
+      // strip trailing zero after decimal: 37.50 → 37,5  but 37.55 → 37,55
+      s=s.replace(/\.?0+$/,"");
+      return s.replace(".",",");
     }
 
     // Normalize exercise name: first letter of full name uppercase, rest lowercase,
@@ -205,6 +209,8 @@
       var [dlg, setDlg]                       = useState(null);
       var [saving, setSaving]                 = useState(false);
       var [navKey, setNavKey]                 = useState(0);
+      var [showSearch, setShowSearch]         = useState(false);
+      function handlePullSearch(){setShowSearch(true);}
 
       useEffect(function() {
         Promise.all([loadData(), new Promise(function(r){ setTimeout(r, 800); })]).then(function(res){ setData(res[0]); });
@@ -480,7 +486,7 @@
       var templates = data.templates || [];
 
       return (
-        <Shell saving={saving}>
+        <Shell saving={saving} onPullSearch={handlePullSearch}>
           {view==="clients" && (
             <div key={navKey} className="page-enter">
               <Header title="Cliënten"
@@ -533,6 +539,7 @@
                 onDeleteSession={deleteSession}
                 onExHistory={function(name){setExHistoryName(name);setClientTab("progressie");setPrevView("client");goView("exHistory");}}
                 initialTab={clientTab}
+                showSearch={showSearch} onHideSearch={function(){setShowSearch(false);}}
               />
             </div>
           )}
@@ -597,8 +604,21 @@
 
     // ── Shell ──────────────────────────────────────────────────────────────────
     function Shell(props) {
+      var touchStartY=useRef(null); var touchStartScroll=useRef(0);
+      function handleTouchStart(e){
+        touchStartY.current=e.touches[0].clientY;
+        touchStartScroll.current=window.scrollY||document.documentElement.scrollTop||0;
+      }
+      function handleTouchMove(e){
+        if(touchStartY.current===null){return;}
+        var dy=e.touches[0].clientY-touchStartY.current;
+        if(dy>55&&touchStartScroll.current<10){
+          touchStartY.current=null;
+          if(props.onPullSearch){props.onPullSearch();}
+        }
+      }
       return (
-        <div style={{minHeight:"100vh",background:T.bg,color:T.text,fontFamily:"'Inter',sans-serif",maxWidth:480,margin:"0 auto",position:"relative"}}>
+        <div onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} style={{minHeight:"100vh",background:T.bg,color:T.text,fontFamily:"'Inter',sans-serif",maxWidth:480,margin:"0 auto",position:"relative"}}>
           <style dangerouslySetInnerHTML={{__html:`
             @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@700;800&family=Inter:wght@300;400;500&display=swap');
             *{box-sizing:border-box;margin:0;padding:0}
@@ -610,8 +630,10 @@
             .rh:hover{background:#faf9f7!important}
             @keyframes slideUp{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
             @keyframes slideIn{from{opacity:0}to{opacity:1}}
+            @keyframes searchReveal{from{max-height:0;opacity:0}to{max-height:56px;opacity:1}}
             .ai{animation:slideUp 0.18s ease}
             .page-enter{animation:slideIn 0.2s ease}
+            .search-reveal{animation:searchReveal 0.2s ease forwards;overflow:hidden}
             input:focus,textarea:focus{outline:none;border-color:#dc4f2a!important}
             input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#dc4f2a}
           `}}/>
@@ -1009,22 +1031,24 @@
     function ClientDetail(props) {
       var client=props.client; var sessions=props.sessions; var data=props.data;
       var [tab,setTab]=useState(props.initialTab||"sessies");
+      var showSearch=props.showSearch||false;
+      var onHideSearch=props.onHideSearch||function(){};
       function startSession(){
         props.onStartSession({id:uid(),clientId:client.id,clientIds:[client.id],date:new Date().toISOString(),exercises:[],notes:""});
       }
       return (
         <div className="ai">
-          <div style={{padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid "+T.border,background:T.surface}}>
+          <div style={{padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:0,zIndex:40}}>
             <Btn accent onClick={startSession}>+ Nieuwe sessie</Btn>
             <button onClick={props.onExport} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:10,borderRadius:4,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer"}}>Exporteer</button>
           </div>
-          <div style={{display:"flex",background:T.surface,borderBottom:"1px solid "+T.border}}>
+          <div style={{display:"flex",background:T.surface,borderBottom:"1px solid "+T.border,position:"sticky",top:49,zIndex:39}}>
             {["sessies","progressie"].map(function(t){return <button key={t} onClick={function(){setTab(t);}} style={{flex:1,padding:"11px 0",background:"none",border:"none",color:tab===t?T.text:T.textMuted,borderBottom:tab===t?"2px solid "+T.accent:"2px solid transparent",fontSize:11,textTransform:"uppercase",letterSpacing:0.8}}>{t}</button>;})}
           </div>
           {tab==="sessies"&&(
-            <SessionSearch sessions={sessions} client={client} onViewSession={props.onViewSession} onDeleteSession={props.onDeleteSession}/>
+            <SessionSearch sessions={sessions} client={client} onViewSession={props.onViewSession} onDeleteSession={props.onDeleteSession} showSearch={showSearch} onHideSearch={onHideSearch}/>
           )}
-          {tab==="progressie"&&<ProgressView sessions={sessions} onExHistory={props.onExHistory} clientId={client.id}/>}
+          {tab==="progressie"&&<ProgressView sessions={sessions} onExHistory={props.onExHistory} clientId={client.id} showSearch={showSearch} onHideSearch={onHideSearch}/>}
         </div>
       );
     }
@@ -1543,6 +1567,9 @@
     function SessionSearch(props) {
       var sessions=props.sessions; var client=props.client;
       var [q,setQ]=useState("");
+      var show=props.showSearch||false;
+      var inputRef=useRef(null);
+      useEffect(function(){if(show&&inputRef.current){inputRef.current.focus();}if(!show){setQ("");}}, [show]);
       var filtered=sessions.filter(function(s){
         if(!q.trim()){return true;}
         var lq=q.toLowerCase();
@@ -1553,9 +1580,11 @@
       });
       return (
         <div>
-          <div style={{padding:"10px 16px",borderBottom:"1px solid "+T.border}}>
-            <input value={q} onChange={function(e){setQ(e.target.value);}} placeholder="Zoek sessie of oefening…" style={{width:"100%",padding:"7px 10px",fontSize:13,border:"1px solid "+T.border,borderRadius:6,background:T.surfaceAlt,color:T.text,outline:"none",boxSizing:"border-box"}}/>
+          {show&&(
+          <div className="search-reveal" style={{padding:"10px 16px",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:97,zIndex:38}}>
+            <input ref={inputRef} value={q} onChange={function(e){setQ(e.target.value);}} onBlur={function(){if(!q.trim()&&props.onHideSearch){props.onHideSearch();}}} placeholder="Zoek sessie of oefening…" style={{width:"100%",padding:"7px 10px",fontSize:13,border:"1px solid "+T.border,borderRadius:6,background:T.surfaceAlt,color:T.text,outline:"none",boxSizing:"border-box"}}/>
           </div>
+          )}
           {filtered.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>Geen sessies gevonden.</div>}
           {filtered.map(function(s){return(
             <div key={s.id} className="rh" onClick={function(){props.onViewSession(s.id);}} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -1581,6 +1610,9 @@
       var clientId=props.clientId||null;
       var [period,setPeriod]=useState("all");
       var [search,setSearch]=useState("");
+      var showSearch=props.showSearch||false;
+      var searchRef=useRef(null);
+      useEffect(function(){if(showSearch&&searchRef.current){searchRef.current.focus();}if(!showSearch){setSearch("");}}, [showSearch]);
       var now=new Date(); var cutoff=null;
       if(period==="1m"){cutoff=new Date(now);cutoff.setMonth(cutoff.getMonth()-1);}
       if(period==="3m"){cutoff=new Date(now);cutoff.setMonth(cutoff.getMonth()-3);}
@@ -1623,9 +1655,11 @@
           <div style={{display:"flex",gap:5,padding:"12px 20px",borderBottom:"1px solid "+T.border,background:T.surface,flexWrap:"wrap"}}>
             {periods.map(function(item){var k=item[0],label=item[1],active=period===k;return <button key={k} onClick={function(){setPeriod(k);}} style={{padding:"5px 10px",fontSize:11,borderRadius:4,background:active?T.accent:"none",border:"1px solid "+(active?T.accent:T.border),color:active?"#fff":T.textMid,textTransform:"uppercase",letterSpacing:0.4}}>{label}</button>;})}
           </div>
-          <div style={{padding:"10px 20px",borderBottom:"1px solid "+T.border,background:T.surface}}>
-            <input value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Zoek oefening..." style={{...iS,margin:0}}/>
+          {showSearch&&(
+          <div className="search-reveal" style={{padding:"10px 20px",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:97,zIndex:38}}>
+            <input ref={searchRef} value={search} onChange={function(e){setSearch(e.target.value);}} onBlur={function(){if(!search.trim()&&props.onHideSearch){props.onHideSearch();}}} placeholder="Zoek oefening..." style={{...iS,margin:0}}/>
           </div>
+          )}
           {filteredEx.length===0&&<div style={{padding:"40px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>{search?"Geen resultaten.":"Geen data in deze periode."}</div>}
           {filteredEx.map(function(ex){
             var sorted=ex.entries.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
@@ -1774,8 +1808,9 @@
           +'*{box-sizing:border-box;margin:0;padding:0}'
           +'body{font-family:\'Inter\',sans-serif;background:#f9fafb;color:#111;padding:24px;max-width:860px;margin:0 auto}'
           +'.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}'
-          +'@media print{body{background:#fff;padding:16px}.grid{grid-template-columns:1fr 1fr}}'
+          +'@media print{body{background:#fff;padding:16px}.grid{grid-template-columns:1fr 1fr}.no-print{display:none!important}}'
           +'</style></head><body>'
+          +'<div class="no-print" style="margin-bottom:16px"><button onclick="window.close()" style="font-family:\'Inter\',sans-serif;font-size:12px;padding:7px 14px;border:1px solid #e5e7eb;border-radius:5px;background:#fff;cursor:pointer;color:#374151">← Terug naar app</button></div>'
           +'<div style="margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #e5e7eb">'
           +'<div style="font-family:\'Raleway\',sans-serif;font-size:24px;font-weight:800;letter-spacing:1px;text-transform:uppercase">'+client.name+'</div>'
           +'<div style="font-size:11px;color:#6b7280;margin-top:4px">Progressierapport · '+rangeLabel+' · '+fmtDate(new Date().toISOString())+'</div>'
