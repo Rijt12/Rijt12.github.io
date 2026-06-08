@@ -103,8 +103,9 @@
     async function loadData() {
       try {
         var result = await window._fbLoad();
-        return result || EMPTY;
-      } catch(e) { return EMPTY; }
+        // Return a flag so we know load succeeded (even if document was empty)
+        return { data: result || EMPTY, ok: true };
+      } catch(e) { return { data: EMPTY, ok: false }; }
     }
 
     async function saveData(d) {
@@ -213,18 +214,17 @@
       function handlePullSearch(){setShowSearch(true);}
 
       useEffect(function() {
-        Promise.all([loadData(), new Promise(function(r){ setTimeout(r, 800); })]).then(function(res){ setData(res[0]); });
+        Promise.all([loadData(), new Promise(function(r){ setTimeout(r, 800); })]).then(function(res){
+          var result=res[0];
+          setData(result.data);
+          // Only seed if Firestore load succeeded AND data is truly empty (first-time setup)
+          if(result.ok && result.data.clients.length===0 && (result.data.exerciseLibrary||[]).length===0){
+            var seeded=buildSeed();
+            setData(seeded);
+            saveData(seeded);
+          }
+        });
       }, []);
-
-      // Seed on first load
-      useEffect(function() {
-        if (!data) { return; }
-        if ((data.exerciseLibrary||[]).length === 0 && data.clients.length === 0) {
-          var seeded = buildSeed();
-          setData(seeded);
-          saveData(seeded);
-        }
-      }, [!!data]);
 
       // Ref zodat callbacks altijd de laatste data hebben
       var dataRef = useRef(data);
