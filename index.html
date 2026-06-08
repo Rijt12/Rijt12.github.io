@@ -14,10 +14,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
-  <!-- Firebase 9.x compat builds (stable gstatic CDN) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script>
     // Scroll focused input above keyboard
     function scrollFocusedAboveKeyboard() {
@@ -38,29 +36,22 @@
   </script>
   <script>
     (function() {
-      var config = {
-        apiKey: "AIzaSyAt5Pe3_mi6KAD5w4nSqeKiUKCrJjOFJhY",
-        authDomain: "trainer-app-b4dd1.firebaseapp.com",
-        projectId: "trainer-app-b4dd1",
-        storageBucket: "trainer-app-b4dd1.firebasestorage.app",
-        messagingSenderId: "376018012060",
-        appId: "1:376018012060:web:5fe266522a06f76f816a59"
-      };
+      var SUPABASE_URL      = 'SUPABASE_URL_HERE';
+      var SUPABASE_ANON_KEY = 'SUPABASE_ANON_KEY_HERE';
 
-      firebase.initializeApp(config);
+      var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-      var db   = firebase.firestore();
-      var auth = firebase.auth();
-      var ref  = db.collection("app").doc("data");
+      // Previous loaded data for diffing in _fbSave
+      var _prevData = null;
 
-      // Single-subscriber auth listener
+      // ── Auth ──────────────────────────────────────────────────────────────────
       var _authResolved = false;
       var _authUser     = null;
       var _authCb       = null;
 
-      auth.onAuthStateChanged(function(user) {
+      sb.auth.onAuthStateChange(function(event, session) {
         _authResolved = true;
-        _authUser = user || null;
+        _authUser = session ? session.user : null;
         if (_authCb) { _authCb(_authUser); }
       });
 
@@ -70,23 +61,172 @@
       };
 
       window._fbLogin = function(email, pw) {
-        return auth.signInWithEmailAndPassword(email, pw);
+        return sb.auth.signInWithPassword({ email: email, password: pw })
+          .then(function(res) {
+            if (res.error) throw res.error;
+            return res;
+          });
       };
 
       window._fbLogout = function() {
-        return auth.signOut();
+        return sb.auth.signOut().then(function(res) {
+          if (res.error) throw res.error;
+          return res;
+        });
       };
 
+      // ── Daily backup ──────────────────────────────────────────────────────────
+      async function _maybeBackup(data, userId) {
+        try {
+          var todayStart = new Date();
+          todayStart.setHours(0, 0, 0, 0);
+          var res = await sb
+            .from('backups')
+            .select('id')
+            .eq('user_id', userId)
+            .gte('created_at', todayStart.toISOString())
+            .limit(1);
+          if (res.error) { console.warn('backup check error', res.error); return; }
+          if (!res.data || res.data.length === 0) {
+            await sb.from('backups').insert({ snapshot: data, user_id: userId });
+          }
+        } catch(e) { console.warn('backup error', e); }
+      }
+
+      // ── Load ──────────────────────────────────────────────────────────────────
       window._fbLoad = async function() {
         try {
-          var snap = await ref.get();
-          return snap.exists ? snap.data().payload : null;
-        } catch(e) { console.error("load error", e); return null; }
+          var userRes = await sb.auth.getUser();
+          if (userRes.error || !userRes.data.user) { console.error('not authenticated'); return null; }
+          var user = userRes.data.user;
+
+          var results = await Promise.all([
+            sb.from('clients').select('*').eq('user_id', user.id),
+            sb.from('sessions').select('*').eq('user_id', user.id),
+            sb.from('exercise_library').select('*').eq('user_id', user.id),
+            sb.from('templates').select('*').eq('user_id', user.id)
+          ]);
+
+          var e1 = results[0].error, e2 = results[1].error,
+              e3 = results[2].error, e4 = results[3].error;
+          if (e1 || e2 || e3 || e4) {
+            console.error('load error', e1, e2, e3, e4);
+            return null;
+          }
+
+          var clientRows = results[0].data || [];
+          var sessionRows = results[1].data || [];
+          var libRows = results[2].data || [];
+          var tmplRows = results[3].data || [];
+
+          var data = {
+            clients: clientRows.map(function(r) {
+              return { id: r.id, name: r.name, createdAt: r.created_at };
+            }),
+            sessions: sessionRows.map(function(r) {
+              return {
+                id: r.id,
+                clientId: r.client_id,
+                clientIds: r.client_ids || [],
+                date: r.date,
+                notes: r.notes,
+                exercises: r.exercises || []
+              };
+            }),
+            exerciseLibrary: libRows.map(function(r) {
+              return { id: r.id, name: r.name, pattern: r.pattern, unilateral: r.unilateral };
+            }),
+            templates: tmplRows.map(function(r) {
+              return { id: r.id, name: r.name, exercises: r.exercises || [] };
+            })
+          };
+
+          _prevData = JSON.parse(JSON.stringify(data));
+          await _maybeBackup(data, user.id);
+          return data;
+        } catch(e) { console.error('load error', e); return null; }
       };
 
+      // ── Save ──────────────────────────────────────────────────────────────────
       window._fbSave = async function(data) {
-        try { await ref.set({ payload: data }); }
-        catch(e) { console.error("save error", e); }
+        try {
+          var userRes = await sb.auth.getUser();
+          if (userRes.error || !userRes.data.user) { console.error('not authenticated'); return; }
+          var uid = userRes.data.user.id;
+
+          var prev = _prevData || { clients: [], sessions: [], exerciseLibrary: [], templates: [] };
+
+          function idSet(arr) {
+            var s = new Set();
+            (arr || []).forEach(function(x) { s.add(x.id); });
+            return s;
+          }
+
+          // --- clients ---
+          var clientUpserts = (data.clients || []).map(function(c) {
+            return { id: c.id, name: c.name, created_at: c.createdAt, user_id: uid };
+          });
+          var removedClients = (prev.clients || [])
+            .filter(function(c) { return !idSet(data.clients).has(c.id); })
+            .map(function(c) { return c.id; });
+
+          // --- sessions ---
+          var sessionUpserts = (data.sessions || []).map(function(s) {
+            return {
+              id: s.id,
+              client_id: s.clientId || null,
+              client_ids: s.clientIds || [],
+              date: s.date || null,
+              notes: s.notes || null,
+              exercises: s.exercises || [],
+              user_id: uid
+            };
+          });
+          var removedSessions = (prev.sessions || [])
+            .filter(function(s) { return !idSet(data.sessions).has(s.id); })
+            .map(function(s) { return s.id; });
+
+          // --- exerciseLibrary ---
+          var libUpserts = (data.exerciseLibrary || []).map(function(e) {
+            return { id: e.id, name: e.name, pattern: e.pattern, unilateral: !!e.unilateral, user_id: uid };
+          });
+          var removedLib = (prev.exerciseLibrary || [])
+            .filter(function(e) { return !idSet(data.exerciseLibrary).has(e.id); })
+            .map(function(e) { return e.id; });
+
+          // --- templates ---
+          var tmplUpserts = (data.templates || []).map(function(t) {
+            return { id: t.id, name: t.name, exercises: t.exercises || [], user_id: uid };
+          });
+          var removedTmpl = (prev.templates || [])
+            .filter(function(t) { return !idSet(data.templates).has(t.id); })
+            .map(function(t) { return t.id; });
+
+          var ops = [];
+          if (clientUpserts.length)
+            ops.push(sb.from('clients').upsert(clientUpserts));
+          if (removedClients.length)
+            ops.push(sb.from('clients').delete().in('id', removedClients).eq('user_id', uid));
+          if (sessionUpserts.length)
+            ops.push(sb.from('sessions').upsert(sessionUpserts));
+          if (removedSessions.length)
+            ops.push(sb.from('sessions').delete().in('id', removedSessions).eq('user_id', uid));
+          if (libUpserts.length)
+            ops.push(sb.from('exercise_library').upsert(libUpserts));
+          if (removedLib.length)
+            ops.push(sb.from('exercise_library').delete().in('id', removedLib).eq('user_id', uid));
+          if (tmplUpserts.length)
+            ops.push(sb.from('templates').upsert(tmplUpserts));
+          if (removedTmpl.length)
+            ops.push(sb.from('templates').delete().in('id', removedTmpl).eq('user_id', uid));
+
+          if (ops.length === 0) return;
+          var results = await Promise.all(ops);
+          var errs = results.filter(function(r) { return r && r.error; });
+          if (errs.length) { console.error('save errors', errs.map(function(r){ return r.error; })); return; }
+
+          _prevData = JSON.parse(JSON.stringify(data));
+        } catch(e) { console.error('save error', e); }
       };
     })();
   </script>

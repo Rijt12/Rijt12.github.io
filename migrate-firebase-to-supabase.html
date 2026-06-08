@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Migreer Firebase → Supabase</title>
+  <!-- Firebase 9.x compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; background: #f5f3ef; color: #333; }
+    h1 { font-size: 1.4rem; margin-bottom: 24px; }
+    label { display: block; font-size: .85rem; margin-bottom: 4px; font-weight: 600; }
+    input { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: .95rem; margin-bottom: 14px; }
+    button { padding: 10px 22px; border: none; border-radius: 6px; font-size: .95rem; cursor: pointer; }
+    #btn-login-firebase { background: #f5a623; color: #fff; margin-right: 8px; }
+    #btn-login-supabase { background: #3ecf8e; color: #fff; margin-right: 8px; }
+    #btn-migrate        { background: #4361ee; color: #fff; }
+    button:disabled     { opacity: .5; cursor: default; }
+    #log { margin-top: 24px; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 14px; min-height: 80px; font-size: .82rem; font-family: monospace; white-space: pre-wrap; word-break: break-all; }
+    .section { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 18px; margin-bottom: 18px; }
+    .status { font-size: .82rem; margin-top: 4px; }
+    .ok  { color: #2a9d5c; }
+    .err { color: #e53e3e; }
+  </style>
+</head>
+<body>
+  <h1>Migreer Firebase → Supabase</h1>
+
+  <div class="section">
+    <label>Firebase login</label>
+    <input id="fb-email" type="email" placeholder="E-mailadres" autocomplete="email"/>
+    <input id="fb-pw" type="password" placeholder="Wachtwoord" autocomplete="current-password"/>
+    <button id="btn-login-firebase">Inloggen Firebase</button>
+    <div class="status" id="status-firebase">Niet ingelogd</div>
+  </div>
+
+  <div class="section">
+    <label>Supabase configuratie</label>
+    <input id="sb-url" type="url" placeholder="https://xxxxxxxxxxxx.supabase.co"/>
+    <input id="sb-key" type="text" placeholder="anon public key"/>
+    <label>Supabase login</label>
+    <input id="sb-email" type="email" placeholder="E-mailadres" autocomplete="email"/>
+    <input id="sb-pw" type="password" placeholder="Wachtwoord" autocomplete="current-password"/>
+    <button id="btn-login-supabase">Inloggen Supabase</button>
+    <div class="status" id="status-supabase">Niet ingelogd</div>
+  </div>
+
+  <button id="btn-migrate" disabled>Migreer</button>
+
+  <div id="log">Wacht op invoer…</div>
+
+  <script>
+  (function() {
+    // ── Firebase init ──────────────────────────────────────────────────────────
+    var fbConfig = {
+      apiKey: "AIzaSyAt5Pe3_mi6KAD5w4nSqeKiUKCrJjOFJhY",
+      authDomain: "trainer-app-b4dd1.firebaseapp.com",
+      projectId: "trainer-app-b4dd1",
+      storageBucket: "trainer-app-b4dd1.firebasestorage.app",
+      messagingSenderId: "376018012060",
+      appId: "1:376018012060:web:5fe266522a06f76f816a59"
+    };
+    firebase.initializeApp(fbConfig);
+    var fbAuth = firebase.auth();
+    var fbDb   = firebase.firestore();
+
+    var sbClient = null;
+    var fbLoggedIn = false;
+    var sbLoggedIn = false;
+
+    var logEl = document.getElementById('log');
+    function log(msg) {
+      logEl.textContent += '\n' + msg;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function updateMigrateBtn() {
+      document.getElementById('btn-migrate').disabled = !(fbLoggedIn && sbLoggedIn);
+    }
+
+    // ── Firebase login ─────────────────────────────────────────────────────────
+    document.getElementById('btn-login-firebase').addEventListener('click', async function() {
+      var email = document.getElementById('fb-email').value.trim();
+      var pw    = document.getElementById('fb-pw').value;
+      var statusEl = document.getElementById('status-firebase');
+      try {
+        await fbAuth.signInWithEmailAndPassword(email, pw);
+        fbLoggedIn = true;
+        statusEl.textContent = 'Ingelogd als ' + email;
+        statusEl.className = 'status ok';
+        log('[Firebase] Ingelogd als ' + email);
+        updateMigrateBtn();
+      } catch(e) {
+        statusEl.textContent = 'Fout: ' + e.message;
+        statusEl.className = 'status err';
+        log('[Firebase] Inlogfout: ' + e.message);
+      }
+    });
+
+    // ── Supabase login ─────────────────────────────────────────────────────────
+    document.getElementById('btn-login-supabase').addEventListener('click', async function() {
+      var url   = document.getElementById('sb-url').value.trim();
+      var key   = document.getElementById('sb-key').value.trim();
+      var email = document.getElementById('sb-email').value.trim();
+      var pw    = document.getElementById('sb-pw').value;
+      var statusEl = document.getElementById('status-supabase');
+      if (!url || !key) {
+        statusEl.textContent = 'Vul eerst de Supabase URL en anon key in.';
+        statusEl.className = 'status err';
+        return;
+      }
+      try {
+        sbClient = supabase.createClient(url, key);
+        var res = await sbClient.auth.signInWithPassword({ email: email, password: pw });
+        if (res.error) throw res.error;
+        sbLoggedIn = true;
+        statusEl.textContent = 'Ingelogd als ' + email;
+        statusEl.className = 'status ok';
+        log('[Supabase] Ingelogd als ' + email);
+        updateMigrateBtn();
+      } catch(e) {
+        statusEl.textContent = 'Fout: ' + e.message;
+        statusEl.className = 'status err';
+        log('[Supabase] Inlogfout: ' + e.message);
+      }
+    });
+
+    // ── Migration ──────────────────────────────────────────────────────────────
+    document.getElementById('btn-migrate').addEventListener('click', async function() {
+      if (!fbLoggedIn || !sbLoggedIn) { log('Eerst inloggen op beide services.'); return; }
+      var btn = this;
+      btn.disabled = true;
+      logEl.textContent = 'Start migratie…';
+
+      try {
+        // 1. Read data from Firebase
+        log('[Firebase] Data ophalen…');
+        var snap = await fbDb.collection('app').doc('data').get();
+        if (!snap.exists) { log('[Firebase] Geen data gevonden (document bestaat niet). Migratie gestopt.'); btn.disabled = false; return; }
+        var payload = snap.data().payload;
+        if (!payload) { log('[Firebase] payload leeg. Migratie gestopt.'); btn.disabled = false; return; }
+
+        var clients  = payload.clients         || [];
+        var sessions = payload.sessions        || [];
+        var library  = payload.exerciseLibrary || [];
+        var templates= payload.templates       || [];
+
+        log('[Firebase] Gevonden: ' + clients.length + ' cliënten, ' + sessions.length + ' sessies, ' + library.length + ' oefeningen, ' + templates.length + ' templates.');
+
+        // 2. Get Supabase user id
+        var userRes = await sbClient.auth.getUser();
+        if (userRes.error || !userRes.data.user) throw new Error('Supabase gebruiker niet gevonden');
+        var uid = userRes.data.user.id;
+        log('[Supabase] user_id = ' + uid);
+
+        // 3. Upsert clients
+        log('[Supabase] Upsert clients…');
+        if (clients.length) {
+          var rows = clients.map(function(c) {
+            return { id: c.id, name: c.name, created_at: c.createdAt || null, user_id: uid };
+          });
+          var res = await sbClient.from('clients').upsert(rows);
+          if (res.error) throw new Error('clients: ' + res.error.message);
+          log('[Supabase] ' + clients.length + ' clients opgeslagen.');
+        } else { log('[Supabase] Geen clients.'); }
+
+        // 4. Upsert sessions
+        log('[Supabase] Upsert sessies…');
+        if (sessions.length) {
+          // Process in batches of 200 to avoid request size limits
+          var batchSize = 200;
+          for (var i = 0; i < sessions.length; i += batchSize) {
+            var batch = sessions.slice(i, i + batchSize).map(function(s) {
+              return {
+                id: s.id,
+                client_id: s.clientId || null,
+                client_ids: s.clientIds || [],
+                date: s.date || null,
+                notes: s.notes || null,
+                exercises: s.exercises || [],
+                user_id: uid
+              };
+            });
+            var res2 = await sbClient.from('sessions').upsert(batch);
+            if (res2.error) throw new Error('sessions batch: ' + res2.error.message);
+            log('[Supabase] Sessies ' + (i+1) + '–' + Math.min(i+batchSize, sessions.length) + ' opgeslagen.');
+          }
+        } else { log('[Supabase] Geen sessies.'); }
+
+        // 5. Upsert exercise_library
+        log('[Supabase] Upsert oefenbibliotheek…');
+        if (library.length) {
+          var libRows = library.map(function(e) {
+            return { id: e.id, name: e.name, pattern: e.pattern || null, unilateral: !!e.unilateral, user_id: uid };
+          });
+          var res3 = await sbClient.from('exercise_library').upsert(libRows);
+          if (res3.error) throw new Error('exercise_library: ' + res3.error.message);
+          log('[Supabase] ' + library.length + ' oefeningen opgeslagen.');
+        } else { log('[Supabase] Geen oefeningen in bibliotheek.'); }
+
+        // 6. Upsert templates
+        log('[Supabase] Upsert templates…');
+        if (templates.length) {
+          var tmplRows = templates.map(function(t) {
+            return { id: t.id, name: t.name, exercises: t.exercises || [], user_id: uid };
+          });
+          var res4 = await sbClient.from('templates').upsert(tmplRows);
+          if (res4.error) throw new Error('templates: ' + res4.error.message);
+          log('[Supabase] ' + templates.length + ' templates opgeslagen.');
+        } else { log('[Supabase] Geen templates.'); }
+
+        log('\nMigratie voltooid!');
+      } catch(e) {
+        log('\nFOUT: ' + e.message);
+        console.error(e);
+        btn.disabled = false;
+      }
+    });
+  })();
+  </script>
+</body>
+</html>
