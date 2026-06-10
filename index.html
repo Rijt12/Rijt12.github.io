@@ -1574,6 +1574,9 @@
       function entryMaxReps(e){return Math.max.apply(null,e.sets.map(function(s){return parseInt(s.reps)||0;}).concat([0]));}
       var maxWeight=isBodyweight?0:Math.max.apply(null,sorted.map(function(e){return e.maxWeight;}));
       if(!isBodyweight&&!maxWeight){maxWeight=1;}
+      function setsAtMaxW(e){return (e.sets||[]).filter(function(st){return (parseW(st.weight)||0)===e.maxWeight;}).length;}
+      function maxRepsAtW(e){return Math.max.apply(null,(e.sets||[]).filter(function(st){return (parseW(st.weight)||0)===e.maxWeight;}).map(function(st){return parseInt(st.reps)||0;}).concat([0]));}
+      function setsAtMaxWR(e){var mr=maxRepsAtW(e);return (e.sets||[]).filter(function(st){return (parseW(st.weight)||0)===e.maxWeight&&(parseInt(st.reps)||0)===mr;}).length;}
       var bestEntry=sorted.reduce(function(prev,cur){
         if(!prev){return cur;}
         if(isBodyweight){
@@ -1583,7 +1586,11 @@
           return prev;
         }
         if(cur.maxWeight>prev.maxWeight){return cur;}
-        if(cur.maxWeight===prev.maxWeight&&cur.sets.length>prev.sets.length){return cur;}
+        if(cur.maxWeight===prev.maxWeight){
+          var cr2=maxRepsAtW(cur),pr2=maxRepsAtW(prev);
+          if(cr2>pr2){return cur;}
+          if(cr2===pr2&&setsAtMaxWR(cur)>setsAtMaxWR(prev)){return cur;}
+        }
         return prev;
       },null);
       var bestDate=bestEntry?bestEntry.date:null;
