@@ -1179,11 +1179,11 @@
       }
       return (
         <div className="ai">
-          <div style={{padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:0,zIndex:40}}>
+          <div style={{padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:49,zIndex:40}}>
             <Btn accent onClick={startSession}>+ Nieuwe sessie</Btn>
             <button onClick={props.onExport} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:10,borderRadius:4,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer"}}>Exporteer</button>
           </div>
-          <div style={{display:"flex",background:T.surface,borderBottom:"1px solid "+T.border,position:"sticky",top:49,zIndex:39}}>
+          <div style={{display:"flex",background:T.surface,borderBottom:"1px solid "+T.border,position:"sticky",top:98,zIndex:39}}>
             {["sessies","progressie"].map(function(t){return <button key={t} onClick={function(){setTab(t);}} style={{flex:1,padding:"11px 0",background:"none",border:"none",color:tab===t?T.text:T.textMuted,borderBottom:tab===t?"2px solid "+T.accent:"2px solid transparent",fontSize:11,textTransform:"uppercase",letterSpacing:0.8}}>{t}</button>;})}
           </div>
           {tab==="sessies"&&(
@@ -1203,7 +1203,7 @@
       function deleteEx(idx){onChange({...session,exercises:session.exercises.filter(function(_,i){return i!==idx;})});}
       function deleteSuperset(ssId){onChange({...session,exercises:session.exercises.filter(function(e){return e.supersetId!==ssId;})});}
       function withDuoDefaults(ex){if(!isDuo(session)){return ex;}return {...ex,clientLabel:"A",setsB:ex.sets.map(function(s){return {weight:"",reps:""};})};}
-      function addEx(ex){onChange({...session,exercises:session.exercises.concat([withDuoDefaults(ex)])});setShowAdd(false);props.showToast(ex.name+" toegevoegd");}
+      function addEx(ex){onChange({...session,exercises:session.exercises.concat([withDuoDefaults(ex)])});setShowAdd(false);props.showToast(ex.name+" toegevoegd");setTimeout(function(){window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});},120);}
       function addSuperset(exA,exB){var ssId=uid();onChange({...session,exercises:session.exercises.concat([{...withDuoDefaults(exA),supersetId:ssId},{...withDuoDefaults(exB),supersetId:ssId}])});setShowSuperset(false);props.showToast("Superset toegevoegd");}
       function moveUp(idx){if(idx===0){return;}var exs=session.exercises.slice();var tmp=exs[idx-1];exs[idx-1]=exs[idx];exs[idx]=tmp;onChange({...session,exercises:exs});}
       function moveDown(idx){if(idx===session.exercises.length-1){return;}var exs=session.exercises.slice();var tmp=exs[idx];exs[idx]=exs[idx+1];exs[idx+1]=tmp;onChange({...session,exercises:exs});}
@@ -1798,7 +1798,7 @@
             {periods.map(function(item){var k=item[0],label=item[1],active=period===k;return <button key={k} onClick={function(){setPeriod(k);}} style={{padding:"5px 10px",fontSize:11,borderRadius:4,background:active?T.accent:"none",border:"1px solid "+(active?T.accent:T.border),color:active?"#fff":T.textMid,textTransform:"uppercase",letterSpacing:0.4}}>{label}</button>;})}
           </div>
           {showSearch&&(
-          <div className="search-reveal" style={{padding:"10px 20px",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:97,zIndex:38}}>
+          <div className="search-reveal" style={{padding:"10px 20px",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:147,zIndex:38}}>
             <input ref={searchRef} value={search} onChange={function(e){setSearch(e.target.value);}} onBlur={function(){if(!search.trim()&&props.onHideSearch){props.onHideSearch();}}} placeholder="Zoek oefening..." style={{...iS,margin:0}}/>
           </div>
           )}
@@ -1809,10 +1809,16 @@
             var best=sorted.reduce(function(prev,cur){
               if(hasWeight){
                 if(cur.maxWeight>prev.maxWeight){return cur;}
-                if(cur.maxWeight===prev.maxWeight&&(cur.maxRepsAtMax||0)>(prev.maxRepsAtMax||0)){return cur;}
+                if(cur.maxWeight===prev.maxWeight){
+                  var cr=(cur.maxRepsAtMax||0),pr=(prev.maxRepsAtMax||0);
+                  if(cr>pr){return cur;}
+                  if(cr===pr&&(cur.sets||[]).length>(prev.sets||[]).length){return cur;}
+                }
                 return prev;
               }
-              return cur.maxReps>prev.maxReps?cur:prev;
+              if(cur.maxReps>prev.maxReps){return cur;}
+              if(cur.maxReps===prev.maxReps&&(cur.sets||[]).length>(prev.sets||[]).length){return cur;}
+              return prev;
             },sorted[0]);
             var last=sorted[sorted.length-1],first=sorted[0];
             var diff=null;
@@ -1825,9 +1831,6 @@
             }
             var color=PC[ex.pattern]||T.textMuted;
             var bestLabel=hasWeight?fmtW(best.maxWeight)+"kg × "+(best.maxRepsAtMax||best.maxReps):best.maxReps+" reps";
-            var diffLabel=hasWeight
-              ?(diff&&(diff.w!==0||diff.r!==0)?((diff.w>0?"+":diff.w<0?"":"")+fmtW(diff.w)+"kg"+(diff.r!==0?" "+(diff.r>0?"+":"")+diff.r+" reps":"")):null)
-              :(diff?(diff>0?"+":"")+diff+" reps":null);
             var indent=ex.isSubEntry;
             return (
               <div key={ex.key} className="rh" onClick={function(){props.onExHistory(ex.key);}} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,borderLeft:"3px solid "+color,cursor:"pointer",background:T.surface,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -1835,7 +1838,16 @@
                   <div style={{fontWeight:500,fontSize:14,color:T.text}}>{ex.isSubEntry?ex.baseName:ex.name}{ex.isSubEntry&&<UniTag/>}</div>
                   <div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:2}}>{ex.pattern} · {ex.entries.length}×</div>
                 </div>
-                <div style={{textAlign:"right"}}><div style={{fontSize:15,fontWeight:500}}>{bestLabel}</div>{diffLabel&&<div style={{fontSize:11,color:(hasWeight?diff&&diff.w>0:diff>0)?"#059669":T.accent}}>{diffLabel}</div>}</div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontSize:15,fontWeight:500}}>{bestLabel}</div>
+                  {hasWeight&&diff&&(diff.w!==0||diff.r!==0)&&(
+                    <div style={{fontSize:11,display:"flex",gap:4,justifyContent:"flex-end"}}>
+                      {diff.w!==0&&<span style={{color:diff.w>0?"#059669":T.accent}}>{diff.w>0?"+":""}{fmtW(diff.w)}kg</span>}
+                      {diff.r!==0&&<span style={{color:diff.r>0?"#059669":T.accent}}>{diff.r>0?"+":""}{diff.r} reps</span>}
+                    </div>
+                  )}
+                  {!hasWeight&&diff!==null&&diff!==0&&<div style={{fontSize:11,color:diff>0?"#059669":T.accent}}>{diff>0?"+":""}{diff} reps</div>}
+                </div>
               </div>
             );
           })}

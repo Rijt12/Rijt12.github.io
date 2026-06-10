@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Import Valerie Gilliot → Supabase</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 520px; margin: 60px auto; padding: 20px; }
+    input { display: block; width: 100%; padding: 10px; margin-bottom: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { padding: 12px 24px; font-size: 15px; background: #dc4f2a; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+    button:disabled { background: #94a3b8; cursor: not-allowed; }
+    #log { margin-top: 20px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
+    .ok   { color: #059669; }
+    .err  { color: #dc2626; }
+    .skip { color: #9ca3af; }
+  </style>
+</head>
+<body>
+  <h2>Import: Valerie Gilliot</h2>
+  <p style="font-size:13px;color:#666">Voegt Valerie Gilliot toe met 5 sessies (Q4 2025 – mei 2026). Wordt overgeslagen als ze al bestaat.</p>
+
+  <div id="loginForm">
+    <p>Log in met je Supabase app-account:</p>
+    <input id="email" type="email" placeholder="E-mailadres"/>
+    <input id="password" type="password" placeholder="Wachtwoord"/>
+    <button onclick="doLogin()">Inloggen</button>
+  </div>
+
+  <div id="importSection" style="display:none">
+    <button id="btn" onclick="runImport()">Importeer Valerie Gilliot</button>
+  </div>
+
+  <div id="log"></div>
+
+<script>
+  var SUPABASE_URL      = 'https://skofblajffjorwprkknz.supabase.co';
+  var SUPABASE_ANON_KEY = 'sb_publishable_QQLElZxZJFOV4IHpbtgQLQ_L3R8SnOh';
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  function log(msg, cls) {
+    var el = document.getElementById("log");
+    var span = document.createElement("span");
+    span.className = cls || "";
+    span.textContent = msg + "\n";
+    el.appendChild(span);
+  }
+
+  function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
+  function makeEx(name, pattern, unilateral, sets, notes) {
+    return { id: uid(), name: name, pattern: pattern,
+             unilateral: !!unilateral, isUnilateralExercise: !!unilateral,
+             performedUnilateral: false, sets: sets, notes: notes || "" };
+  }
+  function s(w, r) { return { weight: w, reps: r }; }
+
+  async function doLogin() {
+    var email = document.getElementById("email").value.trim();
+    var pw    = document.getElementById("password").value;
+    if (!email || !pw) { log("Vul e-mail en wachtwoord in.", "err"); return; }
+    var res = await sb.auth.signInWithPassword({ email: email, password: pw });
+    if (res.error) { log("✗ " + res.error.message, "err"); return; }
+    document.getElementById("loginForm").style.display = "none";
+    document.getElementById("importSection").style.display = "block";
+    log("✓ Ingelogd als " + res.data.user.email, "ok");
+  }
+
+  async function runImport() {
+    document.getElementById("btn").disabled = true;
+
+    var userRes = await sb.auth.getUser();
+    if (userRes.error || !userRes.data.user) { log("Niet ingelogd.", "err"); return; }
+    var userId = userRes.data.user.id;
+
+    log("Controleren of Valerie al bestaat...");
+    var existing = await sb.from("clients").select("id,name").eq("user_id", userId);
+    if (existing.error) { log("✗ " + existing.error.message, "err"); document.getElementById("btn").disabled = false; return; }
+    if ((existing.data || []).some(function(c){ return c.name.toLowerCase() === "valerie gilliot"; })) {
+      log("⚠ Valerie Gilliot bestaat al. Import gestopt.", "skip");
+      document.getElementById("btn").textContent = "Al geïmporteerd";
+      return;
+    }
+
+    var clientId = uid();
+    log("Client aanmaken...");
+    var clientRes = await sb.from("clients").insert([{
+      id: clientId, name: "Valerie Gilliot",
+      created_at: new Date().toISOString(), user_id: userId
+    }]);
+    if (clientRes.error) { log("✗ " + clientRes.error.message, "err"); document.getElementById("btn").disabled = false; return; }
+    log("✓ Client aangemaakt: Valerie Gilliot", "ok");
+
+    var sessions = buildSessions(clientId);
+
+    log("Sessies invoegen (" + sessions.length + ")...");
+    var sessionsToInsert = sessions.map(function(sess) {
+      return {
+        id: sess.id, client_id: clientId, client_ids: [clientId],
+        date: sess.date, notes: sess.notes,
+        exercises: sess.exercises, user_id: userId
+      };
+    });
+    var sessRes = await sb.from("sessions").insert(sessionsToInsert);
+    if (sessRes.error) { log("✗ " + sessRes.error.message, "err"); document.getElementById("btn").disabled = false; return; }
+    log("✓ " + sessions.length + " sessies ingevoegd", "ok");
+
+    log("Bibliotheek controleren...");
+    var libRes = await sb.from("exercise_library").select("name").eq("user_id", userId);
+    if (libRes.error) { log("✗ " + libRes.error.message, "err"); document.getElementById("btn").disabled = false; return; }
+    var existingNames = (libRes.data || []).map(function(e){ return e.name.toLowerCase(); });
+
+    var newLibExercises = [
+      { name:"Split squat",            pattern:"Squat",    unilateral:true  },
+      { name:"Goblet squat",           pattern:"Squat",    unilateral:false },
+      { name:"Linear leg press",       pattern:"Squat",    unilateral:false },
+      { name:"Leg extension",          pattern:"Isolatie", unilateral:true  },
+      { name:"Hip thrust",             pattern:"Hinge",    unilateral:false },
+      { name:"RDL",                    pattern:"Hinge",    unilateral:false },
+      { name:"Leg curl",               pattern:"Isolatie", unilateral:false },
+      { name:"Abductor",               pattern:"Isolatie", unilateral:false },
+      { name:"Adductor",               pattern:"Isolatie", unilateral:false },
+      { name:"Lat pulldown",           pattern:"Pull",     unilateral:false },
+      { name:"Cable row",              pattern:"Pull",     unilateral:false },
+      { name:"Face pull",              pattern:"Pull",     unilateral:false },
+      { name:"DB bench press",         pattern:"Push",     unilateral:false },
+      { name:"Incline push up",        pattern:"Push",     unilateral:false },
+      { name:"Push up",                pattern:"Push",     unilateral:false },
+      { name:"Dips",                   pattern:"Push",     unilateral:false },
+      { name:"Landmine press",         pattern:"Push",     unilateral:false },
+      { name:"Tricep extension cable", pattern:"Isolatie", unilateral:true  },
+      { name:"Bicep curls cable",      pattern:"Isolatie", unilateral:true  },
+      { name:"Lateral raise",          pattern:"Isolatie", unilateral:false },
+      { name:"Pallof press",           pattern:"Core",     unilateral:false }
+    ];
+
+    var toAdd = newLibExercises
+      .filter(function(e){ return !existingNames.includes(e.name.toLowerCase()); })
+      .map(function(e){ return { id: uid(), name: e.name, pattern: e.pattern, unilateral: e.unilateral, user_id: userId }; });
+
+    if (toAdd.length > 0) {
+      var addRes = await sb.from("exercise_library").insert(toAdd);
+      if (addRes.error) { log("✗ Bibliotheek: " + addRes.error.message, "err"); }
+      else { log("✓ " + toAdd.length + " oefeningen aan bibliotheek toegevoegd", "ok"); }
+    } else {
+      log("Bibliotheek: alle oefeningen bestaan al.", "skip");
+    }
+
+    log("", "");
+    sessions.forEach(function(s){ log("  ✓ " + s.notes, "ok"); });
+    log("", "");
+    log("✓ Import voltooid! Ververs de app om Valerie te zien.", "ok");
+    document.getElementById("btn").textContent = "✓ Voltooid";
+  }
+
+  function buildSessions(clientId) {
+    function sess(date, notes, exercises) {
+      return { id: uid(), clientId: clientId, date: new Date(date).toISOString(), notes: notes, exercises: exercises };
+    }
+
+    return [
+
+      // Q4 2025: sessie 1 — alle oefeningen excl. leg extension 17,5kg (tweede bullet)
+      sess("2025-12-31", "Q4 2025 — sessie 1", [
+        makeEx("Split squat",            "Squat",    true,  [s("7","10"),s("7","10"),s("7","10")]),
+        makeEx("Goblet squat",           "Squat",    false, [s("16","10")]),
+        makeEx("Linear leg press",       "Squat",    false, [s("50","12")]),
+        makeEx("Leg extension",          "Isolatie", true,  [s("10","10")]),
+        makeEx("Hip thrust",             "Hinge",    false, [s("25","12"),s("25","12")]),
+        makeEx("RDL",                    "Hinge",    false, [s("15","12"),s("15","12")], "Pull through"),
+        makeEx("Leg curl",               "Isolatie", false, [s("17,5","12"),s("17,5","12"),s("17,5","12")]),
+        makeEx("Abductor",               "Isolatie", false, [s("32,5","12")]),
+        makeEx("Adductor",               "Isolatie", false, [s("25","12")]),
+        makeEx("Cable row",              "Pull",     false, [s("12,5","10"),s("12,5","10")], "High to low"),
+        makeEx("Face pull",              "Pull",     false, [s("12,5","")]),
+        makeEx("DB bench press",         "Push",     false, [s("2x7","12"),s("2x7","12"),s("2x7","12")]),
+        makeEx("Incline push up",        "Push",     false, [s("","12")], "Negatief 6"),
+        makeEx("Tricep extension cable", "Isolatie", true,  [s("7,5","12"),s("7,5","12"),s("7,5","12")]),
+        makeEx("Bicep curls cable",      "Isolatie", true,  [s("7,5","12"),s("7,5","12"),s("7,5","12")])
+      ]),
+
+      // Q4 2025: sessie 2 — leg extension bilateraal (tweede bullet)
+      sess("2025-12-31", "Q4 2025 — sessie 2", [
+        makeEx("Leg extension",          "Isolatie", false, [s("17,5","12")])
+      ]),
+
+      // April 2026: sessie 1
+      sess("2026-04-30", "April 2026 — sessie 1", [
+        makeEx("Goblet squat",           "Squat",    false, [s("12","12"),s("12","12"),s("12","12")]),
+        makeEx("Linear leg press",       "Squat",    false, [s("60","10"),s("60","10")]),
+        makeEx("Leg extension",          "Isolatie", false, [s("17,5","10"),s("17,5","10"),s("17,5","10")]),
+        makeEx("Hip thrust",             "Hinge",    false, [s("25","12"),s("25","12")]),
+        makeEx("RDL",                    "Hinge",    false, [s("40","10"),s("40","10")], "Hex bar"),
+        makeEx("Leg curl",               "Isolatie", false, [s("15","12"),s("15","12"),s("15","12")], "Prone"),
+        makeEx("Adductor",               "Isolatie", false, [s("27,5","10"),s("27,5","10"),s("27,5","10")]),
+        makeEx("Cable row",              "Pull",     false, [s("10","10"),s("10","10"),s("10","10")], "High to low"),
+        makeEx("Face pull",              "Pull",     false, [s("12,5","10"),s("12,5","10"),s("12,5","10")]),
+        makeEx("DB bench press",         "Push",     false, [s("2x9","10"),s("2x9","10"),s("2x9","10")]),
+        makeEx("Push up",                "Push",     false, [s("","12"),s("","12"),s("","12")], "Low box"),
+        makeEx("Tricep extension cable", "Isolatie", true,  [s("8,75","10"),s("8,75","10")]),
+        makeEx("Bicep curls cable",      "Isolatie", false, [s("2x4","12"),s("2x4","12"),s("2x4","12")])
+      ]),
+
+      // April 2026: sessie 2
+      sess("2026-04-30", "April 2026 — sessie 2", [
+        makeEx("Leg extension",          "Isolatie", true,  [s("10","10"),s("10","10"),s("10","10")]),
+        makeEx("RDL",                    "Hinge",    false, [s("24","12")]),
+        makeEx("Leg curl",               "Isolatie", false, [s("17,5","12")]),
+        makeEx("Push up",                "Push",     false, [s("","6"),s("","6")])
+      ]),
+
+      // Mei 2026
+      sess("2026-05-31", "Mei 2026", [
+        makeEx("Split squat",            "Squat",    true,  [s("6","10"),s("6","10")]),
+        makeEx("Linear leg press",       "Squat",    false, [s("60","12"),s("60","12")]),
+        makeEx("Abductor",               "Isolatie", false, [s("35","12"),s("35","12"),s("35","12")]),
+        makeEx("Lat pulldown",           "Pull",     false, [s("25","12"),s("25","12")]),
+        makeEx("DB bench press",         "Push",     false, [s("2x9","10"),s("2x9","10")]),
+        makeEx("Push up",                "Push",     false, [s("","6-8")]),
+        makeEx("Tricep extension cable", "Isolatie", true,  [s("7,5","12"),s("7,5","12"),s("7,5","12")])
+      ])
+
+    ];
+  }
+</script>
+</body>
+</html>
