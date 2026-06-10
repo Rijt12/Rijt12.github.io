@@ -1307,10 +1307,10 @@
             <Label>Notities sessie</Label>
             <textarea value={session.notes} onChange={function(e){onChange({...session,notes:e.target.value});}} placeholder="Opmerkingen over de hele sessie..." rows={3} style={{...iS,marginTop:5,resize:"none"}}/>
           </div>
-          <div style={{height:88}}/>
-          <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,padding:"18px 20px 24px",background:T.surface,borderTop:"1px solid "+T.border,display:"flex",gap:8,zIndex:50,boxShadow:"0 -4px 16px rgba(0,0,0,0.08)"}}>
-            <Btn accent onClick={function(){setShowAdd(true);setShowSuperset(false);}}>+ Oefening</Btn>
-            <Btn onClick={function(){setShowSuperset(true);setShowAdd(false);}}>+ Superset</Btn>
+          <div style={{height:100}}/>
+          <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",display:"flex",flexDirection:"column",alignItems:"center",gap:10,zIndex:50}}>
+            <button onClick={function(){setShowSuperset(function(v){return !v;});setShowAdd(false);}} style={{background:T.surfaceAlt,border:"1px solid "+T.border,color:T.textMid,borderRadius:24,padding:"8px 20px",fontSize:13,fontWeight:500,cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,0.12)"}}>+ Superset</button>
+            <button onClick={function(){setShowAdd(true);setShowSuperset(false);}} style={{background:T.accent,border:"none",color:"#fff",borderRadius:28,padding:"14px 32px",fontSize:16,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(220,79,42,0.45)",letterSpacing:0.3}}>+ Oefening</button>
           </div>
         </div>
       );
