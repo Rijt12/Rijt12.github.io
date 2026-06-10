@@ -205,8 +205,15 @@
           var ops = [];
           if (clientUpserts.length)
             ops.push(sb.from('clients').upsert(clientUpserts));
-          if (removedClients.length)
+          if (removedClients.length) {
+            var now = new Date().toISOString();
+            var archiveRows = removedClients.map(function(cid) {
+              var c = (prev.clients || []).find(function(x){ return x.id === cid; }) || {};
+              return { id: cid, name: c.name || null, archived_at: now, user_id: uid };
+            });
+            ops.push(sb.from('archived_clients').upsert(archiveRows));
             ops.push(sb.from('clients').delete().in('id', removedClients).eq('user_id', uid));
+          }
           if (sessionUpserts.length)
             ops.push(sb.from('sessions').upsert(sessionUpserts));
           if (removedSessions.length)
