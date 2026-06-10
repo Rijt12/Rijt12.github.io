@@ -557,9 +557,22 @@
 
       async function deleteClient(id) {
         var c = data.clients.find(function(x){ return x.id===id; });
-        var ok = await ask('Cliënt "' + (c?c.name:"") + '" en alle sessies verwijderen?');
+        var ok = await ask('Cliënt "' + (c?c.name:"") + '" verwijderen?');
         if (!ok) { return; }
-        persist({...data, clients:data.clients.filter(function(x){return x.id!==id;}), sessions:data.sessions.filter(function(s){return s.clientId!==id;})});
+        var updatedSessions = data.sessions
+          .filter(function(s){
+            // Verwijder alleen solo-sessies van deze klant
+            var isDuoSession = s.clientIds && s.clientIds.length > 1;
+            if (isDuoSession) { return true; } // behoud duo-sessies
+            return s.clientId !== id;
+          })
+          .map(function(s){
+            // Verwijder klant uit clientIds van duo-sessies
+            var isDuoSession = s.clientIds && s.clientIds.length > 1;
+            if (!isDuoSession) { return s; }
+            return {...s, clientIds: s.clientIds.filter(function(cid){ return cid !== id; })};
+          });
+        persist({...data, clients:data.clients.filter(function(x){return x.id!==id;}), sessions:updatedSessions});
         showToast("Cliënt verwijderd");
       }
       async function deleteSession(id) {
