@@ -1847,11 +1847,10 @@
                 </div>
                 <div style={{textAlign:"right"}}>
                   <div style={{fontSize:15,fontWeight:500}}>{bestLabel}</div>
-                  {diff&&(hasWeight?(diff.w!==0||diff.r!==0||diff.s!==0):(diff.r!==0||diff.s!==0))&&(
+                  {diff&&(hasWeight?(diff.w!==0||diff.r!==0):(diff.r!==0))&&(
                     <div style={{fontSize:11,display:"flex",gap:4,justifyContent:"flex-end"}}>
                       {hasWeight&&diff.w!==0&&<span style={{color:diff.w>0?"#059669":T.accent}}>{diff.w>0?"+":""}{fmtW(diff.w)}kg</span>}
                       {diff.r!==0&&<span style={{color:diff.r>0?"#059669":T.accent}}>{diff.r>0?"+":""}{diff.r} reps</span>}
-                      {diff.s!==0&&<span style={{color:diff.s>0?"#059669":T.accent}}>{diff.s>0?"+":""}{diff.s} set{Math.abs(diff.s)!==1?"s":""}</span>}
                     </div>
                   )}
                 </div>
