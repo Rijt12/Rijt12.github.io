@@ -1806,13 +1806,14 @@
           {filteredEx.map(function(ex){
             var sorted=ex.entries.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
             var hasWeight=sorted.some(function(e){return e.maxWeight>0;});
+            function setsAtW(entry){return (entry.sets||[]).filter(function(st){return (parseW(st.weight)||0)===entry.maxWeight;}).length;}
             var best=sorted.reduce(function(prev,cur){
               if(hasWeight){
                 if(cur.maxWeight>prev.maxWeight){return cur;}
                 if(cur.maxWeight===prev.maxWeight){
                   var cr=(cur.maxRepsAtMax||0),pr=(prev.maxRepsAtMax||0);
                   if(cr>pr){return cur;}
-                  if(cr===pr&&(cur.sets||[]).length>(prev.sets||[]).length){return cur;}
+                  if(cr===pr&&setsAtW(cur)>setsAtW(prev)){return cur;}
                 }
                 return prev;
               }
@@ -1826,11 +1827,17 @@
               if(hasWeight){
                 var wDiff=+(last.maxWeight-first.maxWeight).toFixed(1);
                 var rDiff=(last.maxRepsAtMax||0)-(first.maxRepsAtMax||0);
-                diff={w:wDiff,r:rDiff};
-              } else {diff=last.maxReps-first.maxReps;}
+                var sDiff=setsAtW(last)-setsAtW(first);
+                diff={w:wDiff,r:rDiff,s:sDiff};
+              } else {
+                var repsDiff=last.maxReps-first.maxReps;
+                var setsDiff=(last.sets||[]).length-(first.sets||[]).length;
+                diff={r:repsDiff,s:setsDiff};
+              }
             }
             var color=PC[ex.pattern]||T.textMuted;
-            var bestLabel=hasWeight?fmtW(best.maxWeight)+"kg × "+(best.maxRepsAtMax||best.maxReps):best.maxReps+" reps";
+            var bestSets=setsAtW(best);
+            var bestLabel=hasWeight?fmtW(best.maxWeight)+"kg × "+(best.maxRepsAtMax||best.maxReps)+(bestSets>1?" ("+bestSets+"×)":""):best.maxReps+" reps";
             var indent=ex.isSubEntry;
             return (
               <div key={ex.key} className="rh" onClick={function(){props.onExHistory(ex.key);}} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,borderLeft:"3px solid "+color,cursor:"pointer",background:T.surface,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -1840,13 +1847,13 @@
                 </div>
                 <div style={{textAlign:"right"}}>
                   <div style={{fontSize:15,fontWeight:500}}>{bestLabel}</div>
-                  {hasWeight&&diff&&(diff.w!==0||diff.r!==0)&&(
+                  {diff&&(hasWeight?(diff.w!==0||diff.r!==0||diff.s!==0):(diff.r!==0||diff.s!==0))&&(
                     <div style={{fontSize:11,display:"flex",gap:4,justifyContent:"flex-end"}}>
-                      {diff.w!==0&&<span style={{color:diff.w>0?"#059669":T.accent}}>{diff.w>0?"+":""}{fmtW(diff.w)}kg</span>}
+                      {hasWeight&&diff.w!==0&&<span style={{color:diff.w>0?"#059669":T.accent}}>{diff.w>0?"+":""}{fmtW(diff.w)}kg</span>}
                       {diff.r!==0&&<span style={{color:diff.r>0?"#059669":T.accent}}>{diff.r>0?"+":""}{diff.r} reps</span>}
+                      {diff.s!==0&&<span style={{color:diff.s>0?"#059669":T.accent}}>{diff.s>0?"+":""}{diff.s} set{Math.abs(diff.s)!==1?"s":""}</span>}
                     </div>
                   )}
-                  {!hasWeight&&diff!==null&&diff!==0&&<div style={{fontSize:11,color:diff>0?"#059669":T.accent}}>{diff>0?"+":""}{diff} reps</div>}
                 </div>
               </div>
             );
