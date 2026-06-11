@@ -989,7 +989,19 @@
       var [editingId,setEditingId] = useState(null);
       var [editName,setEditName] = useState("");
       var [openRowId,setOpenRowId] = useState(null);
+      var todayKey = new Date().toISOString().slice(0,10);
+      var [pinnedIds,setPinnedIds] = useState(function(){
+        try{var s=localStorage.getItem("pinnedToday");if(!s){return[];}var p=JSON.parse(s);return p.date===todayKey?(p.ids||[]):[];}catch(e){return[];}
+      });
+      function togglePin(id){
+        setPinnedIds(function(prev){
+          var next=prev.includes(id)?prev.filter(function(x){return x!==id;}):prev.concat([id]);
+          try{localStorage.setItem("pinnedToday",JSON.stringify({date:todayKey,ids:next}));}catch(e){}
+          return next;
+        });
+      }
       var filtered = data.clients.filter(function(c){return c.name.toLowerCase().includes(search.toLowerCase());}).sort(function(a,b){return a.name.localeCompare(b.name);});
+      var pinned = data.clients.filter(function(c){return pinnedIds.includes(c.id);});
 
       function saveEdit(id) {
         if (!editName.trim()) { setEditingId(null); return; }
@@ -998,8 +1010,45 @@
         setEditingId(null);
       }
 
+      function renderClientRow(c, inVandaag){
+        var cs=data.sessions.filter(function(s){return s.clientId===c.id||(s.clientIds&&s.clientIds.indexOf(c.id)!==-1);});
+        var last=cs.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);})[0];
+        var isEditing=editingId===c.id;
+        var isPinned=pinnedIds.includes(c.id);
+        return (
+          <SwipeRow key={(inVandaag?"v_":"")+c.id} rowId={(inVandaag?"v_":"")+c.id} openId={openRowId} onOpen={setOpenRowId} onEdit={function(){setEditingId(c.id);setEditName(c.name);}} onDelete={function(){props.onDelete(c.id);}}>
+            {isEditing ? (
+              <div style={{padding:"14px 20px",display:"flex",gap:8,alignItems:"center"}}>
+                <input autoFocus value={editName} onChange={function(e){setEditName(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter"){saveEdit(c.id);}if(e.key==="Escape"){setEditingId(null);}}} style={{...iS,flex:1,padding:"6px 10px"}}/>
+                <button onClick={function(){saveEdit(c.id);}} style={{background:T.accent,border:"none",color:"#fff",padding:"6px 12px",fontSize:11,borderRadius:4,cursor:"pointer",textTransform:"uppercase",letterSpacing:0.4}}>Ok</button>
+                <button onClick={function(){setEditingId(null);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"6px 10px",fontSize:11,borderRadius:4,cursor:"pointer"}}>×</button>
+              </div>
+            ) : (
+              <div style={{display:"flex",alignItems:"center"}}>
+                <div className="rh" onClick={function(){props.onSelect(c.id);}} style={{padding:"12px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:12,flex:1}}>
+                  <div style={{width:38,height:38,borderRadius:"50%",background:inVandaag?T.accent:T.accentBg,border:"1.5px solid "+T.accent+"50",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:13,fontWeight:600,color:inVandaag?"#fff":T.accent,letterSpacing:0.5}}>
+                    {c.name.trim().split(/\s+/).map(function(w){return w[0].toUpperCase();}).slice(0,2).join("")}
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:500,fontSize:14}}>{c.name}</div>
+                    <div style={{color:T.textMuted,fontSize:11,marginTop:2}}>{cs.length} sessie{cs.length!==1?"s":""}{last?" · "+fmtDate(last.date):""}</div>
+                  </div>
+                </div>
+                <button onClick={function(e){e.stopPropagation();togglePin(c.id);}} style={{background:"none",border:"none",padding:"12px 14px",cursor:"pointer",fontSize:16,opacity:isPinned?1:0.3,flexShrink:0}} title={isPinned?"Verwijder uit vandaag":"Pin voor vandaag"}>📌</button>
+              </div>
+            )}
+          </SwipeRow>
+        );
+      }
       return (
         <div>
+          {pinned.length>0&&(
+            <div>
+              <div style={{padding:"8px 20px 4px",fontSize:10,textTransform:"uppercase",letterSpacing:0.8,color:T.accent,fontWeight:600,background:T.accentBg,borderBottom:"1px solid "+T.accent+"30"}}>Vandaag</div>
+              {pinned.map(function(c){return renderClientRow(c,true);})}
+              <div style={{height:6,background:T.bg,borderBottom:"2px solid "+T.border}}/>
+            </div>
+          )}
           {data.clients.length>0&&(
             <div style={{padding:"12px 20px",borderBottom:"1px solid "+T.border,background:T.surface}}>
               <input value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Zoek cliënt..." style={iS}/>
@@ -1007,38 +1056,7 @@
           )}
           {filtered.length===0&&data.clients.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"48px 20px",textAlign:"center"}}>Nog geen cliënten.</div>}
           {filtered.length===0&&data.clients.length>0&&<div style={{color:T.textMuted,fontSize:13,padding:"32px 20px",textAlign:"center"}}>Geen cliënten gevonden.</div>}
-          {filtered.map(function(c){
-            var cs=data.sessions.filter(function(s){return s.clientId===c.id||(s.clientIds&&s.clientIds.indexOf(c.id)!==-1);});
-            var last=cs.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);})[0];
-            var isEditing = editingId===c.id;
-            return (
-              <SwipeRow key={c.id} rowId={c.id} openId={openRowId} onOpen={setOpenRowId} onEdit={function(){setEditingId(c.id);setEditName(c.name);}} onDelete={function(){props.onDelete(c.id);}}>
-                {isEditing ? (
-                  <div style={{padding:"14px 20px",display:"flex",gap:8,alignItems:"center"}}>
-                    <input autoFocus value={editName}
-                      onChange={function(e){setEditName(e.target.value);}}
-                      onKeyDown={function(e){if(e.key==="Enter"){saveEdit(c.id);}if(e.key==="Escape"){setEditingId(null);}}}
-                      style={{...iS,flex:1,padding:"6px 10px"}}/>
-                    <button onClick={function(){saveEdit(c.id);}} style={{background:T.accent,border:"none",color:"#fff",padding:"6px 12px",fontSize:11,borderRadius:4,cursor:"pointer",textTransform:"uppercase",letterSpacing:0.4}}>Ok</button>
-                    <button onClick={function(){setEditingId(null);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"6px 10px",fontSize:11,borderRadius:4,cursor:"pointer"}}>×</button>
-                  </div>
-                ) : (
-                  <div className="rh" onClick={function(){props.onSelect(c.id);}} style={{padding:"12px 20px",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
-                    {(function(){
-                      var initials=c.name.trim().split(/\s+/).map(function(w){return w[0].toUpperCase();}).slice(0,2).join("");
-                      return (<>
-                        <div style={{width:38,height:38,borderRadius:"50%",background:T.accentBg,border:"1.5px solid "+T.accent+"50",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:13,fontWeight:600,color:T.accent,letterSpacing:0.5}}>{initials}</div>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontWeight:500,fontSize:14}}>{c.name}</div>
-                          <div style={{color:T.textMuted,fontSize:11,marginTop:2}}>{cs.length} sessie{cs.length!==1?"s":""}{last?" · "+fmtDate(last.date):""}</div>
-                        </div>
-                      </>);
-                    })()}
-                  </div>
-                )}
-              </SwipeRow>
-            );
-          })}
+          {filtered.map(function(c){return renderClientRow(c,false);})}
         </div>
       );
     }
