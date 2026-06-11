@@ -695,7 +695,7 @@
 
           {view==="library" && (
             <div key={navKey} className="page-enter">
-              <Header title="Oefeningen" back={function(){goView("clients");}} onSearch={function(){setShowSearch(true);}}/>
+              <Header title="Oefeningen" back={function(){goView("clients");}}/>
               <ExerciseLibrary data={data} persist={persist} showToast={showToast} onDelete={deleteExercise} showSearch={showSearch} onHideSearch={function(){setShowSearch(false);}}/>
             </div>
           )}
