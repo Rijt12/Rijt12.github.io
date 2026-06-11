@@ -541,6 +541,7 @@
         var newSessions = data.sessions.filter(function(s){ return s.id !== session.id; });
         newSessions.push(session);
         persist({...data, sessions:newSessions, exerciseLibrary:library.concat(newExs)});
+        setActiveSession(null);
         goView("client");
         showToast(newExs.length>0 ? "Opgeslagen · "+newExs.length+" oef. aan bibliotheek toegevoegd ✓" : "Sessie opgeslagen ✓");
       }
