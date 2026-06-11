@@ -846,9 +846,9 @@
             <span style={{fontFamily:"'Raleway',sans-serif",fontWeight:800,fontSize:22,letterSpacing:0.5,textTransform:"uppercase",color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{props.title}</span>
           </div>
           <div style={{display:"flex",gap:6,flexShrink:0,marginLeft:8,alignItems:"center"}}>
-            {props.onSearch && <button onClick={props.onSearch} style={{background:"none",border:"none",color:T.textMid,padding:"6px 8px",cursor:"pointer",display:"flex",alignItems:"center"}}><svg width="17" height="17" viewBox="0 0 17 17" fill="none"><circle cx="7.5" cy="7.5" r="5.5" stroke={T.textMid} strokeWidth="1.6"/><line x1="11.5" y1="11.5" x2="15.5" y2="15.5" stroke={T.textMid} strokeWidth="1.6" strokeLinecap="round"/></svg></button>}
-            {props.rightAction2 && <button onClick={props.rightAction2.fn} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"6px 12px",fontSize:11,letterSpacing:0.5,textTransform:"uppercase",borderRadius:4}}>{props.rightAction2.label}</button>}
-            {props.rightAction  && <button onClick={props.rightAction.fn}  style={{background:T.accent,border:"none",color:"#fff",padding:"6px 14px",fontSize:11,fontWeight:500,letterSpacing:0.5,textTransform:"uppercase",borderRadius:4}}>{props.rightAction.label}</button>}
+            {props.onSearch && <button onClick={props.onSearch} style={{background:"none",border:"none",color:T.textMid,height:32,width:32,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",borderRadius:4}}><svg width="17" height="17" viewBox="0 0 17 17" fill="none"><circle cx="7.5" cy="7.5" r="5.5" stroke={T.textMid} strokeWidth="1.6"/><line x1="11.5" y1="11.5" x2="15.5" y2="15.5" stroke={T.textMid} strokeWidth="1.6" strokeLinecap="round"/></svg></button>}
+            {props.rightAction2 && <button onClick={props.rightAction2.fn} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,height:32,padding:"0 12px",fontSize:11,letterSpacing:0.5,textTransform:"uppercase",borderRadius:4,cursor:"pointer"}}>{props.rightAction2.label}</button>}
+            {props.rightAction  && <button onClick={props.rightAction.fn}  style={{background:T.accent,border:"none",color:"#fff",height:32,padding:"0 14px",fontSize:11,fontWeight:500,letterSpacing:0.5,textTransform:"uppercase",borderRadius:4,cursor:"pointer"}}>{props.rightAction.label}</button>}
           </div>
         </div>
       );
@@ -1419,7 +1419,9 @@
           </div>
           <div style={{height:100}}/>
           <div style={{position:"fixed",bottom:28,right:20,zIndex:50}}>
-            <button onClick={function(){setShowAdd(true);setShowSuperset(false);}} style={{background:T.accent,border:"none",color:"#fff",borderRadius:"50%",width:56,height:56,fontSize:28,fontWeight:400,cursor:"pointer",boxShadow:"0 4px 16px rgba(220,79,42,0.40)",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>{"+"}</button>
+            <button onClick={function(){setShowAdd(true);setShowSuperset(false);}} style={{background:T.accent,border:"none",color:"#fff",height:32,width:32,borderRadius:4,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 16px rgba(220,79,42,0.40)"}}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><line x1="8" y1="3" x2="8" y2="13" stroke="#fff" strokeWidth="2" strokeLinecap="round"/><line x1="3" y1="8" x2="13" y2="8" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>
+            </button>
           </div>
         </div>
       );
