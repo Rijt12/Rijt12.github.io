@@ -349,7 +349,7 @@
       var [data, setData]                     = useState(null);
       var [view, setView]                     = useState("clients");
       var [activeClientId, setActiveClientId] = useState(null);
-      var [activeSession, setActiveSession]   = useState(null);
+      var [activeSession, setActiveSession]   = useState(function(){try{var s=localStorage.getItem("activeSession");return s?JSON.parse(s):null;}catch(e){return null;}});
       var [viewSessionId, setViewSessionId]   = useState(null);
       var [editingTpl, setEditingTpl]         = useState(null);
       var [exHistoryName, setExHistoryName]   = useState(null);
@@ -378,6 +378,14 @@
       // Ref zodat callbacks altijd de laatste data hebben
       var dataRef = useRef(data);
       useEffect(function() { dataRef.current = data; }, [data]);
+
+      // Persist activeSession in localStorage zodat het overleeft na app-herstart
+      useEffect(function(){
+        try{
+          if(activeSession){localStorage.setItem("activeSession",JSON.stringify(activeSession));}
+          else{localStorage.removeItem("activeSession");}
+        }catch(e){}
+      },[activeSession]);
 
       // Auto-save active session while editing
       var autoSaveRef = useRef(null);
