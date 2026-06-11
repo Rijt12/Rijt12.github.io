@@ -695,8 +695,8 @@
 
           {view==="library" && (
             <div key={navKey} className="page-enter">
-              <Header title="Oefeningen" back={function(){goView("clients");}}/>
-              <ExerciseLibrary data={data} persist={persist} showToast={showToast} onDelete={deleteExercise}/>
+              <Header title="Oefeningen" back={function(){goView("clients");}} onSearch={function(){setShowSearch(true);}}/>
+              <ExerciseLibrary data={data} persist={persist} showToast={showToast} onDelete={deleteExercise} showSearch={showSearch} onHideSearch={function(){setShowSearch(false);}}/>
             </div>
           )}
 
@@ -1103,7 +1103,9 @@
       var [newName,setNewName]=useState(""); var [newPat,setNewPat]=useState("Push"); var [newUni,setNewUni]=useState(false); var [adding,setAdding]=useState(false); var [search,setSearch]=useState("");
       var [editingId,setEditingId]=useState(null); var [editName,setEditName]=useState(""); var [editPat,setEditPat]=useState("Push"); var [editUni,setEditUni]=useState(false);
       var [openRowId,setOpenRowId]=useState(null);
-      var inputRef=useRef(null);
+      var inputRef=useRef(null); var searchRef=useRef(null);
+      var showSearch=props.showSearch||false;
+      useEffect(function(){if(showSearch&&searchRef.current){searchRef.current.focus();}if(!showSearch){setSearch("");}}, [showSearch]);
       function addExercise(){if(!newName.trim()){return;}if(library.some(function(e){return e.name.toLowerCase()===newName.trim().toLowerCase();})){props.showToast("Oefening bestaat al");return;}var ex={id:uid(),name:newName.trim(),pattern:newPat,unilateral:newUni};props.persist({...data,exerciseLibrary:library.concat([ex])});setNewName("");setNewUni(false);props.showToast(ex.name+" toegevoegd ✓");}
       function startEdit(ex){setEditingId(ex.id);setEditName(ex.name);setEditPat(ex.pattern);setEditUni(ex.unilateral||false);}
       function saveEdit(){
@@ -1127,7 +1129,7 @@
       var grouped={};filtered.forEach(function(e){if(!grouped[e.pattern]){grouped[e.pattern]=[];}grouped[e.pattern].push(e);});
       return (
         <div className="ai" style={{paddingBottom:32}}>
-          <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface}}><input value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Zoek oefening..." style={iS}/></div>
+          {showSearch&&<div className="search-reveal" style={{padding:"10px 16px",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:49,zIndex:38}}><input ref={searchRef} value={search} onChange={function(e){setSearch(e.target.value);}} onBlur={function(){if(!search.trim()&&props.onHideSearch){props.onHideSearch();}}} placeholder="Zoek oefening..." style={{...iS,margin:0}}/></div>}
           <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}>
             {!adding?(
               <Btn accent onClick={function(){setAdding(true);setTimeout(function(){if(inputRef.current){inputRef.current.focus();}},50);}}>+ Oefening toevoegen</Btn>
