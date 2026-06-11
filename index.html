@@ -360,6 +360,7 @@
       var [saving, setSaving]                 = useState(false);
       var [navKey, setNavKey]                 = useState(0);
       var [showSearch, setShowSearch]         = useState(false);
+      var [libTriggerAdd, setLibTriggerAdd]   = useState(false);
       function handlePullSearch(){setShowSearch(true);}
 
       useEffect(function() {
@@ -695,8 +696,8 @@
 
           {view==="library" && (
             <div key={navKey} className="page-enter">
-              <Header title="Oefeningen" back={function(){goView("clients");}}/>
-              <ExerciseLibrary data={data} persist={persist} showToast={showToast} onDelete={deleteExercise} showSearch={showSearch} onHideSearch={function(){setShowSearch(false);}}/>
+              <Header title="Oefeningen" back={function(){goView("clients");}} rightAction={{label:"+ Oefening", fn:function(){setLibTriggerAdd(true);}}}/>
+              <ExerciseLibrary data={data} persist={persist} showToast={showToast} onDelete={deleteExercise} showSearch={showSearch} onHideSearch={function(){setShowSearch(false);}} triggerAdd={libTriggerAdd} onTriggerAddDone={function(){setLibTriggerAdd(false);}}/>
             </div>
           )}
 
@@ -1125,6 +1126,7 @@
         props.persist({...data,exerciseLibrary:updated,sessions:updatedSessions});
         props.showToast("Opgeslagen ✓");setEditingId(null);
       }
+      useEffect(function(){if(props.triggerAdd){setAdding(true);setTimeout(function(){if(inputRef.current){inputRef.current.focus();}},50);props.onTriggerAddDone&&props.onTriggerAddDone();}}, [props.triggerAdd]);
       var filtered=library.filter(function(e){return e.name.toLowerCase().includes(search.toLowerCase());}).sort(function(a,b){return a.name.localeCompare(b.name);});
       var grouped={};filtered.forEach(function(e){if(!grouped[e.pattern]){grouped[e.pattern]=[];}grouped[e.pattern].push(e);});
       return (
@@ -1132,7 +1134,7 @@
           {showSearch&&<div className="search-reveal" style={{padding:"10px 16px",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:49,zIndex:38}}><input ref={searchRef} value={search} onChange={function(e){setSearch(e.target.value);}} onBlur={function(){if(!search.trim()&&props.onHideSearch){props.onHideSearch();}}} placeholder="Zoek oefening..." style={{...iS,margin:0}}/></div>}
           <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}>
             {!adding?(
-              <Btn accent onClick={function(){setAdding(true);setTimeout(function(){if(inputRef.current){inputRef.current.focus();}},50);}}>+ Oefening toevoegen</Btn>
+              <div style={{display:"none"}}/>
             ):(
               <div>
                 <div style={{marginBottom:10}}><Label>Naam oefening</Label><AutocompleteInput inputRef={inputRef} value={newName} onChange={setNewName} suggestions={library.map(function(e){return e.name;})} placeholder="bijv. Deadlift..." style={{marginTop:5}}/></div>
