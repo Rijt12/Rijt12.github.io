@@ -696,7 +696,7 @@
 
           {view==="library" && (
             <div key={navKey} className="page-enter">
-              <Header title="Oefeningen" back={function(){goView("clients");}} rightAction={{label:"+ Oefening", fn:function(){setLibTriggerAdd(true);}}}/>
+              <Header title="Oefeningen" back={function(){goView("clients");}} rightAction={{label:"Oefening toevoegen", fn:function(){setLibTriggerAdd(true);}}}/>
               <ExerciseLibrary data={data} persist={persist} showToast={showToast} onDelete={deleteExercise} showSearch={showSearch} onHideSearch={function(){setShowSearch(false);}} triggerAdd={libTriggerAdd} onTriggerAddDone={function(){setLibTriggerAdd(false);}}/>
             </div>
           )}
