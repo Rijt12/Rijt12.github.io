@@ -1274,6 +1274,7 @@
       var allClients=props.allClients||[]; var onDuoPick=props.onDuoPick||null;
       var [showAdd,setShowAdd]=useState(false); var [showTemplates,setShowTemplates]=useState(false);
       var [showSuperset,setShowSuperset]=useState(false); var [showDuoPicker,setShowDuoPicker]=useState(false);
+      var [showReorder,setShowReorder]=useState(false);
       function updateEx(idx,upd){var exs=session.exercises.map(function(e,i){return i===idx?{...e,...upd}:e;});onChange({...session,exercises:exs});}
       function deleteEx(idx){onChange({...session,exercises:session.exercises.filter(function(_,i){return i!==idx;})});}
       function deleteSuperset(ssId){onChange({...session,exercises:session.exercises.filter(function(e){return e.supersetId!==ssId;})});}
@@ -1284,6 +1285,7 @@
       function moveDown(idx){if(idx===session.exercises.length-1){return;}var exs=session.exercises.slice();var tmp=exs[idx];exs[idx]=exs[idx+1];exs[idx+1]=tmp;onChange({...session,exercises:exs});}
       function moveSupersetUp(idxA,idxB){var lo=Math.min(idxA,idxB);if(lo===0){return;}var exs=session.exercises.slice();var pair=[exs[lo],exs[lo+1]];exs.splice(lo,2);exs.splice(lo-1,0,pair[0],pair[1]);onChange({...session,exercises:exs});}
       function moveSupersetDown(idxA,idxB){var lo=Math.min(idxA,idxB);var hi=Math.max(idxA,idxB);if(hi>=session.exercises.length-1){return;}var exs=session.exercises.slice();var pair=[exs[lo],exs[lo+1]];exs.splice(lo,2);exs.splice(lo+1,0,pair[0],pair[1]);onChange({...session,exercises:exs});}
+      function pairSuperset(exId, otherId){var ssId=uid();onChange({...session,exercises:session.exercises.map(function(e){return (e.id===exId||e.id===otherId)?{...e,supersetId:ssId}:e;})});}
       function loadTemplate(tpl){var exercises=tpl.exercises.map(function(e){return {id:uid(),name:e.name,pattern:e.pattern,unilateral:e.unilateral||false,isUnilateralExercise:e.unilateral||false,performedUnilateral:false,sets:(e.sets||[{weight:"",reps:""}]).map(function(s){return {weight:s.weight||"",reps:s.reps||""};}),notes:""};});onChange({...session,exercises:exercises});setShowTemplates(false);props.showToast('Schema "'+tpl.name+'" geladen ✓');}
       var localDateValue=session.date?toLocalISO(session.date):"";
       function handleDateChange(e){if(!e.target.value||!session.date){return;}var orig=new Date(session.date);var parts=e.target.value.split("-");orig.setFullYear(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));onChange({...session,date:orig.toISOString()});}
@@ -1306,6 +1308,9 @@
         }
       });
 
+      if(showReorder){
+        return <ReorderPage exercises={session.exercises} onSave={function(reordered){onChange({...session,exercises:reordered});setShowReorder(false);}} onCancel={function(){setShowReorder(false);}}/>;
+      }
       return (
         <div className="ai" style={{paddingBottom:20}}>
           <div style={{padding:"10px 20px",background:T.surfaceAlt,borderBottom:"1px solid "+T.border,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
@@ -1335,8 +1340,9 @@
               return <ExerciseRow key={item.ex.id} ex={item.ex}
                 onChange={function(upd){updateEx(item.idx,upd);}}
                 onDelete={function(){deleteEx(item.idx);}}
-                onMoveUp={item.idx>0?function(){moveUp(item.idx);}:null}
-                onMoveDown={item.idx<session.exercises.length-1?function(){moveDown(item.idx);}:null}
+                onReorder={function(){setShowReorder(true);}}
+                onPairSuperset={function(otherId){pairSuperset(item.ex.id,otherId);}}
+                sessionExercises={session.exercises}
                 prevData={prevByName[(item.ex.name||"").trim().toLowerCase()]}
                 prevDataB={prevByNameB[(item.ex.name||"").trim().toLowerCase()]}
                 duoClients={duoClients}
@@ -1362,8 +1368,7 @@
             <textarea value={session.notes} onChange={function(e){onChange({...session,notes:e.target.value});}} placeholder="Opmerkingen over de hele sessie..." rows={3} style={{...iS,marginTop:5,resize:"none"}}/>
           </div>
           <div style={{height:100}}/>
-          <div style={{position:"fixed",bottom:28,right:20,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8,zIndex:50}}>
-            <button onClick={function(){setShowSuperset(function(v){return !v;});setShowAdd(false);}} style={{background:T.surface,border:"1px solid "+T.border,color:T.textMid,borderRadius:"50%",width:36,height:36,fontSize:22,fontWeight:400,cursor:"pointer",boxShadow:"0 2px 6px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>{"+"}</button>
+          <div style={{position:"fixed",bottom:28,right:20,zIndex:50}}>
             <button onClick={function(){setShowAdd(true);setShowSuperset(false);}} style={{background:T.accent,border:"none",color:"#fff",borderRadius:"50%",width:56,height:56,fontSize:28,fontWeight:400,cursor:"pointer",boxShadow:"0 4px 16px rgba(220,79,42,0.40)",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>{"+"}</button>
           </div>
         </div>
@@ -1414,6 +1419,76 @@
             </div>
           )}
           <div style={{padding:"10px 14px",borderTop:"1px solid "+T.border}}><button onClick={props.onCancel} style={{background:"none",border:"none",color:T.textMuted,fontSize:12,textTransform:"uppercase",letterSpacing:0.5}}>Annuleer</button></div>
+        </div>
+      );
+    }
+
+    function ReorderPage(props) {
+      var [items,setItems]=useState(props.exercises.slice());
+      var dragIdx=useRef(null);
+      var dragOverIdx=useRef(null);
+      function onDragStart(i){dragIdx.current=i;}
+      function onDragEnter(i){dragOverIdx.current=i;}
+      function onDragEnd(){
+        var from=dragIdx.current; var to=dragOverIdx.current;
+        if(from===null||to===null||from===to){dragIdx.current=null;dragOverIdx.current=null;return;}
+        var arr=items.slice();
+        arr.splice(to,0,arr.splice(from,1)[0]);
+        setItems(arr);
+        dragIdx.current=null; dragOverIdx.current=null;
+      }
+      // Touch drag support
+      var touchStartY=useRef(0); var touchDragIdx=useRef(null);
+      function onTouchStart(i,e){touchDragIdx.current=i;touchStartY.current=e.touches[0].clientY;}
+      function onTouchMove(e){
+        e.preventDefault();
+        var y=e.touches[0].clientY;
+        var els=document.querySelectorAll(".reorder-item");
+        var target=null;
+        els.forEach(function(el,idx){var r=el.getBoundingClientRect();if(y>=r.top&&y<=r.bottom){target=idx;}});
+        if(target!==null){dragOverIdx.current=target;}
+      }
+      function onTouchEnd(){
+        var from=touchDragIdx.current; var to=dragOverIdx.current;
+        if(from!==null&&to!==null&&from!==to){
+          var arr=items.slice();
+          arr.splice(to,0,arr.splice(from,1)[0]);
+          setItems(arr);
+        }
+        touchDragIdx.current=null; dragOverIdx.current=null;
+      }
+      return (
+        <div className="ai">
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 20px",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:48,zIndex:10}}>
+            <span style={{fontSize:14,fontWeight:500}}>Volgorde aanpassen</span>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={props.onCancel} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"6px 14px",fontSize:12,borderRadius:4,cursor:"pointer"}}>Annuleer</button>
+              <button onClick={function(){props.onSave(items);}} style={{background:T.accent,border:"none",color:"#fff",padding:"6px 14px",fontSize:12,borderRadius:4,cursor:"pointer",fontWeight:500}}>Opslaan</button>
+            </div>
+          </div>
+          <div style={{padding:"12px 0"}}>
+            {items.map(function(ex,i){
+              var color=PC[ex.pattern]||T.textMuted;
+              return (
+                <div key={ex.id} className="reorder-item"
+                  draggable
+                  onDragStart={function(){onDragStart(i);}}
+                  onDragEnter={function(){onDragEnter(i);}}
+                  onDragEnd={onDragEnd}
+                  onDragOver={function(e){e.preventDefault();}}
+                  onTouchStart={function(e){onTouchStart(i,e);}}
+                  onTouchMove={onTouchMove}
+                  onTouchEnd={onTouchEnd}
+                  style={{margin:"0 16px 8px",padding:"12px 16px",background:T.surface,border:"1px solid "+T.border,borderLeft:"3px solid "+color,borderRadius:4,display:"flex",alignItems:"center",gap:12,cursor:"grab",userSelect:"none",touchAction:"none"}}>
+                  <span style={{color:T.textMuted,fontSize:18,lineHeight:1}}>☰</span>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:500}}>{ex.name}</div>
+                    <div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:2}}>{ex.pattern}{ex.supersetId?" · superset":""}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       );
     }
@@ -1552,6 +1627,8 @@
       var isAB=duoClients&&lbl==="AB";
       var prevData=isB?(props.prevDataB||null):props.prevData;
       var [open,setOpen]=useState(true);
+      var [showExMenu,setShowExMenu]=useState(false);
+      var [showSsPicker,setShowSsPicker]=useState(false);
       var color=PC[ex.pattern]||T.textMuted;
       var activeSets=isB?(ex.setsB||[{weight:"",reps:""}]):ex.sets;
       function getSetsB(){return ex.setsB||ex.sets.map(function(){return {weight:"",reps:""};});}
@@ -1602,10 +1679,30 @@
                 )}
               </div>
             </div>
-            <div style={{display:"flex",gap:2,alignItems:"center"}}>
-              {props.onMoveUp&&<button onClick={function(e){e.stopPropagation();props.onMoveUp();}} style={{background:"none",border:"none",color:T.textMuted,fontSize:16,padding:"8px 10px",lineHeight:1}}>↑</button>}
-              {props.onMoveDown&&<button onClick={function(e){e.stopPropagation();props.onMoveDown();}} style={{background:"none",border:"none",color:T.textMuted,fontSize:16,padding:"8px 10px",lineHeight:1}}>↓</button>}
-              <button onClick={function(e){e.stopPropagation();props.onDelete();}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"8px 10px",lineHeight:1}}>×</button>
+            <div style={{position:"relative"}}>
+              {showExMenu&&<div onClick={function(e){e.stopPropagation();setShowExMenu(false);setShowSsPicker(false);}} style={{position:"fixed",inset:0,zIndex:19}}/>}
+              <button onClick={function(e){e.stopPropagation();setShowExMenu(function(v){return !v;});setShowSsPicker(false);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,padding:"8px 10px",lineHeight:1,display:"flex",flexDirection:"column",gap:3,alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                <span style={{width:3,height:3,borderRadius:"50%",background:T.textMid,display:"block"}}/>
+                <span style={{width:3,height:3,borderRadius:"50%",background:T.textMid,display:"block"}}/>
+                <span style={{width:3,height:3,borderRadius:"50%",background:T.textMid,display:"block"}}/>
+              </button>
+              {showExMenu&&(
+                <div style={{position:"absolute",right:0,top:"calc(100% + 2px)",background:T.surface,border:"1px solid "+T.border,borderRadius:6,boxShadow:"0 4px 16px rgba(0,0,0,0.12)",zIndex:20,minWidth:180,overflow:"hidden"}}>
+                  <button onClick={function(e){e.stopPropagation();setShowSsPicker(true);setShowExMenu(false);}} style={{display:"block",width:"100%",padding:"12px 16px",background:"none",border:"none",borderBottom:"1px solid "+T.border,color:T.text,fontSize:13,textAlign:"left",cursor:"pointer",fontFamily:"inherit"}}>Koppel superset</button>
+                  <button onClick={function(e){e.stopPropagation();setShowExMenu(false);props.onReorder&&props.onReorder();}} style={{display:"block",width:"100%",padding:"12px 16px",background:"none",border:"none",borderBottom:"1px solid "+T.border,color:T.text,fontSize:13,textAlign:"left",cursor:"pointer",fontFamily:"inherit"}}>Volgorde aanpassen</button>
+                  <button onClick={function(e){e.stopPropagation();setShowExMenu(false);props.onDelete();}} style={{display:"block",width:"100%",padding:"12px 16px",background:"none",border:"none",color:"#dc2626",fontSize:13,textAlign:"left",cursor:"pointer",fontFamily:"inherit"}}>Verwijder oefening</button>
+                </div>
+              )}
+              {showSsPicker&&(
+                <div style={{position:"absolute",right:0,top:"calc(100% + 2px)",background:T.surface,border:"1px solid "+T.border,borderRadius:6,boxShadow:"0 4px 16px rgba(0,0,0,0.12)",zIndex:20,minWidth:200,overflow:"hidden"}}>
+                  <div style={{padding:"10px 14px",borderBottom:"1px solid "+T.border,fontSize:11,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5}}>Koppel aan oefening</div>
+                  {(props.sessionExercises||[]).filter(function(e){return e.id!==ex.id&&!e.supersetId;}).map(function(e){return(
+                    <button key={e.id} onClick={function(ev){ev.stopPropagation();props.onPairSuperset&&props.onPairSuperset(e.id);setShowSsPicker(false);}} style={{display:"block",width:"100%",padding:"11px 14px",background:"none",border:"none",borderBottom:"1px solid "+T.border,color:T.text,fontSize:13,textAlign:"left",cursor:"pointer",fontFamily:"inherit"}}>{e.name}</button>
+                  );})}
+                  {(props.sessionExercises||[]).filter(function(e){return e.id!==ex.id&&!e.supersetId;}).length===0&&<div style={{padding:"12px 14px",fontSize:12,color:T.textMuted}}>Geen andere oefeningen beschikbaar</div>}
+                  <button onClick={function(e){e.stopPropagation();setShowSsPicker(false);}} style={{display:"block",width:"100%",padding:"10px 14px",background:"none",border:"none",color:T.textMuted,fontSize:11,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",fontFamily:"inherit"}}>Annuleer</button>
+                </div>
+              )}
             </div>
           </div>
           {open&&(
