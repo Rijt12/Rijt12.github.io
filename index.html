@@ -839,13 +839,22 @@
     }
 
     function Header(props) {
+      var titleRef = React.useRef(null);
+      React.useEffect(function(){
+        var el = titleRef.current;
+        if (!el) return;
+        el.style.fontSize = '22px';
+        while (el.scrollWidth > el.offsetWidth && parseFloat(el.style.fontSize) > 11) {
+          el.style.fontSize = (parseFloat(el.style.fontSize) - 1) + 'px';
+        }
+      }, [props.title]);
       return (
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:0,zIndex:10}}>
-          <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0,overflow:"hidden",flex:1,marginRight:12}}>
             {props.back && <button onClick={props.back} style={{background:"none",border:"none",color:T.textMuted,fontSize:18,lineHeight:1,padding:"0 4px 0 0",flexShrink:0}}>←</button>}
-            <span style={{fontFamily:"'Raleway',sans-serif",fontWeight:800,fontSize:22,letterSpacing:0.5,textTransform:"uppercase",color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{props.title}</span>
+            <span ref={titleRef} style={{fontFamily:"'Raleway',sans-serif",fontWeight:800,fontSize:22,letterSpacing:0.5,textTransform:"uppercase",color:T.text,whiteSpace:"nowrap",display:"block",overflow:"hidden"}}>{props.title}</span>
           </div>
-          <div style={{display:"flex",gap:6,flexShrink:0,marginLeft:8,alignItems:"center"}}>
+          <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
             {props.onSearch && <button onClick={props.onSearch} style={{background:"none",border:"none",color:T.textMid,height:32,width:32,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",borderRadius:4}}><svg width="17" height="17" viewBox="0 0 17 17" fill="none"><circle cx="7.5" cy="7.5" r="5.5" stroke={T.textMid} strokeWidth="1.6"/><line x1="11.5" y1="11.5" x2="15.5" y2="15.5" stroke={T.textMid} strokeWidth="1.6" strokeLinecap="round"/></svg></button>}
             {props.rightAction2 && <button onClick={props.rightAction2.fn} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,height:32,padding:"0 12px",fontSize:11,letterSpacing:0.5,textTransform:"uppercase",borderRadius:4,cursor:"pointer"}}>{props.rightAction2.label}</button>}
             {props.rightAction  && <button onClick={props.rightAction.fn}  style={{background:T.accent,border:"none",color:"#fff",height:32,padding:"0 14px",fontSize:11,fontWeight:500,letterSpacing:0.5,textTransform:"uppercase",borderRadius:4,cursor:"pointer"}}>{props.rightAction.label}</button>}
@@ -1287,7 +1296,7 @@
       return (
         <div className="ai">
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:0,zIndex:10}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0,overflow:"hidden"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0,overflow:"hidden",flex:1,marginRight:12}}>
               <button onClick={function(){props.onBack?props.onBack():history.back();}} style={{background:"none",border:"none",color:T.textMuted,fontSize:18,lineHeight:1,padding:"0 4px 0 0",flexShrink:0}}>←</button>
               <span ref={clientNameRef} style={{fontFamily:"'Raleway',sans-serif",fontWeight:800,fontSize:22,letterSpacing:0.5,textTransform:"uppercase",color:T.text,whiteSpace:"nowrap",display:"block",overflow:"hidden"}}>{client.name}</span>
             </div>
