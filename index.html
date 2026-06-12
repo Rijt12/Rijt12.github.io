@@ -1349,12 +1349,17 @@
       var allClients=props.allClients||[]; var onDuoPick=props.onDuoPick||null;
       var [showAdd,setShowAdd]=useState(false); var [showTemplates,setShowTemplates]=useState(false);
       var [showSuperset,setShowSuperset]=useState(false); var [showDuoPicker,setShowDuoPicker]=useState(false);
-      var [showReorder,setShowReorder]=useState(false);
+      var [showReorder,setShowReorder]=useState(false); var [swipeOpenId,setSwipeOpenId]=useState(null);
       function updateEx(idx,upd){var exs=session.exercises.map(function(e,i){return i===idx?{...e,...upd}:e;});onChange({...session,exercises:exs});}
       function deleteEx(idx){onChange({...session,exercises:session.exercises.filter(function(_,i){return i!==idx;})});}
       function deleteSuperset(ssId){onChange({...session,exercises:session.exercises.filter(function(e){return e.supersetId!==ssId;})});}
       function withDuoDefaults(ex){if(!isDuo(session)){return ex;}return {...ex,clientLabel:"A",setsB:ex.sets.map(function(s){return {weight:"",reps:""};}),performedUnilateralB:false,notesB:""};}
-      function addEx(ex){onChange({...session,exercises:session.exercises.concat([withDuoDefaults(ex)])});setShowAdd(false);props.showToast(ex.name+" toegevoegd");setTimeout(function(){window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});},120);}
+      function addEx(ex){
+        var prev=prevByName[(ex.name||"").trim().toLowerCase()];
+        var prefillSets=prev&&prev.sets&&prev.sets.length>0?prev.sets.map(function(s){return {weight:s.weight||"",reps:s.reps||""};}): [{weight:"",reps:""}];
+        var newEx={...ex,sets:prefillSets};
+        onChange({...session,exercises:session.exercises.concat([withDuoDefaults(newEx)])});setShowAdd(false);props.showToast(ex.name+" toegevoegd");setTimeout(function(){window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});},120);
+      }
       function addSuperset(exA,exB){var ssId=uid();onChange({...session,exercises:session.exercises.concat([{...withDuoDefaults(exA),supersetId:ssId},{...withDuoDefaults(exB),supersetId:ssId}])});setShowSuperset(false);props.showToast("Superset added");}
       function moveUp(idx){if(idx===0){return;}var exs=session.exercises.slice();var tmp=exs[idx-1];exs[idx-1]=exs[idx];exs[idx]=tmp;onChange({...session,exercises:exs});}
       function moveDown(idx){if(idx===session.exercises.length-1){return;}var exs=session.exercises.slice();var tmp=exs[idx];exs[idx]=exs[idx+1];exs[idx+1]=tmp;onChange({...session,exercises:exs});}
@@ -1412,17 +1417,19 @@
           {session.exercises.length===0&&!showAdd&&!showSuperset&&<div style={{padding:"36px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Add an exercise to get started.</div>}
           {renderList.map(function(item){
             if(item.type==="single"){
-              return <ExerciseRow key={item.ex.id} ex={item.ex}
-                onChange={function(upd){updateEx(item.idx,upd);}}
-                onDelete={function(){deleteEx(item.idx);}}
-                onReorder={function(){setShowReorder(true);}}
-                onPairSuperset={function(otherId){pairSuperset(item.ex.id,otherId);}}
-                sessionExercises={session.exercises}
-                prevData={prevByName[(item.ex.name||"").trim().toLowerCase()]}
-                prevDataB={prevByNameB[(item.ex.name||"").trim().toLowerCase()]}
-                duoClients={duoClients}
-                onViewHistory={function(){var k=(item.ex.performedUnilateral&&item.ex.isUnilateralExercise)?item.ex.name+"__uni":item.ex.name;props.onViewExHistory(k);}}
-              />;
+              return <SwipeRow key={item.ex.id} rowId={item.ex.id} openId={swipeOpenId} onOpen={setSwipeOpenId} onDelete={function(){deleteEx(item.idx);}}>
+                <ExerciseRow ex={item.ex}
+                  onChange={function(upd){updateEx(item.idx,upd);}}
+                  onDelete={function(){deleteEx(item.idx);}}
+                  onReorder={function(){setShowReorder(true);}}
+                  onPairSuperset={function(otherId){pairSuperset(item.ex.id,otherId);}}
+                  sessionExercises={session.exercises}
+                  prevData={prevByName[(item.ex.name||"").trim().toLowerCase()]}
+                  prevDataB={prevByNameB[(item.ex.name||"").trim().toLowerCase()]}
+                  duoClients={duoClients}
+                  onViewHistory={function(){var k=(item.ex.performedUnilateral&&item.ex.isUnilateralExercise)?item.ex.name+"__uni":item.ex.name;props.onViewExHistory(k);}}
+                />
+              </SwipeRow>;
             }
             var ssLo=Math.min(item.idxA,item.idxB);var ssHi=Math.max(item.idxA,item.idxB);
             return <SupersetBlock key={item.ssId}
@@ -1733,7 +1740,7 @@
         props.onChange(upd);
       }
       return (
-        <div style={{borderBottom:"1px solid "+T.border,borderLeft:"3px solid "+color,background:T.surface}}>
+        <div style={{borderLeft:"3px solid "+color,background:T.surface}}>
           <div style={{padding:"12px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={function(){setOpen(!open);}}>
             <div>
               <div style={{fontWeight:500,fontSize:14}}>{ex.name}</div>
@@ -1767,6 +1774,7 @@
                 <div style={{position:"absolute",right:0,top:"calc(100% + 2px)",background:T.surface,border:"1px solid "+T.border,borderRadius:6,boxShadow:"0 4px 16px rgba(0,0,0,0.12)",zIndex:20,minWidth:180,overflow:"hidden"}}>
                   <button onClick={function(e){e.stopPropagation();setShowSsPicker(true);setShowExMenu(false);}} style={{display:"block",width:"100%",padding:"12px 16px",background:"none",border:"none",borderBottom:"1px solid "+T.border,color:T.text,fontSize:13,textAlign:"left",cursor:"pointer",fontFamily:"inherit"}}>Link superset</button>
                   <button onClick={function(e){e.stopPropagation();setShowExMenu(false);props.onReorder&&props.onReorder();}} style={{display:"block",width:"100%",padding:"12px 16px",background:"none",border:"none",borderBottom:"1px solid "+T.border,color:T.text,fontSize:13,textAlign:"left",cursor:"pointer",fontFamily:"inherit"}}>Reorder</button>
+                  <button onClick={function(e){e.stopPropagation();setShowExMenu(false);props.onViewHistory&&props.onViewHistory();}} style={{display:"block",width:"100%",padding:"12px 16px",background:"none",border:"none",borderBottom:"1px solid "+T.border,color:T.text,fontSize:13,textAlign:"left",cursor:"pointer",fontFamily:"inherit"}}>Full history →</button>
                   <button onClick={function(e){e.stopPropagation();setShowExMenu(false);props.onDelete();}} style={{display:"block",width:"100%",padding:"12px 16px",background:"none",border:"none",color:"#dc2626",fontSize:13,textAlign:"left",cursor:"pointer",fontFamily:"inherit"}}>Delete exercise</button>
                 </div>
               )}
@@ -1784,28 +1792,25 @@
           </div>
           {open&&(
             <div style={{padding:"0 20px 14px"}}>
-              <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:5}}><span style={lS}>#</span><span style={lS}>kg</span><span style={lS}>reps</span><span/></div>
-              {activeSets.map(function(s,i){return(
-                <div key={i} style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:6}}>
-                  <span style={{color:T.textMuted,fontSize:12,paddingTop:10,textAlign:"center"}}>{i+1}</span>
-                  <Stepper value={s.weight} step={0.5} placeholder="kg" onChange={function(v){updateSet(i,"weight",v);}}/>
-                  <Stepper value={s.reps} step={1} placeholder="reps" onChange={function(v){updateSet(i,"reps",v);}}/>
-                  <button onClick={function(){removeSet(i);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14}}>×</button>
+              <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr",gap:6,marginBottom:5}}><span style={lS}>#</span><span style={lS}>kg</span><span style={lS}>reps</span></div>
+              {activeSets.map(function(s,i){
+                var ps=prevData&&prevData.sets&&prevData.sets[i];
+                return(
+                <div key={i} style={{marginBottom:8}}>
+                  <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr",gap:6}}>
+                    <span style={{color:T.textMuted,fontSize:12,paddingTop:10,textAlign:"center"}}>{i+1}</span>
+                    <Stepper value={s.weight} step={0.5} placeholder="kg" onChange={function(v){updateSet(i,"weight",v);}}/>
+                    <Stepper value={s.reps} step={1} placeholder="reps" onChange={function(v){updateSet(i,"reps",v);}}/>
+                  </div>
+                  {ps&&<div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr",gap:6,marginTop:2}}>
+                    <span/>
+                    <span style={{fontSize:10,color:T.textMuted,textAlign:"center",paddingLeft:4}}>{ps.weight?ps.weight+" kg":"—"}</span>
+                    <span style={{fontSize:10,color:T.textMuted,textAlign:"center"}}>{ps.reps||"—"} reps</span>
+                  </div>}
                 </div>
               );})}
               <button onClick={addSet} style={{background:"none",border:"1px dashed "+T.borderStrong,color:T.textMuted,padding:"6px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,marginTop:2,cursor:"pointer",width:"100%",borderRadius:4}}>+ Add set</button>
               <div style={{marginTop:10}}><textarea value={(isB?(ex.notesB!=null?ex.notesB:""):ex.notes)||""} onChange={function(e){if(isB){props.onChange({...ex,notesB:e.target.value});}else{props.onChange({...ex,notes:e.target.value});}}} placeholder="Notes for this exercise..." rows={2} style={{...iS,resize:"none",fontSize:12,color:T.textMid,background:T.surfaceAlt,marginTop:2}}/></div>
-              {prevData&&(
-                <div style={{marginTop:10,padding:"8px 10px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:4}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
-                    <span style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5}}>Vorige · {fmtDate(prevData.date)}</span>
-                    <button onClick={props.onViewHistory} style={{background:"none",border:"none",color:T.accent,fontSize:10,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",padding:0}}>Full history →</button>
-                  </div>
-                  <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-                    {prevData.sets.map(function(s,i){return <span key={i} style={{fontSize:11,padding:"3px 7px",background:T.surface,border:"1px solid "+T.border,borderRadius:4,color:T.textMid}}>{i+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>
