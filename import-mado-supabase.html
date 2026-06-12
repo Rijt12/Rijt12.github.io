@@ -17,15 +17,15 @@
 </head>
 <body>
   <h2>Import: Mado van den Brand</h2>
-  <p style="font-size:13px;color:#666">Voegt Mado van den Brand toe met 6 sessies (2025 – juni 2026).</p>
+  <p style="font-size:13px;color:#666">Adds Mado van den Brand with 6 sessions (2025 – juni 2026).</p>
   <div id="loginForm">
-    <p>Log in met je Supabase app-account:</p>
-    <input id="email" type="email" placeholder="E-mailadres"/>
-    <input id="password" type="password" placeholder="Wachtwoord"/>
-    <button onclick="doLogin()">Inloggen</button>
+    <p>Log in with your Supabase account:</p>
+    <input id="email" type="email" placeholder="Email address"/>
+    <input id="password" type="password" placeholder="Password"/>
+    <button onclick="doLogin()">Log in</button>
   </div>
   <div id="importSection" style="display:none">
-    <button id="btn" onclick="runImport()">Importeer Mado van den Brand</button>
+    <button id="btn" onclick="runImport()">Import Mado van den Brand</button>
   </div>
   <div id="log"></div>
 <script>
@@ -52,46 +52,46 @@
   async function doLogin() {
     var email = document.getElementById("email").value.trim();
     var pw    = document.getElementById("password").value;
-    if (!email || !pw) { log("Vul e-mail en wachtwoord in.", "err"); return; }
+    if (!email || !pw) { log("Enter email and password.", "err"); return; }
     var res = await sb.auth.signInWithPassword({ email: email, password: pw });
     if (res.error) { log("✗ " + res.error.message, "err"); return; }
     document.getElementById("loginForm").style.display = "none";
     document.getElementById("importSection").style.display = "block";
-    log("✓ Ingelogd als " + res.data.user.email, "ok");
+    log("✓ Logged in as " + res.data.user.email, "ok");
   }
 
   async function runImport() {
     document.getElementById("btn").disabled = true;
     var userRes = await sb.auth.getUser();
-    if (userRes.error || !userRes.data.user) { log("Niet ingelogd.", "err"); return; }
+    if (userRes.error || !userRes.data.user) { log("Not logged in.", "err"); return; }
     var userId = userRes.data.user.id;
 
-    log("Controleren of Mado al bestaat...");
+    log("Checking if Mado already exists...");
     var existing = await sb.from("clients").select("id,name").eq("user_id", userId);
     if (existing.error) { log("✗ " + existing.error.message, "err"); document.getElementById("btn").disabled = false; return; }
     var existingClient = (existing.data || []).find(function(c){ return c.name.toLowerCase() === "mado van den brand"; });
     var clientId;
     if (existingClient) {
       clientId = existingClient.id;
-      log("✓ Bestaande client gevonden: " + existingClient.name + " — sessies worden toegevoegd.", "ok");
+      log("✓ Existing client found: " + existingClient.name + " — sessions will be added.", "ok");
     } else {
       clientId = uid();
-      log("Client aanmaken...");
+      log("Creating client...");
       var clientRes = await sb.from("clients").insert([{ id: clientId, name: "Mado van den Brand", created_at: new Date().toISOString(), user_id: userId }]);
       if (clientRes.error) { log("✗ " + clientRes.error.message, "err"); document.getElementById("btn").disabled = false; return; }
-      log("✓ Client aangemaakt: Mado van den Brand", "ok");
+      log("✓ Client created: Mado van den Brand", "ok");
     }
 
     var sessions = buildSessions(clientId);
-    log("Sessies invoegen (" + sessions.length + ")...");
+    log("Inserting sessions (" + sessions.length + ")...");
     var sessionsToInsert = sessions.map(function(sess) {
       return { id: sess.id, client_id: clientId, client_ids: [clientId], date: sess.date, notes: sess.notes, exercises: sess.exercises, user_id: userId };
     });
     var sessRes = await sb.from("sessions").insert(sessionsToInsert);
     if (sessRes.error) { log("✗ " + sessRes.error.message, "err"); document.getElementById("btn").disabled = false; return; }
-    log("✓ " + sessions.length + " sessies ingevoegd", "ok");
+    log("✓ " + sessions.length + " sessions inserted", "ok");
 
-    log("Bibliotheek controleren...");
+    log("Checking exercise library...");
     var libRes = await sb.from("exercise_library").select("name").eq("user_id", userId);
     if (libRes.error) { log("✗ " + libRes.error.message, "err"); document.getElementById("btn").disabled = false; return; }
     var existingNames = (libRes.data || []).map(function(e){ return e.name.toLowerCase(); });
@@ -124,14 +124,14 @@
     if (toAdd.length > 0) {
       var addRes = await sb.from("exercise_library").insert(toAdd);
       if (addRes.error) { log("✗ Bibliotheek: " + addRes.error.message, "err"); }
-      else { log("✓ " + toAdd.length + " oefeningen aan bibliotheek toegevoegd", "ok"); }
+      else { log("✓ " + toAdd.length + " exercises added to library", "ok"); }
     } else {
-      log("Bibliotheek: alle oefeningen bestaan al.", "skip");
+      log("Library: all exercises already exist.", "skip");
     }
 
     log(""); sessions.forEach(function(s){ log("  ✓ " + s.notes, "ok"); }); log("");
-    log("✓ Import voltooid! Ververs de app om Mado te zien.", "ok");
-    document.getElementById("btn").textContent = "✓ Voltooid";
+    log("✓ Import complete! Refresh the app to see Mado.", "ok");
+    document.getElementById("btn").textContent = "✓ Done";
   }
 
   function buildSessions(clientId) {
