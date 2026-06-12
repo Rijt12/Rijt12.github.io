@@ -137,7 +137,7 @@
               return { id: r.id, name: r.name, pattern: r.pattern, unilateral: r.unilateral };
             }),
             templates: tmplRows.map(function(r) {
-              return { id: r.id, name: r.name, exercises: r.exercises || [] };
+              return { id: r.id, name: r.name, exercises: r.exercises || [], client_id: r.client_id || null };
             })
           };
 
@@ -196,7 +196,7 @@
 
           // --- templates ---
           var tmplUpserts = (data.templates || []).map(function(t) {
-            return { id: t.id, name: t.name, exercises: t.exercises || [], user_id: uid };
+            return { id: t.id, name: t.name, exercises: t.exercises || [], user_id: uid, client_id: t.client_id || null };
           });
           var removedTmpl = (prev.templates || [])
             .filter(function(t) { return !idSet(data.templates).has(t.id); })
