@@ -352,6 +352,7 @@
       var [activeSession, setActiveSession]   = useState(function(){try{var s=localStorage.getItem("activeSession");return s?JSON.parse(s):null;}catch(e){return null;}});
       var [viewSessionId, setViewSessionId]   = useState(null);
       var [editingTpl, setEditingTpl]         = useState(null);
+      var [tplClientId, setTplClientId]       = useState(null);
       var [exHistoryName, setExHistoryName]   = useState(null);
       var [prevView, setPrevView]             = useState("client");
       var [clientTab, setClientTab]           = useState("sessies");
@@ -416,8 +417,8 @@
       goBackRef.current = function() {
         if (view === "clients")                              { return; }
         if (view === "library")                              { goView("clients"); return; }
-        if (view === "templates" && editingTpl)              { setEditingTpl(null); return; }
-        if (view === "templates")                            { goView("clients"); return; }
+        if (view === "templates" && editingTpl)              { setEditingTpl(null); if(tplClientId){goView("client");}return; }
+        if (view === "templates")                            { if(tplClientId){goView("client");}else{goView("clients");}return; }
         if (view === "client")                               { goView("clients"); return; }
         if (view === "session" || view === "editSession")    { goView("client"); return; }
         if (view === "viewSession")                          { goView("client"); return; }
@@ -565,6 +566,7 @@
         persist({...data, templates:newTemplates});
         setEditingTpl(null);
         showToast('"'+tpl.name+'" opgeslagen ✓');
+        if(tplClientId){goView("client");}
       }
 
       async function deleteClient(id) {
@@ -663,8 +665,7 @@
           {view==="clients" && (
             <div key={navKey} className="page-enter">
               <Header title="Cliënten"
-                rightAction2={{label:"Schema's",   fn:function(){goView("templates");}}}
-                rightAction= {{label:"Bibliotheek",fn:function(){goView("library");}}}
+                rightAction={{label:"Bibliotheek",fn:function(){goView("library");}}}
               />
 
               {(function(){
@@ -703,9 +704,9 @@
 
           {view==="templates" && !editingTpl && (
             <div key={navKey} className="page-enter">
-              <Header title="Trainingsschema's" back={function(){goView("clients");}} rightAction={{label:"Schema toevoegen", fn:function(){ setEditingTpl({id:uid(),name:"",exercises:[]}); }}}/>
-              <TemplateList data={data}
-                onNew={function(){ setEditingTpl({id:uid(),name:"",exercises:[]}); }}
+              <Header title="Schema's" back={function(){tplClientId?goView("client"):goView("clients");}} rightAction={{label:"Schema toevoegen", fn:function(){ setEditingTpl({id:uid(),name:"",exercises:[],client_id:tplClientId}); }}}/>
+              <TemplateList data={data} clientId={tplClientId}
+                onNew={function(){ setEditingTpl({id:uid(),name:"",exercises:[],client_id:tplClientId}); }}
                 onEdit={function(tpl){ setEditingTpl({...tpl,exercises:(tpl.exercises||[]).map(function(e){return {...e,sets:e.sets||[{weight:"",reps:""}]};})}); }}
                 onDelete={deleteTemplate}
               />
@@ -714,7 +715,7 @@
 
           {view==="templates" && editingTpl && (
             <div key={navKey} className="page-enter">
-              <Header title={editingTpl.name||"Nieuw schema"} back={function(){setEditingTpl(null);}}
+              <Header title={editingTpl.name||"Nieuw schema"} back={function(){setEditingTpl(null);if(tplClientId){goView("client");}}}
                 rightAction={{label:"Opslaan", fn:function(){ if(editingTpl.name.trim()){ saveTpl(editingTpl); } }}}
               />
               <TemplateEditor template={editingTpl} onChange={setEditingTpl} library={library}/>
@@ -728,6 +729,7 @@
                 onStartSession={function(s){setActiveSession(s);goView("session");}}
                 onViewSession={function(id){setViewSessionId(id);goView("viewSession");}}
                 onExport={function(){goView("export");}}
+                onNewTemplate={function(){setTplClientId(activeClientId);setEditingTpl({id:uid(),name:"",exercises:[],client_id:activeClientId});goView("templates");}}
                 onDeleteSession={deleteSession}
                 onExHistory={function(name){setExHistoryName(name);setClientTab("progressie");setPrevView("client");goView("exHistory");}}
                 initialTab={clientTab}
@@ -1183,7 +1185,7 @@
     }
 
     function TemplateList(props) {
-      var templates=props.data.templates||[];
+      var templates=(props.data.templates||[]).filter(function(t){return props.clientId?t.client_id===props.clientId:true;});
       var [openRowId,setOpenRowId]=useState(null);
       return (
         <div className="ai" style={{paddingBottom:32}}>
@@ -1270,7 +1272,7 @@
 
     function ClientDetail(props) {
       var client=props.client; var sessions=props.sessions; var data=props.data;
-      var templates=data.templates||[];
+      var templates=(data.templates||[]).filter(function(t){return t.client_id===client.id;});
       var [tab,setTab]=useState(props.initialTab||"sessies");
       var showSearch=props.showSearch||false;
       var onHideSearch=props.onHideSearch||function(){};
@@ -1309,6 +1311,7 @@
                 {showMenu&&<div onClick={function(){setShowMenu(false);setShowTplPicker(false);}} style={{position:"fixed",inset:0,zIndex:99}}/>}
                 {showMenu&&(
                   <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:T.surface,border:"1px solid "+T.border,borderRadius:6,boxShadow:"0 4px 16px rgba(0,0,0,0.10)",zIndex:100,minWidth:160,overflow:"hidden"}}>
+                    <button onClick={function(){setShowMenu(false);props.onNewTemplate();}} style={{display:"block",width:"100%",padding:"12px 16px",background:"none",border:"none",borderBottom:"1px solid "+T.border,color:T.text,fontSize:13,textAlign:"left",cursor:"pointer"}}>Schema toevoegen</button>
                     {templates.length>0&&<button onClick={function(){setShowTplPicker(!showTplPicker);}} style={{display:"block",width:"100%",padding:"12px 16px",background:"none",border:"none",borderBottom:"1px solid "+T.border,color:T.text,fontSize:13,textAlign:"left",cursor:"pointer"}}>Schema laden</button>}
                     <button onClick={function(){setShowMenu(false);props.onExport();}} style={{display:"block",width:"100%",padding:"12px 16px",background:"none",border:"none",color:T.text,fontSize:13,textAlign:"left",cursor:"pointer"}}>Exporteer</button>
                   </div>
