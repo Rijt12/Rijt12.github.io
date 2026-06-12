@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Rename Exercises → Supabase</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 560px; margin: 60px auto; padding: 20px; }
+    input { display: block; width: 100%; padding: 10px; margin-bottom: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { padding: 12px 24px; font-size: 15px; background: #dc4f2a; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+    button:disabled { background: #94a3b8; cursor: not-allowed; }
+    #log { margin-top: 20px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
+    .ok   { color: #059669; }
+    .err  { color: #dc2626; }
+    .skip { color: #9ca3af; }
+  </style>
+</head>
+<body>
+  <h2>Rename Exercises</h2>
+  <p style="font-size:13px;color:#666">Renames 4 exercises in exercise_library and all sessions.</p>
+  <div id="loginForm">
+    <p>Log in met je Supabase app-account:</p>
+    <input id="email" type="email" placeholder="E-mailadres"/>
+    <input id="password" type="password" placeholder="Wachtwoord"/>
+    <button onclick="doLogin()">Inloggen</button>
+  </div>
+  <div id="importSection" style="display:none">
+    <button id="btn" onclick="runRename()">Rename exercises</button>
+  </div>
+  <div id="log"></div>
+<script>
+  var SUPABASE_URL      = 'https://skofblajffjorwprkknz.supabase.co';
+  var SUPABASE_ANON_KEY = 'sb_publishable_QQLElZxZJFOV4IHpbtgQLQ_L3R8SnOh';
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  function log(msg, cls) {
+    var el = document.getElementById("log");
+    var span = document.createElement("span");
+    span.className = cls || "";
+    span.textContent = msg + "\n";
+    el.appendChild(span);
+  }
+
+  async function doLogin() {
+    var email = document.getElementById("email").value.trim();
+    var pw    = document.getElementById("password").value;
+    if (!email || !pw) { log("Vul e-mail en wachtwoord in.", "err"); return; }
+    var res = await sb.auth.signInWithPassword({ email: email, password: pw });
+    if (res.error) { log("✗ " + res.error.message, "err"); return; }
+    document.getElementById("loginForm").style.display = "none";
+    document.getElementById("importSection").style.display = "block";
+    log("✓ Ingelogd als " + res.data.user.email, "ok");
+  }
+
+  var RENAMES = [
+    { from: "Chin ups",             to: "Chin up"                  },
+    { from: "Prone leg curl (uni)", to: "Prone leg curl"           },
+    { from: "Leg press linear",     to: "Linear leg press"         },
+    { from: "Face pull",            to: "Half kneeling face pull"  }
+  ];
+
+  async function runRename() {
+    document.getElementById("btn").disabled = true;
+    var userRes = await sb.auth.getUser();
+    if (userRes.error || !userRes.data.user) { log("Niet ingelogd.", "err"); return; }
+    var userId = userRes.data.user.id;
+
+    // ── 1. Rename in exercise_library ────────────────────────────────────────
+    log("── Exercise library ─────────────────────────────");
+    var libRes = await sb.from("exercise_library").select("id,name").eq("user_id", userId);
+    if (libRes.error) { log("✗ " + libRes.error.message, "err"); document.getElementById("btn").disabled = false; return; }
+    var libMap = {};
+    (libRes.data || []).forEach(function(e){ libMap[e.name.toLowerCase()] = e; });
+
+    for (var i = 0; i < RENAMES.length; i++) {
+      var r = RENAMES[i];
+      var fromEntry = libMap[r.from.toLowerCase()];
+      var toEntry   = libMap[r.to.toLowerCase()];
+
+      if (!fromEntry) {
+        log("  skip: \"" + r.from + "\" not found in library", "skip");
+        continue;
+      }
+      if (toEntry) {
+        // target already exists — delete the duplicate (old name)
+        var delRes = await sb.from("exercise_library").delete().eq("id", fromEntry.id);
+        if (delRes.error) { log("  ✗ delete \"" + r.from + "\": " + delRes.error.message, "err"); }
+        else { log("  ✓ deleted duplicate \"" + r.from + "\" (target \"" + r.to + "\" already exists)", "ok"); }
+      } else {
+        var upRes = await sb.from("exercise_library").update({ name: r.to }).eq("id", fromEntry.id);
+        if (upRes.error) { log("  ✗ rename \"" + r.from + "\": " + upRes.error.message, "err"); }
+        else { log("  ✓ renamed \"" + r.from + "\" → \"" + r.to + "\"", "ok"); }
+      }
+    }
+
+    // ── 2. Update exercises JSONB in all sessions ─────────────────────────────
+    log("── Sessions ─────────────────────────────────────");
+    var sessRes = await sb.from("sessions").select("id,exercises").eq("user_id", userId);
+    if (sessRes.error) { log("✗ " + sessRes.error.message, "err"); document.getElementById("btn").disabled = false; return; }
+    var sessions = sessRes.data || [];
+    log("  Loaded " + sessions.length + " sessions");
+
+    var updated = 0;
+    for (var j = 0; j < sessions.length; j++) {
+      var sess = sessions[j];
+      var exercises = sess.exercises;
+      if (!Array.isArray(exercises)) continue;
+      var changed = false;
+      var newExercises = exercises.map(function(ex) {
+        for (var k = 0; k < RENAMES.length; k++) {
+          if (ex.name && ex.name.toLowerCase() === RENAMES[k].from.toLowerCase()) {
+            changed = true;
+            return Object.assign({}, ex, { name: RENAMES[k].to });
+          }
+        }
+        return ex;
+      });
+      if (!changed) continue;
+      var patchRes = await sb.from("sessions").update({ exercises: newExercises }).eq("id", sess.id);
+      if (patchRes.error) { log("  ✗ session " + sess.id + ": " + patchRes.error.message, "err"); }
+      else { updated++; }
+    }
+    log("  ✓ Updated " + updated + " session(s)", "ok");
+
+    log("");
+    log("✓ Done! Refresh the app to see changes.", "ok");
+    document.getElementById("btn").textContent = "✓ Voltooid";
+  }
+</script>
+</body>
+</html>
