@@ -1798,8 +1798,8 @@
                 return(
                 <SwipeRow key={i} rowId={i} openId={setSwipeId} onOpen={setSetSwipeId} onDelete={function(){removeSet(i);}}>
                   <div style={{display:"grid",gridTemplateColumns:"24px 80px 1fr 1fr",gap:6,padding:"0 20px",paddingBottom:6,paddingTop:2,alignItems:"center"}}>
-                    <span style={{color:T.textMuted,fontSize:12,paddingTop:8,textAlign:"center"}}>{i+1}</span>
-                    <span style={{fontSize:11,color:T.textMuted,textAlign:"center"}}>{prevLabel}</span>
+                    <span style={{color:T.textMuted,fontSize:12,paddingTop:8}}>{i+1}</span>
+                    <span style={{fontSize:11,color:T.textMuted}}>{prevLabel}</span>
                     <Stepper value={s.weight} step={0.5} placeholder="kg" onChange={function(v){updateSet(i,"weight",v);}}/>
                     <Stepper value={s.reps} step={1} placeholder="reps" onChange={function(v){updateSet(i,"reps",v);}}/>
                   </div>
