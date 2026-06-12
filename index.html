@@ -1330,7 +1330,7 @@
             <SessionSearch sessions={sessions} client={client} onViewSession={props.onViewSession} onDeleteSession={props.onDeleteSession} showSearch={showSearch} onHideSearch={onHideSearch}/>
           )}
           {tab==="progressie"&&<ProgressView sessions={sessions} onExHistory={props.onExHistory} clientId={client.id} showSearch={showSearch} onHideSearch={onHideSearch}/>}
-          <div style={{position:"fixed",bottom:28,right:20,zIndex:50}}>
+          <div style={{position:"fixed",bottom:58,right:20,zIndex:50}}>
             <button onClick={startSession} style={{background:T.accent,border:"none",color:"#fff",height:64,width:64,borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 16px rgba(220,79,42,0.40)"}}>
               <svg width="32" height="32" viewBox="0 0 16 16" fill="none"><line x1="8" y1="3" x2="8" y2="13" stroke="#fff" strokeWidth="2" strokeLinecap="round"/><line x1="3" y1="8" x2="13" y2="8" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>
             </button>
@@ -1438,7 +1438,7 @@
             <textarea value={session.notes} onChange={function(e){onChange({...session,notes:e.target.value});}} placeholder="Opmerkingen over de hele sessie..." rows={3} style={{...iS,marginTop:5,resize:"none"}}/>
           </div>
           <div style={{height:100}}/>
-          <div style={{position:"fixed",bottom:28,right:20,zIndex:50}}>
+          <div style={{position:"fixed",bottom:58,right:20,zIndex:50}}>
             <button onClick={function(){setShowAdd(true);setShowSuperset(false);}} style={{background:T.accent,border:"none",color:"#fff",height:64,width:64,borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 16px rgba(220,79,42,0.40)"}}>
               <svg width="32" height="32" viewBox="0 0 16 16" fill="none"><line x1="8" y1="3" x2="8" y2="13" stroke="#fff" strokeWidth="2" strokeLinecap="round"/><line x1="3" y1="8" x2="13" y2="8" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>
             </button>
