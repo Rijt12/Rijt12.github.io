@@ -874,7 +874,7 @@
       return (
         <div style={{display:"flex",alignItems:"center",border:"1px solid "+T.border,borderRadius:4,background:T.bg,overflow:"hidden"}}>
           <button onMouseDown={function(e){e.preventDefault();dec();}} style={{background:"none",border:"none",borderRight:"1px solid "+T.border,color:T.textMid,fontSize:18,lineHeight:1,padding:"0 10px",height:38,cursor:"pointer",flexShrink:0}}>−</button>
-          <input type="number" inputMode={step<1?"decimal":"numeric"} value={val} onChange={function(e){props.onChange(e.target.value);}} placeholder={props.placeholder} style={{flex:1,background:"none",border:"none",color:T.text,fontSize:13,textAlign:"center",padding:"8px 2px",minWidth:0,outline:"none"}}/>
+          <input type="number" inputMode={step<1?"decimal":"numeric"} value={val} onChange={function(e){props.onChange(e.target.value);}} onFocus={function(e){e.target.select();}} placeholder={props.placeholder} style={{flex:1,background:"none",border:"none",color:T.text,fontSize:13,textAlign:"center",padding:"8px 2px",minWidth:0,outline:"none"}}/>
           <button onMouseDown={function(e){e.preventDefault();inc();}} style={{background:"none",border:"none",borderLeft:"1px solid "+T.border,color:T.textMid,fontSize:18,lineHeight:1,padding:"0 10px",height:38,cursor:"pointer",flexShrink:0}}>+</button>
         </div>
       );
