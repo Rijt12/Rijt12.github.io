@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8"/>
-  <title>Import Valerie Gilliot → Supabase</title>
+  <title>Import Jacqueline de Greve-Timmermans → Supabase</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
   <style>
     body { font-family: sans-serif; max-width: 520px; margin: 60px auto; padding: 20px; }
@@ -16,8 +16,8 @@
   </style>
 </head>
 <body>
-  <h2>Import: Valerie Gilliot</h2>
-  <p style="font-size:13px;color:#666">Voegt Valerie Gilliot toe met 3 sessies (Q4 2025 – mei 2026). Wordt overgeslagen als ze al bestaat.</p>
+  <h2>Import: Jacqueline de Greve-Timmermans</h2>
+  <p style="font-size:13px;color:#666">Voegt Jacqueline de Greve-Timmermans toe met 5 sessies (2025 – juni 2026).</p>
   <div id="loginForm">
     <p>Log in met je Supabase app-account:</p>
     <input id="email" type="email" placeholder="E-mailadres"/>
@@ -25,7 +25,7 @@
     <button onclick="doLogin()">Inloggen</button>
   </div>
   <div id="importSection" style="display:none">
-    <button id="btn" onclick="runImport()">Importeer Valerie Gilliot</button>
+    <button id="btn" onclick="runImport()">Importeer Jacqueline de Greve-Timmermans</button>
   </div>
   <div id="log"></div>
 <script>
@@ -66,20 +66,20 @@
     if (userRes.error || !userRes.data.user) { log("Niet ingelogd.", "err"); return; }
     var userId = userRes.data.user.id;
 
-    log("Controleren of Valerie al bestaat...");
+    log("Controleren of Jacqueline al bestaat...");
     var existing = await sb.from("clients").select("id,name").eq("user_id", userId);
     if (existing.error) { log("✗ " + existing.error.message, "err"); document.getElementById("btn").disabled = false; return; }
-    if ((existing.data || []).some(function(c){ return c.name.toLowerCase() === "valerie gilliot"; })) {
-      log("⚠ Valerie Gilliot bestaat al. Import gestopt.", "skip");
+    if ((existing.data || []).some(function(c){ return c.name.toLowerCase() === "jacqueline de greve-timmermans"; })) {
+      log("⚠ Jacqueline de Greve-Timmermans bestaat al. Import gestopt.", "skip");
       document.getElementById("btn").textContent = "Al geïmporteerd";
       return;
     }
 
     var clientId = uid();
     log("Client aanmaken...");
-    var clientRes = await sb.from("clients").insert([{ id: clientId, name: "Valerie Gilliot", created_at: new Date().toISOString(), user_id: userId }]);
+    var clientRes = await sb.from("clients").insert([{ id: clientId, name: "Jacqueline de Greve-Timmermans", created_at: new Date().toISOString(), user_id: userId }]);
     if (clientRes.error) { log("✗ " + clientRes.error.message, "err"); document.getElementById("btn").disabled = false; return; }
-    log("✓ Client aangemaakt: Valerie Gilliot", "ok");
+    log("✓ Client aangemaakt: Jacqueline de Greve-Timmermans", "ok");
 
     var sessions = buildSessions(clientId);
     log("Sessies invoegen (" + sessions.length + ")...");
@@ -98,26 +98,19 @@
     var newLibExercises = [
       { name:"Split squat",              pattern:"Squat",    unilateral:true  },
       { name:"Goblet squat",             pattern:"Squat",    unilateral:false },
-      { name:"Linear leg press",         pattern:"Squat",    unilateral:false },
+      { name:"Leg press linear",         pattern:"Squat",    unilateral:false },
       { name:"Leg extension",            pattern:"Isolatie", unilateral:false },
       { name:"Hip thrust",               pattern:"Hinge",    unilateral:false },
       { name:"RDL",                      pattern:"Hinge",    unilateral:false },
-      { name:"Cable pull through",       pattern:"Hinge",    unilateral:false },
-      { name:"Hex bar DL",               pattern:"Hinge",    unilateral:false },
       { name:"Leg curl",                 pattern:"Isolatie", unilateral:false },
-      { name:"Prone leg curl",           pattern:"Isolatie", unilateral:false },
       { name:"Hip abductor",             pattern:"Isolatie", unilateral:false },
-      { name:"Hip adductor",             pattern:"Isolatie", unilateral:false },
       { name:"Lat pulldown (supinated)", pattern:"Pull",     unilateral:false },
       { name:"High to low cable row",    pattern:"Pull",     unilateral:false },
       { name:"Face pull",                pattern:"Pull",     unilateral:false },
       { name:"DB bench press",           pattern:"Push",     unilateral:false },
       { name:"Incline push up",          pattern:"Push",     unilateral:false },
-      { name:"Dips",                     pattern:"Push",     unilateral:false },
       { name:"Tricep extension cable",   pattern:"Isolatie", unilateral:true  },
-      { name:"Bicep curls cable",        pattern:"Isolatie", unilateral:true  },
-      { name:"DB lateral raise",         pattern:"Isolatie", unilateral:false },
-      { name:"Pallof press",             pattern:"Core",     unilateral:false }
+      { name:"Bicep curls cable",        pattern:"Isolatie", unilateral:true  }
     ];
 
     var toAdd = newLibExercises.filter(function(e){ return !existingNames.includes(e.name.toLowerCase()); })
@@ -131,7 +124,7 @@
     }
 
     log(""); sessions.forEach(function(s){ log("  ✓ " + s.notes, "ok"); }); log("");
-    log("✓ Import voltooid! Ververs de app om Valerie te zien.", "ok");
+    log("✓ Import voltooid! Ververs de app om Jacqueline te zien.", "ok");
     document.getElementById("btn").textContent = "✓ Voltooid";
   }
 
@@ -140,53 +133,59 @@
       return { id: uid(), clientId: clientId, date: new Date(date).toISOString(), notes: notes, exercises: exercises };
     }
     return [
-      sess("2025-12-31", "Q4 2025", [
-        makeEx("Split squat",            "Squat",    true,  [s("7","10"),s("7","10"),s("7","10")]),
-        makeEx("Goblet squat",           "Squat",    false, [s("16","10")]),
-        makeEx("Linear leg press",       "Squat",    false, [s("50","12")]),
-        makeEx("Leg extension",          "Isolatie", true,  [s("10","10")]),
-        makeEx("Leg extension",          "Isolatie", false, [s("17,5","12")]),
-        makeEx("Hip thrust",             "Hinge",    false, [s("25","12"),s("25","12")]),
-        makeEx("Cable pull through",     "Hinge",    false, [s("15","12"),s("15","12")]),
-        makeEx("Leg curl",               "Isolatie", false, [s("17,5","12"),s("17,5","12"),s("17,5","12")]),
-        makeEx("Hip abductor",           "Isolatie", false, [s("32,5","12")]),
-        makeEx("Hip adductor",           "Isolatie", false, [s("25","12")]),
-        makeEx("High to low cable row",  "Pull",     false, [s("12,5","10"),s("12,5","10")]),
-        makeEx("Face pull",              "Pull",     false, [s("12,5","")]),
-        makeEx("DB bench press",         "Push",     false, [s("7","12"),s("7","12"),s("7","12")]),
-        makeEx("Incline push up",        "Push",     false, [s("","12")], "Negatief 6"),
-        makeEx("Tricep extension cable", "Isolatie", true,  [s("7,5","12"),s("7,5","12"),s("7,5","12")]),
-        makeEx("Bicep curls cable",      "Isolatie", true,  [s("7,5","12"),s("7,5","12"),s("7,5","12")])
+      sess("2025-12-01", "2025", [
+        makeEx("Split squat",            "Squat",    true,  [s("8","10")]),
+        makeEx("Goblet squat",           "Squat",    false, [s("20","12")]),
+        makeEx("Leg press linear",       "Squat",    false, [s("60","12")]),
+        makeEx("Leg extension",          "Isolatie", false, [s("10","10"),s("10","10"),s("10","10")]),
+        makeEx("Leg extension",          "Isolatie", false, [s("22,5","10")]),
+        makeEx("Hip thrust",             "Hinge",    false, [s("45","12"),s("45","12")]),
+        makeEx("Hip thrust",             "Hinge",    false, [s("50","10"),s("50","10")]),
+        makeEx("RDL",                    "Hinge",    false, [s("32","12"),s("32","12")]),
+        makeEx("RDL",                    "Hinge",    false, [s("14","12")]),
+        makeEx("Leg curl",               "Isolatie", false, [s("27,5","12"),s("27,5","12")]),
+        makeEx("Leg curl",               "Isolatie", false, [s("27,5","12"),s("27,5","12"),s("27,5","12")]),
+        makeEx("Lat pulldown (supinated)","Pull",    false, [s("35","12"),s("35","12")]),
+        makeEx("High to low cable row",  "Pull",     false, [s("12","10"),s("12","10"),s("12","10")]),
+        makeEx("High to low cable row",  "Pull",     false, [s("15","10"),s("15","10")]),
+        makeEx("Face pull",              "Pull",     false, [s("15","12"),s("15","12")]),
+        makeEx("DB bench press",         "Push",     false, [s("7","12")]),
+        makeEx("Incline push up",        "Push",     false, [s("","12")], "Medium box"),
+        makeEx("Incline push up",        "Push",     false, [s("","10")], "Negatief 6"),
+        makeEx("Tricep extension cable", "Isolatie", true,  [s("7,5","12"),s("7,5","12"),s("7,5","12")])
+      ]),
+      sess("2026-03-31", "Maart 2026", [
+        makeEx("Split squat",            "Squat",    true,  [s("4","10"),s("4","10")]),
+        makeEx("Leg extension",          "Isolatie", false, [s("25","10")]),
+        makeEx("Hip thrust",             "Hinge",    false, [s("45","12"),s("45","12")]),
+        makeEx("Leg curl",               "Isolatie", false, [s("20","12"),s("20","12"),s("20","12")]),
+        makeEx("High to low cable row",  "Pull",     false, [s("15","8"),s("15","8")]),
+        makeEx("Incline push up",        "Push",     false, [s("","12"),s("","12"),s("","12")], "Medium box"),
+        makeEx("Tricep extension cable", "Isolatie", true,  [s("7,5","12"),s("7,5","12"),s("7,5","12")])
       ]),
       sess("2026-04-30", "April 2026", [
-        makeEx("Split squat",            "Squat",    true,  [s("4","10"),s("4","10"),s("4","10")]),
-        makeEx("Goblet squat",           "Squat",    false, [s("12","12"),s("12","12"),s("12","12")]),
-        makeEx("Linear leg press",       "Squat",    false, [s("60","10"),s("60","10")]),
-        makeEx("Leg extension",          "Isolatie", false, [s("17,5","10"),s("17,5","10"),s("17,5","10")]),
-        makeEx("Leg extension",          "Isolatie", true,  [s("10","10"),s("10","10"),s("10","10")]),
-        makeEx("Hip thrust",             "Hinge",    false, [s("25","12"),s("25","12")]),
-        makeEx("RDL",                    "Hinge",    false, [s("40","10"),s("40","10")], "Hex bar"),
-        makeEx("RDL",                    "Hinge",    false, [s("24","12")]),
-        makeEx("Prone leg curl",         "Isolatie", false, [s("15","12"),s("15","12"),s("15","12")]),
-        makeEx("Leg curl",               "Isolatie", false, [s("17,5","12")]),
-        makeEx("Hip abductor",           "Isolatie", false, [s("35","10"),s("35","10"),s("35","10")]),
-        makeEx("Hip adductor",           "Isolatie", false, [s("27,5","10"),s("27,5","10"),s("27,5","10")]),
-        makeEx("High to low cable row",  "Pull",     false, [s("10","10"),s("10","10"),s("10","10")]),
-        makeEx("Face pull",              "Pull",     false, [s("12,5","10"),s("12,5","10"),s("12,5","10")]),
-        makeEx("DB bench press",         "Push",     false, [s("9","10"),s("9","10"),s("9","10")]),
-        makeEx("Incline push up",        "Push",     false, [s("","12"),s("","12"),s("","12")], "Low box"),
-        makeEx("Incline push up",        "Push",     false, [s("",""),s("","")], "Negatief 6"),
-        makeEx("Tricep extension cable", "Isolatie", true,  [s("8,75","10"),s("8,75","10")]),
-        makeEx("Bicep curls cable",      "Isolatie", true,  [s("4","12"),s("4","12"),s("4","12")])
+        makeEx("Leg press linear",       "Squat",    false, [s("60","12"),s("60","12")]),
+        makeEx("Leg curl",               "Isolatie", false, [s("27,5","12"),s("27,5","12")]),
+        makeEx("Lat pulldown (supinated)","Pull",    false, [s("35","10")]),
+        makeEx("High to low cable row",  "Pull",     false, [s("15","8"),s("15","8")]),
+        makeEx("Incline push up",        "Push",     false, [s("","10"),s("","10"),s("","10")], "Negatief 7")
       ]),
       sess("2026-05-31", "Mei 2026", [
-        makeEx("Split squat",            "Squat",    true,  [s("6","10"),s("6","10")]),
-        makeEx("Linear leg press",       "Squat",    false, [s("60","12"),s("60","12")]),
-        makeEx("Hip abductor",           "Isolatie", false, [s("35","12"),s("35","12"),s("35","12")]),
-        makeEx("Lat pulldown (supinated)","Pull",    false, [s("25","12"),s("25","12")]),
-        makeEx("DB bench press",         "Push",     false, [s("9","10"),s("9","10")]),
-        makeEx("Incline push up",        "Push",     false, [s("","")], "6-8 reps"),
-        makeEx("Tricep extension cable", "Isolatie", true,  [s("7,5","12"),s("7,5","12"),s("7,5","12")])
+        makeEx("Split squat",            "Squat",    true,  [s("7","10")]),
+        makeEx("Hip thrust",             "Hinge",    false, [s("50","12"),s("50","12"),s("50","12")]),
+        makeEx("Leg curl",               "Isolatie", false, [s("27,5","12"),s("27,5","12")]),
+        makeEx("Hip abductor",           "Isolatie", false, [s("35","12"),s("35","12")]),
+        makeEx("Lat pulldown (supinated)","Pull",    false, [s("35","10"),s("35","10")]),
+        makeEx("Incline push up",        "Push",     false, [s("","12"),s("","12")], "Negatief 7"),
+        makeEx("Incline push up",        "Push",     false, [s("","10"),s("","10"),s("","10")], "Low box"),
+        makeEx("Tricep extension cable", "Isolatie", true,  [s("10","10"),s("10","10")])
+      ]),
+      sess("2026-06-11", "Juni 2026", [
+        makeEx("Hip thrust",             "Hinge",    false, [s("50","12"),s("50","12"),s("50","12")]),
+        makeEx("Leg curl",               "Isolatie", false, [s("27,5","10"),s("27,5","10"),s("27,5","10")]),
+        makeEx("Lat pulldown (supinated)","Pull",    false, [s("35","10"),s("35","10")]),
+        makeEx("DB bench press",         "Push",     false, [s("10","10"),s("10","10"),s("10","10")]),
+        makeEx("Bicep curls cable",      "Isolatie", true,  [s("5","10"),s("5","10"),s("5","10")])
       ])
     ];
   }
