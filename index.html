@@ -1793,17 +1793,17 @@
           </div>
           {open&&(
             <div style={{paddingBottom:14}}>
-              <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 80px",gap:6,marginBottom:5,padding:"0 20px"}}><span style={lS}>#</span><span style={lS}>kg</span><span style={lS}>reps</span><span style={lS}>prev</span></div>
+              <div style={{display:"grid",gridTemplateColumns:"24px 80px 1fr 1fr",gap:6,marginBottom:5,padding:"0 20px"}}><span style={lS}>#</span><span style={lS}>prev</span><span style={lS}>kg</span><span style={lS}>reps</span></div>
               {activeSets.map(function(s,i){
                 var ps=prevData&&prevData.sets&&prevData.sets[i];
                 var prevLabel=ps?(ps.weight?ps.weight+"×"+(ps.reps||"—"):"×"+(ps.reps||"—")):"—";
                 return(
                 <SwipeRow key={i} rowId={i} openId={setSwipeId} onOpen={setSetSwipeId} onDelete={function(){removeSet(i);}}>
-                  <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 80px",gap:6,padding:"0 20px",paddingBottom:6,paddingTop:2,alignItems:"center"}}>
+                  <div style={{display:"grid",gridTemplateColumns:"24px 80px 1fr 1fr",gap:6,padding:"0 20px",paddingBottom:6,paddingTop:2,alignItems:"center"}}>
                     <span style={{color:T.textMuted,fontSize:12,paddingTop:8,textAlign:"center"}}>{i+1}</span>
+                    <span style={{fontSize:11,color:T.textMuted,textAlign:"center"}}>{prevLabel}</span>
                     <Stepper value={s.weight} step={0.5} placeholder="kg" onChange={function(v){updateSet(i,"weight",v);}}/>
                     <Stepper value={s.reps} step={1} placeholder="reps" onChange={function(v){updateSet(i,"reps",v);}}/>
-                    <span style={{fontSize:11,color:T.textMuted,textAlign:"center"}}>{prevLabel}</span>
                   </div>
                 </SwipeRow>
               );})}
