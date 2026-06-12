@@ -1713,6 +1713,7 @@
       var [open,setOpen]=useState(true);
       var [showExMenu,setShowExMenu]=useState(false);
       var [showSsPicker,setShowSsPicker]=useState(false);
+      var [setSwipeId,setSetSwipeId]=useState(null);
       var color=PC[ex.pattern]||T.textMuted;
       var activeSets=isB?(ex.setsB||[{weight:"",reps:""}]):ex.sets;
       function getSetsB(){return ex.setsB||ex.sets.map(function(){return {weight:"",reps:""};});}
@@ -1791,26 +1792,25 @@
             </div>
           </div>
           {open&&(
-            <div style={{padding:"0 20px 14px"}}>
-              <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr",gap:6,marginBottom:5}}><span style={lS}>#</span><span style={lS}>kg</span><span style={lS}>reps</span></div>
+            <div style={{paddingBottom:14}}>
+              <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 80px",gap:6,marginBottom:5,padding:"0 20px"}}><span style={lS}>#</span><span style={lS}>kg</span><span style={lS}>reps</span><span style={lS}>prev</span></div>
               {activeSets.map(function(s,i){
                 var ps=prevData&&prevData.sets&&prevData.sets[i];
+                var prevLabel=ps?(ps.weight?ps.weight+"×"+(ps.reps||"—"):"×"+(ps.reps||"—")):"—";
                 return(
-                <div key={i} style={{marginBottom:8}}>
-                  <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr",gap:6}}>
-                    <span style={{color:T.textMuted,fontSize:12,paddingTop:10,textAlign:"center"}}>{i+1}</span>
+                <SwipeRow key={i} rowId={i} openId={setSwipeId} onOpen={setSetSwipeId} onDelete={function(){removeSet(i);}}>
+                  <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 80px",gap:6,padding:"0 20px",paddingBottom:6,paddingTop:2,alignItems:"center"}}>
+                    <span style={{color:T.textMuted,fontSize:12,paddingTop:8,textAlign:"center"}}>{i+1}</span>
                     <Stepper value={s.weight} step={0.5} placeholder="kg" onChange={function(v){updateSet(i,"weight",v);}}/>
                     <Stepper value={s.reps} step={1} placeholder="reps" onChange={function(v){updateSet(i,"reps",v);}}/>
+                    <span style={{fontSize:11,color:T.textMuted,textAlign:"center"}}>{prevLabel}</span>
                   </div>
-                  {ps&&<div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr",gap:6,marginTop:2}}>
-                    <span/>
-                    <span style={{fontSize:10,color:T.textMuted,textAlign:"center",paddingLeft:4}}>{ps.weight?ps.weight+" kg":"—"}</span>
-                    <span style={{fontSize:10,color:T.textMuted,textAlign:"center"}}>{ps.reps||"—"} reps</span>
-                  </div>}
-                </div>
+                </SwipeRow>
               );})}
+              <div style={{padding:"0 20px"}}>
               <button onClick={addSet} style={{background:"none",border:"1px dashed "+T.borderStrong,color:T.textMuted,padding:"6px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,marginTop:2,cursor:"pointer",width:"100%",borderRadius:4}}>+ Add set</button>
               <div style={{marginTop:10}}><textarea value={(isB?(ex.notesB!=null?ex.notesB:""):ex.notes)||""} onChange={function(e){if(isB){props.onChange({...ex,notesB:e.target.value});}else{props.onChange({...ex,notes:e.target.value});}}} placeholder="Notes for this exercise..." rows={2} style={{...iS,resize:"none",fontSize:12,color:T.textMid,background:T.surfaceAlt,marginTop:2}}/></div>
+              </div>
             </div>
           )}
         </div>
