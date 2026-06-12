@@ -703,7 +703,7 @@
 
           {view==="templates" && !editingTpl && (
             <div key={navKey} className="page-enter">
-              <Header title="Trainingsschema's" back={function(){goView("clients");}}/>
+              <Header title="Trainingsschema's" back={function(){goView("clients");}} rightAction={{label:"Nieuw schema", fn:function(){ setEditingTpl({id:uid(),name:"",exercises:[]}); }}}/>
               <TemplateList data={data}
                 onNew={function(){ setEditingTpl({id:uid(),name:"",exercises:[]}); }}
                 onEdit={function(tpl){ setEditingTpl({...tpl,exercises:(tpl.exercises||[]).map(function(e){return {...e,sets:e.sets||[{weight:"",reps:""}]};})}); }}
