@@ -69,17 +69,18 @@
     log("Controleren of Valerie al bestaat...");
     var existing = await sb.from("clients").select("id,name").eq("user_id", userId);
     if (existing.error) { log("✗ " + existing.error.message, "err"); document.getElementById("btn").disabled = false; return; }
-    if ((existing.data || []).some(function(c){ return c.name.toLowerCase() === "valerie gilliot"; })) {
-      log("⚠ Valerie Gilliot bestaat al. Import gestopt.", "skip");
-      document.getElementById("btn").textContent = "Al geïmporteerd";
-      return;
+    var existingClient = (existing.data || []).find(function(c){ return c.name.toLowerCase() === "valerie gilliot"; });
+    var clientId;
+    if (existingClient) {
+      clientId = existingClient.id;
+      log("✓ Bestaande client gevonden: " + existingClient.name + " — sessies worden toegevoegd.", "ok");
+    } else {
+      clientId = uid();
+      log("Client aanmaken...");
+      var clientRes = await sb.from("clients").insert([{ id: clientId, name: "Valerie Gilliot", created_at: new Date().toISOString(), user_id: userId }]);
+      if (clientRes.error) { log("✗ " + clientRes.error.message, "err"); document.getElementById("btn").disabled = false; return; }
+      log("✓ Client aangemaakt: Valerie Gilliot", "ok");
     }
-
-    var clientId = uid();
-    log("Client aanmaken...");
-    var clientRes = await sb.from("clients").insert([{ id: clientId, name: "Valerie Gilliot", created_at: new Date().toISOString(), user_id: userId }]);
-    if (clientRes.error) { log("✗ " + clientRes.error.message, "err"); document.getElementById("btn").disabled = false; return; }
-    log("✓ Client aangemaakt: Valerie Gilliot", "ok");
 
     var sessions = buildSessions(clientId);
     log("Sessies invoegen (" + sessions.length + ")...");
