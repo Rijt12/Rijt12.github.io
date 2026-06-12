@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8"/>
-  <title>Import Jacqueline de Greve-Timmermans → Supabase</title>
+  <title>Import Jacqueline de Greve - Timmermans → Supabase</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
   <style>
     body { font-family: sans-serif; max-width: 520px; margin: 60px auto; padding: 20px; }
@@ -16,8 +16,8 @@
   </style>
 </head>
 <body>
-  <h2>Import: Jacqueline de Greve-Timmermans</h2>
-  <p style="font-size:13px;color:#666">Voegt Jacqueline de Greve-Timmermans toe met 5 sessies (2025 – juni 2026).</p>
+  <h2>Import: Jacqueline de Greve - Timmermans</h2>
+  <p style="font-size:13px;color:#666">Voegt Jacqueline de Greve - Timmermans toe met 5 sessies (2025 – juni 2026).</p>
   <div id="loginForm">
     <p>Log in met je Supabase app-account:</p>
     <input id="email" type="email" placeholder="E-mailadres"/>
@@ -25,7 +25,7 @@
     <button onclick="doLogin()">Inloggen</button>
   </div>
   <div id="importSection" style="display:none">
-    <button id="btn" onclick="runImport()">Importeer Jacqueline de Greve-Timmermans</button>
+    <button id="btn" onclick="runImport()">Importeer Jacqueline de Greve - Timmermans</button>
   </div>
   <div id="log"></div>
 <script>
@@ -69,7 +69,7 @@
     log("Controleren of Jacqueline al bestaat...");
     var existing = await sb.from("clients").select("id,name").eq("user_id", userId);
     if (existing.error) { log("✗ " + existing.error.message, "err"); document.getElementById("btn").disabled = false; return; }
-    var existingClient = (existing.data || []).find(function(c){ return c.name.toLowerCase() === "jacqueline de greve-timmermans"; });
+    var existingClient = (existing.data || []).find(function(c){ return c.name.toLowerCase() === "jacqueline de greve - timmermans"; });
     var clientId;
     if (existingClient) {
       clientId = existingClient.id;
@@ -77,9 +77,9 @@
     } else {
       clientId = uid();
       log("Client aanmaken...");
-      var clientRes = await sb.from("clients").insert([{ id: clientId, name: "Jacqueline de Greve-Timmermans", created_at: new Date().toISOString(), user_id: userId }]);
+      var clientRes = await sb.from("clients").insert([{ id: clientId, name: "Jacqueline de Greve - Timmermans", created_at: new Date().toISOString(), user_id: userId }]);
       if (clientRes.error) { log("✗ " + clientRes.error.message, "err"); document.getElementById("btn").disabled = false; return; }
-      log("✓ Client aangemaakt: Jacqueline de Greve-Timmermans", "ok");
+      log("✓ Client aangemaakt: Jacqueline de Greve - Timmermans", "ok");
     }
 
     var sessions = buildSessions(clientId);
