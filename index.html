@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, interactive-widget=resizes-content"/>
@@ -336,8 +336,8 @@
           <div style={{background:T.surface,borderRadius:4,padding:24,maxWidth:320,width:"100%",boxShadow:"0 8px 32px rgba(0,0,0,0.18)"}}>
             <div style={{fontSize:14,color:T.text,lineHeight:1.6,marginBottom:20}}>{props.msg}</div>
             <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
-              <button onClick={props.onCancel} style={{padding:"8px 16px",fontSize:12,background:"none",border:"1px solid "+T.border,color:T.textMid,borderRadius:4,cursor:"pointer",textTransform:"uppercase",letterSpacing:0.4}}>Annuleer</button>
-              <button onClick={props.onConfirm} style={{padding:"8px 16px",fontSize:12,background:T.danger,border:"none",color:"#fff",borderRadius:4,cursor:"pointer",textTransform:"uppercase",letterSpacing:0.4}}>Verwijderen</button>
+              <button onClick={props.onCancel} style={{padding:"8px 16px",fontSize:12,background:"none",border:"1px solid "+T.border,color:T.textMid,borderRadius:4,cursor:"pointer",textTransform:"uppercase",letterSpacing:0.4}}>Cancel</button>
+              <button onClick={props.onConfirm} style={{padding:"8px 16px",fontSize:12,background:T.danger,border:"none",color:"#fff",borderRadius:4,cursor:"pointer",textTransform:"uppercase",letterSpacing:0.4}}>Delete</button>
             </div>
           </div>
         </div>
@@ -355,7 +355,7 @@
       var [tplClientId, setTplClientId]       = useState(null);
       var [exHistoryName, setExHistoryName]   = useState(null);
       var [prevView, setPrevView]             = useState("client");
-      var [clientTab, setClientTab]           = useState("sessies");
+      var [clientTab, setClientTab]           = useState("Sessions");
       var [toast, setToast]                   = useState(null);
       var [dlg, setDlg]                       = useState(null);
       var [saving, setSaving]                 = useState(false);
@@ -554,7 +554,7 @@
         persist({...data, sessions:newSessions, exerciseLibrary:library.concat(newExs)});
         setActiveSession(null);
         goView("client");
-        showToast(newExs.length>0 ? "Opgeslagen · "+newExs.length+" oef. aan bibliotheek toegevoegd ✓" : "Sessie opgeslagen ✓");
+        showToast(newExs.length>0 ? "Saved · "+newExs.length+" exercise(s) added to library ✓" : "Session saved ✓");
       }
 
       function saveTpl(tpl) {
@@ -566,13 +566,13 @@
           : templates.concat([tpl]);
         persist({...data, templates:newTemplates});
         setEditingTpl(null);
-        showToast('"'+tpl.name+'" opgeslagen ✓');
+        showToast('"'+tpl.name+'" saved ✓');
         if(tplClientId){goView("client");}
       }
 
       async function deleteClient(id) {
         var c = data.clients.find(function(x){ return x.id===id; });
-        var ok = await ask('Cliënt "' + (c?c.name:"") + '" verwijderen?');
+        var ok = await ask('Delete client "' + (c?c.name:"") + '"?');
         if (!ok) { return; }
         var updatedSessions = data.sessions
           .filter(function(s){
@@ -588,30 +588,30 @@
             return {...s, clientIds: s.clientIds.filter(function(cid){ return cid !== id; })};
           });
         persist({...data, clients:data.clients.filter(function(x){return x.id!==id;}), sessions:updatedSessions});
-        showToast("Cliënt verwijderd");
+        showToast("Client deleted");
       }
       async function deleteSession(id) {
         var s = data.sessions.find(function(x){ return x.id===id; });
-        var ok = await ask("Sessie van "+(s?fmtDate(s.date):"?")+" verwijderen?");
+        var ok = await ask("Delete session from "+(s?fmtDate(s.date):"?")+"?");
         if (!ok) { return; }
         persist({...data, sessions:data.sessions.filter(function(x){return x.id!==id;})});
-        showToast("Sessie verwijderd");
+        showToast("Session deleted");
       }
       async function deleteExercise(id) {
         var lib = data.exerciseLibrary || [];
         var ex = lib.find(function(e){ return e.id===id; });
-        var ok = await ask('Oefening "' + (ex?ex.name:"") + '" verwijderen?');
+        var ok = await ask('Delete exercise "' + (ex?ex.name:"") + '"?');
         if (!ok) { return; }
         persist({...data, exerciseLibrary:lib.filter(function(e){return e.id!==id;})});
-        showToast("Oefening verwijderd");
+        showToast("Exercise deleted");
       }
       async function deleteTemplate(id) {
         var templates = data.templates || [];
         var tpl = templates.find(function(t){ return t.id===id; });
-        var ok = await ask('Schema "' + (tpl?tpl.name:"") + '" verwijderen?');
+        var ok = await ask('Delete template "' + (tpl?tpl.name:"") + '"?');
         if (!ok) { return; }
         persist({...data, templates:templates.filter(function(t){return t.id!==id;})});
-        showToast("Schema verwijderd");
+        showToast("Template deleted");
       }
 
       var activeSessionDate = activeSession ? toLocalISO(activeSession.date) : null;
@@ -665,8 +665,8 @@
         <Shell saving={saving} onPullSearch={handlePullSearch}>
           {view==="clients" && (
             <div key={navKey} className="page-enter">
-              <Header title="Cliënten"
-                rightAction={{label:"Bibliotheek",fn:function(){goView("library");}}}
+              <Header title="Clients"
+                rightAction={{label:"Library",fn:function(){goView("library");}}}
               />
 
               {(function(){
@@ -676,19 +676,19 @@
                 });
                 if (!hasData) { return null; }
                 var sessClient = data.clients.find(function(c){ return c.id === (activeSession.clientIds&&activeSession.clientIds[0]); });
-                var sessClientName = sessClient ? sessClient.name.split(" ")[0] : "onbekend";
+                var sessClientName = sessClient ? sessClient.name.split(" ")[0] : "unknown";
                 return (
                   <div onClick={function(){setActiveClientId(activeSession.clientIds&&activeSession.clientIds[0]);goView("session");}} style={{margin:"12px 16px",padding:"14px 16px",background:T.accent,borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",boxShadow:"0 2px 10px rgba(220,79,42,0.30)"}}>
                     <div>
-                      <div style={{color:"#fff",fontWeight:600,fontSize:14}}>Sessie {sessClientName} bezig</div>
-                      <div style={{color:"rgba(255,255,255,0.75)",fontSize:11,marginTop:2}}>{activeSession.exercises.length} oefening{activeSession.exercises.length!==1?"en":""} · {toLocalISO(activeSession.date)}</div>
+                      <div style={{color:"#fff",fontWeight:600,fontSize:14}}>Session {sessClientName} in progress</div>
+                      <div style={{color:"rgba(255,255,255,0.75)",fontSize:11,marginTop:2}}>{activeSession.exercises.length} exercise{activeSession.exercises.length!==1?"s":""} · {toLocalISO(activeSession.date)}</div>
                     </div>
                     <div style={{color:"#fff",fontSize:20,fontWeight:300}}>→</div>
                   </div>
                 );
               })()}
-              <ClientList data={data} onSelect={function(id){setActiveClientId(id);setClientTab("sessies");goView("client");}} onDelete={deleteClient}
-                onRename={function(updatedClients){ persist({...data, clients:updatedClients}); showToast("Naam opgeslagen ✓"); }}
+              <ClientList data={data} onSelect={function(id){setActiveClientId(id);setClientTab("Sessions");goView("client");}} onDelete={deleteClient}
+                onRename={function(updatedClients){ persist({...data, clients:updatedClients}); showToast("Name saved ✓"); }}
                 showSearch={showSearch} onHideSearch={function(){setShowSearch(false);}}
               />
               <AddClientInline data={data} persist={persist} showToast={showToast}/>
@@ -698,14 +698,14 @@
 
           {view==="library" && (
             <div key={navKey} className="page-enter">
-              <Header title="Oefeningen" back={function(){goView("clients");}} rightAction={{label:"Oefening toevoegen", fn:function(){setLibTriggerAdd(true);}}}/>
+              <Header title="Exercises" back={function(){goView("clients");}} rightAction={{label:"Add exercise", fn:function(){setLibTriggerAdd(true);}}}/>
               <ExerciseLibrary data={data} persist={persist} showToast={showToast} onDelete={deleteExercise} showSearch={showSearch} onHideSearch={function(){setShowSearch(false);}} triggerAdd={libTriggerAdd} onTriggerAddDone={function(){setLibTriggerAdd(false);}}/>
             </div>
           )}
 
           {view==="templates" && !editingTpl && (
             <div key={navKey} className="page-enter">
-              <Header title="Schema's" back={function(){tplClientId?goView("client"):goView("clients");}} rightAction={{label:"Schema toevoegen", fn:function(){ setEditingTpl({id:uid(),name:"",exercises:[],client_id:tplClientId}); }}}/>
+              <Header title="Templates" back={function(){tplClientId?goView("client"):goView("clients");}} rightAction={{label:"Add template", fn:function(){ setEditingTpl({id:uid(),name:"",exercises:[],client_id:tplClientId}); }}}/>
               <TemplateList data={data} clientId={tplClientId}
                 onNew={function(){ setEditingTpl({id:uid(),name:"",exercises:[],client_id:tplClientId}); }}
                 onEdit={function(tpl){ setEditingTpl({...tpl,exercises:(tpl.exercises||[]).map(function(e){return {...e,sets:e.sets||[{weight:"",reps:""}]};})}); }}
@@ -716,8 +716,8 @@
 
           {view==="templates" && editingTpl && (
             <div key={navKey} className="page-enter">
-              <Header title={editingTpl.name||"Nieuw schema"} back={function(){setEditingTpl(null);if(tplClientId){goView("client");}}}
-                rightAction={{label:"Opslaan", fn:function(){ if(editingTpl.name.trim()){ saveTpl(editingTpl); } }}}
+              <Header title={editingTpl.name||"New template"} back={function(){setEditingTpl(null);if(tplClientId){goView("client");}}}
+                rightAction={{label:"Save", fn:function(){ if(editingTpl.name.trim()){ saveTpl(editingTpl); } }}}
               />
               <TemplateEditor template={editingTpl} onChange={setEditingTpl} library={library}/>
             </div>
@@ -733,7 +733,7 @@
                 onNewTemplate={function(){setTplClientId(activeClientId);setEditingTpl({id:uid(),name:"",exercises:[],client_id:activeClientId});goView("templates");}}
                 onLoadTemplate={function(){goView("loadTemplate");}}
                 onDeleteSession={deleteSession}
-                onExHistory={function(name){setExHistoryName(name);setClientTab("progressie");setPrevView("client");goView("exHistory");}}
+                onExHistory={function(name){setExHistoryName(name);setClientTab("Progress");setPrevView("client");goView("exHistory");}}
                 initialTab={clientTab}
                 showSearch={showSearch} onHideSearch={function(){setShowSearch(false);}}
               />
@@ -742,12 +742,11 @@
 
           {view==="loadTemplate" && (
             <div key={navKey} className="page-enter">
-              <Header title="Kies een schema" back={function(){goView("client");}}/>
+              <Header title="Choose a template" back={function(){goView("client");}}/>
               <div className="ai" style={{paddingBottom:32}}>
                 {(function(){
-                  var client=data.clients.find(function(c){return c.id===activeClientId;});
                   var clientTemplates=(data.templates||[]).filter(function(t){return t.client_id===activeClientId;});
-                  if(clientTemplates.length===0) return <div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>Nog geen schema's voor deze cliënt.</div>;
+                  if(clientTemplates.length===0) return <div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>No templates for this client yet.</div>;
                   return clientTemplates.map(function(tpl){
                     return <div key={tpl.id} className="rh" onClick={function(){
                       var exercises=tpl.exercises.map(function(e){return {id:uid(),name:e.name,pattern:e.pattern,unilateral:e.unilateral||false,isUnilateralExercise:e.unilateral||false,performedUnilateral:false,sets:(e.sets||[{weight:"",reps:""}]).map(function(s){return {weight:s.weight||"",reps:s.reps||""};}) ,notes:""};});
@@ -768,7 +767,7 @@
 
           {(view==="session"||view==="editSession") && activeSession && (
             <div key={navKey} className="page-enter">
-              <Header title={view==="session"?"Sessie bezig":"Sessie bewerken"} back={function(){goView("client");}}
+              <Header title={view==="session"?"Session in progress":"Edit session"} back={function(){goView("client");}}
                 rightAction={{label:"Finish", fn:function(){saveSession(activeSession);}}}
               />
               {(function(){
@@ -798,8 +797,8 @@
 
           {view==="viewSession" && vSession && (
             <div key={navKey} className="page-enter">
-              <Header title={"Sessie "+fmtDate(vSession.date)} back={function(){goView("client");}}
-                rightAction={{label:"Bewerk", fn:function(){setActiveSession({...vSession});goView("editSession");}}}
+              <Header title={"Session "+fmtDate(vSession.date)} back={function(){goView("client");}}
+                rightAction={{label:"Edit", fn:function(){setActiveSession({...vSession});goView("editSession");}}}
               />
               <SessionView session={vSession} client={client} allEntriesByName={allEntriesByName} data={data}/>
             </div>
@@ -814,7 +813,7 @@
 
           {view==="export" && client && (
             <div key={navKey} className="page-enter">
-              <Header title="Exporteren" back={function(){goView("client");}}/>
+              <Header title="Export" back={function(){goView("client");}}/>
               <ExportView client={client} sessions={clientSessions}/>
             </div>
           )}
@@ -869,22 +868,13 @@
     }
 
     function Header(props) {
-      var titleRef = React.useRef(null);
-      React.useEffect(function(){
-        var el = titleRef.current;
-        if (!el) return;
-        el.style.fontSize = '22px';
-        while (el.scrollWidth > el.offsetWidth && parseFloat(el.style.fontSize) > 11) {
-          el.style.fontSize = (parseFloat(el.style.fontSize) - 1) + 'px';
-        }
-      }, [props.title]);
       return (
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:0,zIndex:10}}>
-          <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0,overflow:"hidden",flex:1,marginRight:12}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
             {props.back && <button onClick={props.back} style={{background:"none",border:"none",color:T.textMuted,fontSize:18,lineHeight:1,padding:"0 4px 0 0",flexShrink:0}}>←</button>}
-            <span ref={titleRef} style={{fontFamily:"'Raleway',sans-serif",fontWeight:800,fontSize:22,letterSpacing:0.5,textTransform:"uppercase",color:T.text,whiteSpace:"nowrap",display:"block",overflow:"hidden"}}>{props.title}</span>
+            <span style={{fontFamily:"'Raleway',sans-serif",fontWeight:800,fontSize:22,letterSpacing:0.5,textTransform:"uppercase",color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{props.title}</span>
           </div>
-          <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
+          <div style={{display:"flex",gap:6,flexShrink:0,marginLeft:8,alignItems:"center"}}>
             {props.onSearch && <button onClick={props.onSearch} style={{background:"none",border:"none",color:T.textMid,height:32,width:32,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",borderRadius:4}}><svg width="17" height="17" viewBox="0 0 17 17" fill="none"><circle cx="7.5" cy="7.5" r="5.5" stroke={T.textMid} strokeWidth="1.6"/><line x1="11.5" y1="11.5" x2="15.5" y2="15.5" stroke={T.textMid} strokeWidth="1.6" strokeLinecap="round"/></svg></button>}
             {props.rightAction2 && <button onClick={props.rightAction2.fn} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,height:32,padding:"0 12px",fontSize:11,letterSpacing:0.5,textTransform:"uppercase",borderRadius:4,cursor:"pointer"}}>{props.rightAction2.label}</button>}
             {props.rightAction  && <button onClick={props.rightAction.fn}  style={{background:T.accent,border:"none",color:"#fff",height:32,padding:"0 14px",fontSize:11,fontWeight:500,letterSpacing:0.5,textTransform:"uppercase",borderRadius:4,cursor:"pointer"}}>{props.rightAction.label}</button>}
@@ -1077,7 +1067,7 @@
                   </div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontWeight:500,fontSize:14}}>{c.name}</div>
-                    <div style={{color:T.textMuted,fontSize:11,marginTop:2}}>{cs.length} sessie{cs.length!==1?"s":""}{last?" · "+fmtDate(last.date):""}</div>
+                    <div style={{color:T.textMuted,fontSize:11,marginTop:2}}>{cs.length} session{cs.length!==1?"s":""}{last?" · "+fmtDate(last.date):""}</div>
                   </div>
                 </div>
                 <button onClick={function(e){e.stopPropagation();togglePin(c.id);}} style={{background:"none",border:"none",padding:"12px 14px",cursor:"pointer",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -1095,18 +1085,18 @@
         <div>
           {showSearch&&(
             <div className="search-reveal" style={{padding:"10px 16px",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:49,zIndex:38}}>
-              <input ref={searchRef} value={search} onChange={function(e){setSearch(e.target.value);}} onBlur={function(){if(!search.trim()){onHideSearch();}}} placeholder="Zoek cliënt..." style={{...iS,margin:0}}/>
+              <input ref={searchRef} value={search} onChange={function(e){setSearch(e.target.value);}} onBlur={function(){if(!search.trim()){onHideSearch();}}} placeholder="Search client..." style={{...iS,margin:0}}/>
             </div>
           )}
           {pinned.length>0&&(
             <div>
-              <div style={{padding:"8px 20px 4px",fontSize:10,textTransform:"uppercase",letterSpacing:0.8,color:T.accent,fontWeight:600,background:T.accentBg,borderBottom:"1px solid "+T.accent+"30"}}>Vandaag</div>
+              <div style={{padding:"8px 20px 4px",fontSize:10,textTransform:"uppercase",letterSpacing:0.8,color:T.accent,fontWeight:600,background:T.accentBg,borderBottom:"1px solid "+T.accent+"30"}}>Today</div>
               {pinned.map(function(c){return renderClientRow(c,true);})}
               <div style={{height:6,background:T.bg,borderBottom:"2px solid "+T.border}}/>
             </div>
           )}
-          {filtered.length===0&&data.clients.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"48px 20px",textAlign:"center"}}>Nog geen cliënten.</div>}
-          {filtered.length===0&&data.clients.length>0&&<div style={{color:T.textMuted,fontSize:13,padding:"32px 20px",textAlign:"center"}}>Geen cliënten gevonden.</div>}
+          {filtered.length===0&&data.clients.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"48px 20px",textAlign:"center"}}>No clients yet.</div>}
+          {filtered.length===0&&data.clients.length>0&&<div style={{color:T.textMuted,fontSize:13,padding:"32px 20px",textAlign:"center"}}>No clients found.</div>}
           {filtered.map(function(c){return renderClientRow(c,false);})}
         </div>
       );
@@ -1114,17 +1104,17 @@
 
     function AddClientInline(props) {
       var [newName,setNewName]=useState(""); var [adding,setAdding]=useState(false);
-      function addClient(){if(!newName.trim()){return;}var c={id:uid(),name:newName.trim(),createdAt:new Date().toISOString()};props.persist({...props.data,clients:props.data.clients.concat([c])});setNewName("");setAdding(false);props.showToast(c.name+" toegevoegd ✓");}
+      function addClient(){if(!newName.trim()){return;}var c={id:uid(),name:newName.trim(),createdAt:new Date().toISOString()};props.persist({...props.data,clients:props.data.clients.concat([c])});setNewName("");setAdding(false);props.showToast(c.name+" added ✓");}
       return (
         <div style={{padding:"16px 20px"}}>
           {adding?(
             <div style={{display:"flex",gap:8}}>
-              <input autoFocus value={newName} onChange={function(e){setNewName(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter"){addClient();}}} placeholder="Naam cliënt..." style={{...iS,flex:1}}/>
-              <Btn accent onClick={addClient}>Voeg toe</Btn>
+              <input autoFocus value={newName} onChange={function(e){setNewName(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter"){addClient();}}} placeholder="Client name..." style={{...iS,flex:1}}/>
+              <Btn accent onClick={addClient}>Add</Btn>
               <Btn onClick={function(){setAdding(false);}}>×</Btn>
             </div>
           ):(
-            <Btn accent onClick={function(){setAdding(true);}}>+ Nieuwe cliënt</Btn>
+            <Btn accent onClick={function(){setAdding(true);}}>+ New client</Btn>
           )}
         </div>
       );
@@ -1133,7 +1123,7 @@
     function LogoutBar() {
       return (
         <div style={{padding:"32px 20px 24px",textAlign:"center"}}>
-          <button onClick={function(){ window._fbLogout(); }} style={{background:"none",border:"none",color:T.textMuted,fontSize:11,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer",opacity:0.6}}>Uitloggen</button>
+          <button onClick={function(){ window._fbLogout(); }} style={{background:"none",border:"none",color:T.textMuted,fontSize:11,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer",opacity:0.6}}>Log out</button>
         </div>
       );
     }
@@ -1146,7 +1136,7 @@
       var inputRef=useRef(null); var searchRef=useRef(null);
       var showSearch=props.showSearch||false;
       useEffect(function(){if(showSearch&&searchRef.current){searchRef.current.focus();}if(!showSearch){setSearch("");}}, [showSearch]);
-      function addExercise(){if(!newName.trim()){return;}if(library.some(function(e){return e.name.toLowerCase()===newName.trim().toLowerCase();})){props.showToast("Oefening bestaat al");return;}var ex={id:uid(),name:newName.trim(),pattern:newPat,unilateral:newUni};props.persist({...data,exerciseLibrary:library.concat([ex])});setNewName("");setNewUni(false);props.showToast(ex.name+" toegevoegd ✓");}
+      function addExercise(){if(!newName.trim()){return;}if(library.some(function(e){return e.name.toLowerCase()===newName.trim().toLowerCase();})){props.showToast("Exercise already exists");return;}var ex={id:uid(),name:newName.trim(),pattern:newPat,unilateral:newUni};props.persist({...data,exerciseLibrary:library.concat([ex])});setNewName("");setNewUni(false);props.showToast(ex.name+" added ✓");}
       function startEdit(ex){setEditingId(ex.id);setEditName(ex.name);setEditPat(ex.pattern);setEditUni(ex.unilateral||false);}
       function saveEdit(){
         if(!editName.trim()){return;}
@@ -1163,27 +1153,27 @@
           return changed?{...s,exercises:exs}:s;
         });
         props.persist({...data,exerciseLibrary:updated,sessions:updatedSessions});
-        props.showToast("Opgeslagen ✓");setEditingId(null);
+        props.showToast("Saved ✓");setEditingId(null);
       }
       useEffect(function(){if(props.triggerAdd){setAdding(true);setTimeout(function(){if(inputRef.current){inputRef.current.focus();}},50);props.onTriggerAddDone&&props.onTriggerAddDone();}}, [props.triggerAdd]);
       var filtered=library.filter(function(e){return e.name.toLowerCase().includes(search.toLowerCase());}).sort(function(a,b){return a.name.localeCompare(b.name);});
       var grouped={};filtered.forEach(function(e){if(!grouped[e.pattern]){grouped[e.pattern]=[];}grouped[e.pattern].push(e);});
       return (
         <div className="ai" style={{paddingBottom:32}}>
-          {showSearch&&<div className="search-reveal" style={{padding:"10px 16px",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:49,zIndex:38}}><input ref={searchRef} value={search} onChange={function(e){setSearch(e.target.value);}} onBlur={function(){if(!search.trim()&&props.onHideSearch){props.onHideSearch();}}} placeholder="Zoek oefening..." style={{...iS,margin:0}}/></div>}
+          {showSearch&&<div className="search-reveal" style={{padding:"10px 16px",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:49,zIndex:38}}><input ref={searchRef} value={search} onChange={function(e){setSearch(e.target.value);}} onBlur={function(){if(!search.trim()&&props.onHideSearch){props.onHideSearch();}}} placeholder="Search exercise..." style={{...iS,margin:0}}/></div>}
           <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}>
             {!adding?(
               <div style={{display:"none"}}/>
             ):(
               <div>
-                <div style={{marginBottom:10}}><Label>Naam oefening</Label><AutocompleteInput inputRef={inputRef} value={newName} onChange={setNewName} suggestions={library.map(function(e){return e.name;})} placeholder="bijv. Deadlift..." style={{marginTop:5}}/></div>
-                <div style={{marginBottom:10}}><Label>Bewegingspatroon</Label><PatternPicker value={newPat} onChange={setNewPat}/></div>
-                <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,cursor:"pointer",fontSize:13,color:T.textMid}}><input type="checkbox" checked={newUni} onChange={function(e){setNewUni(e.target.checked);}}/>Unilateraal</label>
-                <div style={{display:"flex",gap:8}}><Btn accent onClick={addExercise}>Toevoegen</Btn><Btn onClick={function(){setAdding(false);setNewName("");}}>Annuleer</Btn></div>
+                <div style={{marginBottom:10}}><Label>Exercise name</Label><AutocompleteInput inputRef={inputRef} value={newName} onChange={setNewName} suggestions={library.map(function(e){return e.name;})} placeholder="e.g. Deadlift..." style={{marginTop:5}}/></div>
+                <div style={{marginBottom:10}}><Label>Movement pattern</Label><PatternPicker value={newPat} onChange={setNewPat}/></div>
+                <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,cursor:"pointer",fontSize:13,color:T.textMid}}><input type="checkbox" checked={newUni} onChange={function(e){setNewUni(e.target.checked);}}/>Unilateral</label>
+                <div style={{display:"flex",gap:8}}><Btn accent onClick={addExercise}>Add</Btn><Btn onClick={function(){setAdding(false);setNewName("");}}>Cancel</Btn></div>
               </div>
             )}
           </div>
-          {library.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>Nog geen oefeningen.</div>}
+          {library.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>No exercises yet.</div>}
           {PATTERNS.map(function(pattern){
             var exs=grouped[pattern]; if(!exs||!exs.length){return null;} var color=PC[pattern];
             return (
@@ -1194,10 +1184,10 @@
                     <div style={{borderLeft:"3px solid "+color}}>
                       {editingId===ex.id?(
                         <div style={{padding:"12px 20px"}}>
-                          <div style={{marginBottom:10}}><Label>Naam oefening</Label><input value={editName} onChange={function(e){setEditName(e.target.value);}} style={{...iS,marginTop:5}}/></div>
-                          <div style={{marginBottom:10}}><Label>Bewegingspatroon</Label><PatternPicker value={editPat} onChange={setEditPat}/></div>
-                          <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,cursor:"pointer",fontSize:13,color:T.textMid}}><input type="checkbox" checked={editUni} onChange={function(e){setEditUni(e.target.checked);}}/>Unilateraal</label>
-                          <div style={{display:"flex",gap:8}}><Btn accent onClick={saveEdit}>Opslaan</Btn><Btn onClick={function(){setEditingId(null);}}>Annuleer</Btn></div>
+                          <div style={{marginBottom:10}}><Label>Exercise name</Label><input value={editName} onChange={function(e){setEditName(e.target.value);}} style={{...iS,marginTop:5}}/></div>
+                          <div style={{marginBottom:10}}><Label>Movement pattern</Label><PatternPicker value={editPat} onChange={setEditPat}/></div>
+                          <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,cursor:"pointer",fontSize:13,color:T.textMid}}><input type="checkbox" checked={editUni} onChange={function(e){setEditUni(e.target.checked);}}/>Unilateral</label>
+                          <div style={{display:"flex",gap:8}}><Btn accent onClick={saveEdit}>Save</Btn><Btn onClick={function(){setEditingId(null);}}>Cancel</Btn></div>
                         </div>
                       ):(
                         <div style={{padding:"12px 20px",fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</div>
@@ -1213,16 +1203,17 @@
     }
 
     function TemplateList(props) {
-      var templates=(props.data.templates||[]).filter(function(t){return props.clientId?t.client_id===props.clientId:true;});
+      var templates=props.data.templates||[];
       var [openRowId,setOpenRowId]=useState(null);
       return (
         <div className="ai" style={{paddingBottom:32}}>
-          {templates.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>Nog geen schema's.<br/>Maak een schema met vaste oefeningen, sets, kg en reps.</div>}
+          <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}><Btn accent onClick={props.onNew}>+ New template</Btn></div>
+          {templates.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>No templates yet.<br/>Create a template with fixed exercises, sets, kg and reps.</div>}
           {templates.map(function(tpl){return(
             <SwipeRow key={tpl.id} rowId={tpl.id} openId={openRowId} onOpen={setOpenRowId} background={T.surface} onDelete={function(){props.onDelete(tpl.id);}}>
             <div className="rh" onClick={function(){props.onEdit(tpl);}} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,cursor:"pointer"}}>
               <div style={{fontWeight:500,fontSize:14}}>{tpl.name}</div>
-              <div style={{fontSize:11,color:T.textMuted,marginTop:3}}>{tpl.exercises.length} oefening{tpl.exercises.length!==1?"en":""}</div>
+              <div style={{fontSize:11,color:T.textMuted,marginTop:3}}>{tpl.exercises.length} exercise{tpl.exercises.length!==1?"s":""}</div>
               <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>
                 {tpl.exercises.slice(0,5).map(function(e,i){var col=PC[e.pattern]||"#999";return <span key={i} style={{fontSize:9,padding:"2px 7px",background:col+"18",color:col,border:"1px solid "+col+"40",borderRadius:4}}>{e.name}</span>;})}
                 {tpl.exercises.length>5&&<span style={{fontSize:9,padding:"2px 6px",color:T.textMuted}}>+{tpl.exercises.length-5}</span>}
@@ -1247,8 +1238,8 @@
       var filtLib=library.filter(function(e){var inTpl=tpl.exercises.some(function(x){return x.name.toLowerCase()===e.name.toLowerCase();});return !inTpl&&e.name.toLowerCase().includes(search.toLowerCase());}).sort(function(a,b){return a.name.localeCompare(b.name);});
       return (
         <div className="ai" style={{paddingBottom:40}}>
-          <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}><Label>Naam schema</Label><input autoFocus value={tpl.name} onChange={function(e){setTpl({...tpl,name:e.target.value});}} placeholder="bijv. Kracht A, Push dag..." style={{...iS,marginTop:5}}/></div>
-          {tpl.exercises.length===0&&!showAdd&&<div style={{padding:"28px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Voeg oefeningen toe via de knop hieronder.</div>}
+          <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}><Label>Template name</Label><input autoFocus value={tpl.name} onChange={function(e){setTpl({...tpl,name:e.target.value});}} placeholder="e.g. Strength A, Push day..." style={{...iS,marginTop:5}}/></div>
+          {tpl.exercises.length===0&&!showAdd&&<div style={{padding:"28px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Add exercises using the button below.</div>}
           {tpl.exercises.map(function(ex,idx){
             var color=PC[ex.pattern]||T.textMuted;
             return (
@@ -1279,7 +1270,7 @@
           <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border}}>
             {!showAdd?(<Btn accent onClick={function(){setShowAdd(true);}}>+ Oefening toevoegen</Btn>):(
               <div style={{background:T.surface,border:"1px solid "+T.border,borderRadius:4,overflow:"hidden"}}>
-                <input autoFocus value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Zoek in bibliotheek..." style={{...iS,borderRadius:0,borderLeft:"none",borderRight:"none",borderTop:"none"}}/>
+                <input autoFocus value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Search library..." style={{...iS,borderRadius:0,borderLeft:"none",borderRight:"none",borderTop:"none"}}/>
                 <div style={{maxHeight:200,overflowY:"auto"}}>
                   {library.length===0&&<div style={{padding:14,fontSize:12,color:T.textMuted,textAlign:"center"}}>Bibliotheek is leeg.</div>}
                   {filtLib.length===0&&library.length>0&&<div style={{padding:14,fontSize:12,color:T.textMuted,textAlign:"center"}}>Geen resultaten</div>}
@@ -1301,7 +1292,7 @@
     function ClientDetail(props) {
       var client=props.client; var sessions=props.sessions; var data=props.data;
       var templates=(data.templates||[]).filter(function(t){return t.client_id===client.id;});
-      var [tab,setTab]=useState(props.initialTab||"sessies");
+      var [tab,setTab]=useState(props.initialTab||"Sessions");
       var showSearch=props.showSearch||false;
       var onHideSearch=props.onHideSearch||function(){};
       var [showMenu,setShowMenu]=useState(false);
@@ -1312,25 +1303,16 @@
         var exercises=tpl.exercises.map(function(e){return {id:uid(),name:e.name,pattern:e.pattern,unilateral:e.unilateral||false,isUnilateralExercise:e.unilateral||false,performedUnilateral:false,sets:(e.sets||[{weight:"",reps:""}]).map(function(s){return {weight:s.weight||"",reps:s.reps||""};}) ,notes:""};});
         props.onStartSession({id:uid(),clientId:client.id,clientIds:[client.id],date:new Date().toISOString(),exercises:exercises,notes:""});
       }
-      var clientNameRef = useRef(null);
-      useEffect(function(){
-        var el = clientNameRef.current;
-        if (!el) return;
-        el.style.fontSize = '22px';
-        while (el.scrollWidth > el.offsetWidth && parseFloat(el.style.fontSize) > 11) {
-          el.style.fontSize = (parseFloat(el.style.fontSize) - 1) + 'px';
-        }
-      }, [client.name]);
       return (
         <div className="ai">
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:0,zIndex:50}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0,overflow:"hidden",flex:1,marginRight:12}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:0,zIndex:10}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
               <button onClick={function(){props.onBack?props.onBack():history.back();}} style={{background:"none",border:"none",color:T.textMuted,fontSize:18,lineHeight:1,padding:"0 4px 0 0",flexShrink:0}}>←</button>
-              <span ref={clientNameRef} style={{fontFamily:"'Raleway',sans-serif",fontWeight:800,fontSize:22,letterSpacing:0.5,textTransform:"uppercase",color:T.text,whiteSpace:"nowrap",display:"block",overflow:"hidden"}}>{client.name}</span>
+              <span style={{fontFamily:"'Raleway',sans-serif",fontWeight:800,fontSize:22,letterSpacing:0.5,textTransform:"uppercase",color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{client.name}</span>
             </div>
             <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
               <div style={{position:"relative"}}>
-                <button onClick={function(){setShowMenu(!showMenu);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:18,borderRadius:4,lineHeight:1,display:"flex",flexDirection:"column",gap:3,alignItems:"center",justifyContent:"center",height:32,width:32}}>
+                <button onClick={function(){setShowMenu(!showMenu);setShowTplPicker(false);}} style={{background:"none",border:"1px solid "+T.border,color:T.textMid,padding:"5px 10px",fontSize:18,borderRadius:4,lineHeight:1,display:"flex",flexDirection:"column",gap:3,alignItems:"center",justifyContent:"center",height:32,width:32}}>
                   <span style={{width:3,height:3,borderRadius:"50%",background:T.textMid,display:"block"}}/>
                   <span style={{width:3,height:3,borderRadius:"50%",background:T.textMid,display:"block"}}/>
                   <span style={{width:3,height:3,borderRadius:"50%",background:T.textMid,display:"block"}}/>
@@ -1338,21 +1320,21 @@
                 {showMenu&&<div onClick={function(){setShowMenu(false);}} style={{position:"fixed",inset:0,zIndex:99}}/>}
                 {showMenu&&(
                   <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:T.surface,border:"1px solid "+T.border,borderRadius:6,boxShadow:"0 4px 16px rgba(0,0,0,0.10)",zIndex:100,minWidth:160,overflow:"hidden"}}>
-                    <button onClick={function(){setShowMenu(false);props.onNewTemplate();}} style={{display:"block",width:"100%",padding:"12px 16px",background:"none",border:"none",borderBottom:"1px solid "+T.border,color:T.text,fontSize:13,textAlign:"left",cursor:"pointer"}}>Schema toevoegen</button>
-                    {templates.length>0&&<button onClick={function(){setShowMenu(false);props.onLoadTemplate();}} style={{display:"block",width:"100%",padding:"12px 16px",background:"none",border:"none",borderBottom:"1px solid "+T.border,color:T.text,fontSize:13,textAlign:"left",cursor:"pointer"}}>Schema laden</button>}
-                    <button onClick={function(){setShowMenu(false);props.onExport();}} style={{display:"block",width:"100%",padding:"12px 16px",background:"none",border:"none",color:T.text,fontSize:13,textAlign:"left",cursor:"pointer"}}>Exporteer</button>
+                    <button onClick={function(){setShowMenu(false);props.onNewTemplate();}} style={{display:"block",width:"100%",padding:"12px 16px",background:"none",border:"none",borderBottom:"1px solid "+T.border,color:T.text,fontSize:13,textAlign:"left",cursor:"pointer"}}>Add template</button>
+                    {templates.length>0&&<button onClick={function(){setShowMenu(false);props.onLoadTemplate();}} style={{display:"block",width:"100%",padding:"12px 16px",background:"none",border:"none",borderBottom:"1px solid "+T.border,color:T.text,fontSize:13,textAlign:"left",cursor:"pointer"}}>Load template</button>}
+                    <button onClick={function(){setShowMenu(false);props.onExport();}} style={{display:"block",width:"100%",padding:"12px 16px",background:"none",border:"none",color:T.text,fontSize:13,textAlign:"left",cursor:"pointer"}}>Export</button>
                   </div>
                 )}
               </div>
             </div>
           </div>
           <div style={{display:"flex",background:T.surface,borderBottom:"1px solid "+T.border,position:"sticky",top:49,zIndex:39}}>
-            {["sessies","progressie"].map(function(t){return <button key={t} onClick={function(){setTab(t);}} style={{flex:1,padding:"11px 0",background:"none",border:"none",color:tab===t?T.text:T.textMuted,borderBottom:tab===t?"2px solid "+T.accent:"2px solid transparent",fontSize:11,textTransform:"uppercase",letterSpacing:0.8}}>{t}</button>;})}
+            {["Sessions","Progress"].map(function(t){return <button key={t} onClick={function(){setTab(t);}} style={{flex:1,padding:"11px 0",background:"none",border:"none",color:tab===t?T.text:T.textMuted,borderBottom:tab===t?"2px solid "+T.accent:"2px solid transparent",fontSize:11,textTransform:"uppercase",letterSpacing:0.8}}>{t}</button>;})}
           </div>
-          {tab==="sessies"&&(
+          {tab==="Sessions"&&(
             <SessionSearch sessions={sessions} client={client} onViewSession={props.onViewSession} onDeleteSession={props.onDeleteSession} showSearch={showSearch} onHideSearch={onHideSearch}/>
           )}
-          {tab==="progressie"&&<ProgressView sessions={sessions} onExHistory={props.onExHistory} clientId={client.id} showSearch={showSearch} onHideSearch={onHideSearch}/>}
+          {tab==="Progress"&&<ProgressView sessions={sessions} onExHistory={props.onExHistory} clientId={client.id} showSearch={showSearch} onHideSearch={onHideSearch}/>}
           <div style={{position:"fixed",bottom:58,right:20,zIndex:50}}>
             <button onClick={startSession} style={{background:T.accent,border:"none",color:"#fff",height:64,width:64,borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 16px rgba(220,79,42,0.40)"}}>
               <svg width="32" height="32" viewBox="0 0 16 16" fill="none"><line x1="8" y1="3" x2="8" y2="13" stroke="#fff" strokeWidth="2" strokeLinecap="round"/><line x1="3" y1="8" x2="13" y2="8" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>
@@ -1420,14 +1402,14 @@
           {showSuperset&&<><div onClick={function(){setShowSuperset(false);}} style={{position:"fixed",inset:0,zIndex:8,background:"rgba(0,0,0,0.25)"}}/><div style={{position:"fixed",top:48,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,zIndex:9,background:T.surface,borderBottom:"2px solid "+T.accent,boxShadow:"0 4px 12px rgba(0,0,0,0.12)"}}><AddSupersetForm library={library} onAdd={addSuperset} onCancel={function(){setShowSuperset(false);}}/></div></> }
           {showDuoPicker&&(
             <div style={{padding:"10px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}>
-              <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.6,marginBottom:8}}>Kies tweede klant voor duo-sessie</div>
+              <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.6,marginBottom:8}}>Choose second client for duo session</div>
               {allClients.filter(function(c){return c.id!==session.clientIds[0];}).map(function(c){return(
                 <div key={c.id} className="rh" onClick={function(){onDuoPick(c.id);setShowDuoPicker(false);}} style={{padding:"9px 12px",borderBottom:"1px solid "+T.border,cursor:"pointer",fontSize:13,background:T.surface,borderRadius:4,marginBottom:4}}>{c.name}</div>
               );})}
               <button onClick={function(){setShowDuoPicker(false);}} style={{marginTop:6,background:"none",border:"none",color:T.textMuted,fontSize:11,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer"}}>Annuleer</button>
             </div>
           )}
-          {session.exercises.length===0&&!showAdd&&!showSuperset&&<div style={{padding:"36px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Voeg een oefening toe om te beginnen.</div>}
+          {session.exercises.length===0&&!showAdd&&!showSuperset&&<div style={{padding:"36px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Add an exercise to get started.</div>}
           {renderList.map(function(item){
             if(item.type==="single"){
               return <ExerciseRow key={item.ex.id} ex={item.ex}
@@ -1457,13 +1439,13 @@
             />;
           })}
           <div style={{padding:"0 20px 20px"}}>
-            <Label>Notities sessie</Label>
-            <textarea value={session.notes} onChange={function(e){onChange({...session,notes:e.target.value});}} placeholder="Opmerkingen over de hele sessie..." rows={3} style={{...iS,marginTop:5,resize:"none"}}/>
+            <Label>Session notes</Label>
+            <textarea value={session.notes} onChange={function(e){onChange({...session,notes:e.target.value});}} placeholder="Session notes..." rows={3} style={{...iS,marginTop:5,resize:"none"}}/>
           </div>
           <div style={{height:100}}/>
-          <div style={{position:"fixed",bottom:58,right:20,zIndex:50}}>
-            <button onClick={function(){setShowAdd(true);setShowSuperset(false);}} style={{background:T.accent,border:"none",color:"#fff",height:64,width:64,borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 16px rgba(220,79,42,0.40)"}}>
-              <svg width="32" height="32" viewBox="0 0 16 16" fill="none"><line x1="8" y1="3" x2="8" y2="13" stroke="#fff" strokeWidth="2" strokeLinecap="round"/><line x1="3" y1="8" x2="13" y2="8" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>
+          <div style={{position:"fixed",bottom:28,right:20,zIndex:50}}>
+            <button onClick={function(){setShowAdd(true);setShowSuperset(false);}} style={{background:T.accent,border:"none",color:"#fff",height:32,width:32,borderRadius:4,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 16px rgba(220,79,42,0.40)"}}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><line x1="8" y1="3" x2="8" y2="13" stroke="#fff" strokeWidth="2" strokeLinecap="round"/><line x1="3" y1="8" x2="13" y2="8" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>
             </button>
           </div>
         </div>
@@ -1486,13 +1468,13 @@
         <div style={{background:T.surface,border:"1px solid "+T.border,borderRadius:4}}>
           <div style={{height:10,background:T.surface}}/>
           <div style={{display:"flex",borderBottom:"1px solid "+T.border}}>
-            {["library","custom"].map(function(m){return <button key={m} onClick={function(){setMode(m);}} style={{flex:1,padding:"13px 0",background:"none",border:"none",color:mode===m?T.text:T.textMuted,borderBottom:mode===m?"2px solid "+T.accent:"2px solid transparent",fontSize:11,textTransform:"uppercase",letterSpacing:0.6}}>{m==="library"?"Uit bibliotheek":"Nieuwe oefening"}</button>;})}
+            {["library","custom"].map(function(m){return <button key={m} onClick={function(){setMode(m);}} style={{flex:1,padding:"13px 0",background:"none",border:"none",color:mode===m?T.text:T.textMuted,borderBottom:mode===m?"2px solid "+T.accent:"2px solid transparent",fontSize:11,textTransform:"uppercase",letterSpacing:0.6}}>{m==="library"?"From library":"New exercise"}</button>;})}
           </div>
           {mode==="library"&&(
             <div style={{padding:14}}>
-              {library.length===0?<div style={{color:T.textMuted,fontSize:12,padding:"12px 0",textAlign:"center"}}>Geen oefeningen in bibliotheek.</div>:(
+              {library.length===0?<div style={{color:T.textMuted,fontSize:12,padding:"12px 0",textAlign:"center"}}>No exercises in library.</div>:(
                 <div>
-                  <input ref={inputRef} value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Zoek oefening..." style={{...iS,marginBottom:8}}/>
+                  <input ref={inputRef} value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Search exercise..." style={{...iS,marginBottom:8}}/>
                   <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8,alignItems:"center"}}>
                     {PATTERNS.map(function(p){var on=patternActive(p);var col=PC[p]||"#999";return <button key={p} onClick={function(){togglePattern(p);}} style={{padding:"3px 8px",fontSize:9,borderRadius:4,background:on?col+"18":"none",border:"1px solid "+(on?col:T.border),color:on?col:T.textMuted,textTransform:"uppercase",letterSpacing:0.3}}>{p}</button>;})}
                     <button onClick={function(){setActivePatterns({});}} style={{padding:"3px 8px",fontSize:9,borderRadius:4,marginLeft:2,background:"none",border:"1px solid "+T.border,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.3,display:PATTERNS.filter(function(p){return activePatterns[p]===false;}).length===0?"none":"inline-block"}}>Alles</button>
@@ -1507,10 +1489,10 @@
           )}
           {mode==="custom"&&(
             <div style={{padding:14}}>
-              <div style={{marginBottom:10}}><Label>Naam oefening</Label><AutocompleteInput inputRef={inputRef} value={customName} onChange={setCustomName} suggestions={library.map(function(e){return e.name;})} placeholder="bijv. Deadlift..." style={{marginTop:5}}/></div>
-              <div style={{marginBottom:10}}><Label>Bewegingspatroon</Label><PatternPicker value={pattern} onChange={setPattern}/></div>
+              <div style={{marginBottom:10}}><Label>Exercise name</Label><AutocompleteInput inputRef={inputRef} value={customName} onChange={setCustomName} suggestions={library.map(function(e){return e.name;})} placeholder="e.g. Deadlift..." style={{marginTop:5}}/></div>
+              <div style={{marginBottom:10}}><Label>Movement pattern</Label><PatternPicker value={pattern} onChange={setPattern}/></div>
               <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,cursor:"pointer",fontSize:13,color:T.textMid}}><input type="checkbox" checked={unilateral} onChange={function(e){setUnilateral(e.target.checked);}}/>Unilateraal</label>
-              <Btn accent onClick={addCustom}>Toevoegen</Btn>
+              <Btn accent onClick={addCustom}>Add</Btn>
             </div>
           )}
           <div style={{padding:"10px 14px",borderTop:"1px solid "+T.border}}><button onClick={props.onCancel} style={{background:"none",border:"none",color:T.textMuted,fontSize:12,textTransform:"uppercase",letterSpacing:0.5}}>Annuleer</button></div>
@@ -1610,12 +1592,12 @@
           <div style={{padding:"10px 14px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div>
               <div style={{fontSize:11,fontWeight:500,textTransform:"uppercase",letterSpacing:0.5,color:T.accent}}>Superset</div>
-              <div style={{fontSize:11,color:T.textMuted,marginTop:2}}>{step===1?"Stap 1: kies oefening A":"Stap 2: kies oefening B"}</div>
+              <div style={{fontSize:11,color:T.textMuted,marginTop:2}}>{step===1?"Step 1: choose exercise A":"Step 2: choose exercise B"}</div>
             </div>
             {step===2&&<div style={{fontSize:12,color:T.textMid,padding:"4px 8px",background:T.accentBg,borderRadius:4,border:"1px solid "+T.accent+"40"}}>A: {exA.name}</div>}
           </div>
           <div style={{padding:14}}>
-            <input ref={inputRef} value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Zoek oefening..." style={{...iS,marginBottom:8}}/>
+            <input ref={inputRef} value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Search exercise..." style={{...iS,marginBottom:8}}/>
             <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8,alignItems:"center"}}>
               {PATTERNS.map(function(p){var on=patternActive(p);var col=PC[p]||"#999";return <button key={p} onClick={function(){togglePattern(p);}} style={{padding:"3px 8px",fontSize:9,borderRadius:4,background:on?col+"18":"none",border:"1px solid "+(on?col:T.border),color:on?col:T.textMuted,textTransform:"uppercase",letterSpacing:0.3}}>{p}</button>;})}
               <button onClick={function(){setActivePatterns({});}} style={{padding:"3px 8px",fontSize:9,borderRadius:4,marginLeft:2,background:"none",border:"1px solid "+T.border,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.3,display:PATTERNS.filter(function(p){return activePatterns[p]===false;}).length===0?"none":"inline-block"}}>Alles</button>
@@ -1790,7 +1772,7 @@
               )}
               {showSsPicker&&(
                 <div style={{position:"absolute",right:0,top:"calc(100% + 2px)",background:T.surface,border:"1px solid "+T.border,borderRadius:6,boxShadow:"0 4px 16px rgba(0,0,0,0.12)",zIndex:20,minWidth:200,overflow:"hidden"}}>
-                  <div style={{padding:"10px 14px",borderBottom:"1px solid "+T.border,fontSize:11,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5}}>Koppel aan oefening</div>
+                  <div style={{padding:"10px 14px",borderBottom:"1px solid "+T.border,fontSize:11,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5}}>Link to exercise</div>
                   {(props.sessionExercises||[]).filter(function(e){return e.id!==ex.id&&!e.supersetId;}).map(function(e){return(
                     <button key={e.id} onClick={function(ev){ev.stopPropagation();props.onPairSuperset&&props.onPairSuperset(e.id);setShowSsPicker(false);}} style={{display:"block",width:"100%",padding:"11px 14px",background:"none",border:"none",borderBottom:"1px solid "+T.border,color:T.text,fontSize:13,textAlign:"left",cursor:"pointer",fontFamily:"inherit"}}>{e.name}</button>
                   );})}
@@ -1811,8 +1793,8 @@
                   <button onClick={function(){removeSet(i);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14}}>×</button>
                 </div>
               );})}
-              <button onClick={addSet} style={{background:"none",border:"1px dashed "+T.borderStrong,color:T.textMuted,padding:"6px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,marginTop:2,cursor:"pointer",width:"100%",borderRadius:4}}>+ Set toevoegen</button>
-              <div style={{marginTop:10}}><textarea value={(isB?(ex.notesB!=null?ex.notesB:""):ex.notes)||""} onChange={function(e){if(isB){props.onChange({...ex,notesB:e.target.value});}else{props.onChange({...ex,notes:e.target.value});}}} placeholder="Opmerking bij deze oefening..." rows={2} style={{...iS,resize:"none",fontSize:12,color:T.textMid,background:T.surfaceAlt,marginTop:2}}/></div>
+              <button onClick={addSet} style={{background:"none",border:"1px dashed "+T.borderStrong,color:T.textMuted,padding:"6px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,marginTop:2,cursor:"pointer",width:"100%",borderRadius:4}}>+ Add set</button>
+              <div style={{marginTop:10}}><textarea value={(isB?(ex.notesB!=null?ex.notesB:""):ex.notes)||""} onChange={function(e){if(isB){props.onChange({...ex,notesB:e.target.value});}else{props.onChange({...ex,notes:e.target.value});}}} placeholder="Notes for this exercise..." rows={2} style={{...iS,resize:"none",fontSize:12,color:T.textMid,background:T.surfaceAlt,marginTop:2}}/></div>
               {prevData&&(
                 <div style={{marginTop:10,padding:"8px 10px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:4}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
@@ -1832,7 +1814,7 @@
 
     function ExerciseHistoryPage(props) {
       var entries=props.entries||[];
-      if(entries.length===0){return <div style={{padding:"40px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Nog geen data voor deze oefening.</div>;}
+      if(entries.length===0){return <div style={{padding:"40px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>No data yet for this exercise.</div>;}
       var sorted=entries.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
       var isBodyweight=sorted.every(function(e){return !e.maxWeight||e.maxWeight===0;});
       // For bodyweight: use max reps across all sets per entry
@@ -1862,7 +1844,7 @@
       return (
         <div className="ai" style={{paddingBottom:40}}>
           <div style={{padding:"16px 20px 12px",background:T.surfaceAlt,borderBottom:"1px solid "+T.border}}>
-            <div style={{fontSize:10,color:T.textMuted,marginBottom:8,textTransform:"uppercase",letterSpacing:0.5}}>{isBodyweight?"Max reps per sessie":"Max gewicht per sessie (kg)"}</div>
+            <div style={{fontSize:10,color:T.textMuted,marginBottom:8,textTransform:"uppercase",letterSpacing:0.5}}>{isBodyweight?"Max reps per session":"Max weight per session (kg)"}</div>
             {(function(){
               var PAD={t:16,r:16,b:32,l:36};
               var W=Math.min(440,window.innerWidth-40);
@@ -1966,7 +1948,7 @@
                   {ex.notes&&<div style={{marginTop:6,fontSize:12,color:T.textMid,fontStyle:"italic",background:T.surfaceAlt,padding:"6px 10px",borderRadius:4}}>{ex.notes}</div>}
                   {prevEntry&&(
                     <div style={{marginTop:8,padding:"8px 10px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:4}}>
-                      <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Vorige sessie · {fmtDate(prevEntry.date)}</div>
+                      <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Previous session · {fmtDate(prevEntry.date)}</div>
                       <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{prevEntry.sets.map(function(s,i){return <span key={i} style={{fontSize:11,padding:"3px 7px",background:T.surface,border:"1px solid "+T.border,borderRadius:4,color:T.textMid}}>{i+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}</div>
                     </div>
                   )}
@@ -1974,7 +1956,7 @@
               </div>
             );
           })}
-          {session.notes&&<div style={{padding:"16px 20px",background:T.surface}}><Label>Notities sessie</Label><div style={{marginTop:6,fontSize:13,color:T.textMid,lineHeight:1.7}}>{session.notes}</div></div>}
+          {session.notes&&<div style={{padding:"16px 20px",background:T.surface}}><Label>Session notes</Label><div style={{marginTop:6,fontSize:13,color:T.textMid,lineHeight:1.7}}>{session.notes}</div></div>}
         </div>
       );
     }
@@ -1997,10 +1979,10 @@
         <div>
           {show&&(
           <div className="search-reveal" style={{padding:"10px 16px",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:97,zIndex:38}}>
-            <input ref={inputRef} value={q} onChange={function(e){setQ(e.target.value);}} onBlur={function(){if(!q.trim()&&props.onHideSearch){props.onHideSearch();}}} placeholder="Zoek sessie of oefening…" style={{width:"100%",padding:"7px 10px",fontSize:13,border:"1px solid "+T.border,borderRadius:6,background:T.surfaceAlt,color:T.text,outline:"none",boxSizing:"border-box"}}/>
+            <input ref={inputRef} value={q} onChange={function(e){setQ(e.target.value);}} onBlur={function(){if(!q.trim()&&props.onHideSearch){props.onHideSearch();}}} placeholder="Search session or exercise…" style={{width:"100%",padding:"7px 10px",fontSize:13,border:"1px solid "+T.border,borderRadius:6,background:T.surfaceAlt,color:T.text,outline:"none",boxSizing:"border-box"}}/>
           </div>
           )}
-          {filtered.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>Geen sessies gevonden.</div>}
+          {filtered.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>No sessions found.</div>}
           {filtered.map(function(s){return(
             <div key={s.id} className="rh" onClick={function(){props.onViewSession(s.id);}} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <div>
@@ -2064,7 +2046,7 @@
 
       var exercises=Object.values(exerciseMap).sort(function(a,b){return a.name.localeCompare(b.name);});
       var filteredEx=search.trim()?exercises.filter(function(ex){return ex.name.toLowerCase().includes(search.toLowerCase());}):exercises;
-      var periods=[["all","Alles"],["1m","1 mnd"],["3m","3 mnd"],["6m","6 mnd"],["1y","1 jaar"]];
+      var periods=[["all","All"],["1m","1 mnd"],["3m","3 mnd"],["6m","6 mnd"],["1y","1 jaar"]];
       return (
         <div>
           <div style={{display:"flex",gap:5,padding:"12px 20px",borderBottom:"1px solid "+T.border,background:T.surface,flexWrap:"wrap"}}>
@@ -2072,10 +2054,10 @@
           </div>
           {showSearch&&(
           <div className="search-reveal" style={{padding:"10px 20px",borderBottom:"1px solid "+T.border,background:T.surface,position:"sticky",top:98,zIndex:38}}>
-            <input ref={searchRef} value={search} onChange={function(e){setSearch(e.target.value);}} onBlur={function(){if(!search.trim()&&props.onHideSearch){props.onHideSearch();}}} placeholder="Zoek oefening..." style={{...iS,margin:0}}/>
+            <input ref={searchRef} value={search} onChange={function(e){setSearch(e.target.value);}} onBlur={function(){if(!search.trim()&&props.onHideSearch){props.onHideSearch();}}} placeholder="Search exercise..." style={{...iS,margin:0}}/>
           </div>
           )}
-          {filteredEx.length===0&&<div style={{padding:"40px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>{search?"Geen resultaten.":"Geen data in deze periode."}</div>}
+          {filteredEx.length===0&&<div style={{padding:"40px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>{search?"No results.":"No data in this period."}</div>}
           {filteredEx.map(function(ex){
             var sorted=ex.entries.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
             var hasWeight=sorted.some(function(e){return e.maxWeight>0;});
@@ -2213,7 +2195,7 @@
       }
 
       function buildPDF(){
-        var rangeLabel=period==="all"?"Alle sessies":period==="month"?"Deze maand":period==="3m"?"Afgelopen 3 maanden":"Dit jaar";
+        var rangeLabel=period==="all"?"All sessions":period==="month"?"This month":period==="3m"?"Last 3 months":"This year";
         var patternColors=PC;
         var cardsHTML=exList.map(function(ex){
           var color=patternColors[ex.pattern]||"#dc4f2a";
@@ -2226,7 +2208,7 @@
                 +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
                 +'<div><div style="font-weight:600;font-size:13px;color:#111">'+(ex.name)+'</div>'
                 +'<div style="font-size:10px;color:'+color+';text-transform:uppercase;letter-spacing:0.4px;margin-top:2px">'+ex.pattern+'</div>'
-                +(bestDateStr?'<div style="font-size:10px;color:#9ca3af;margin-top:2px">Beste sessie: '+bestDateStr+'</div>':'')
+                +(bestDateStr?'<div style="font-size:10px;color:#9ca3af;margin-top:2px">Best session: '+bestDateStr+'</div>':'')
                 +'</div>'
                 +'<div style="text-align:right"><div style="font-size:18px;font-weight:700;color:#111">'+bestVal+'</div>'
                 +(ex.best&&ex.best.totalVol>0?'<div style="font-size:10px;color:#9ca3af">'+ex.best.totalVol.toLocaleString("nl-NL")+' vol.</div>':"")
@@ -2257,19 +2239,19 @@
 
       return (
         <div className="ai" style={{padding:20,paddingBottom:40}}>
-          <div style={{fontSize:12,color:T.textMid,marginBottom:14,lineHeight:1.6}}>Progressierapport per oefening met lijngrafieken, exporteer als PDF via de printdialoog.</div>
+          <div style={{fontSize:12,color:T.textMid,marginBottom:14,lineHeight:1.6}}>Progress report per exercise with line charts, export as PDF via the print dialog.</div>
           <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
-            {[["all","Alles"],["year","Dit jaar"],["3m","Afgelopen 3 mnd"],["month","Deze maand"]].map(function(item){return <button key={item[0]} onClick={function(){setPeriod(item[0]);}} style={{padding:"6px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,borderRadius:4,background:period===item[0]?T.accent:T.surface,border:"1px solid "+(period===item[0]?T.accent:T.border),color:period===item[0]?"#fff":T.textMid}}>{item[1]}</button>;})}
+            {[["all","All"],["year","This year"],["3m","Last 3 mo"],["month","This month"]].map(function(item){return <button key={item[0]} onClick={function(){setPeriod(item[0]);}} style={{padding:"6px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,borderRadius:4,background:period===item[0]?T.accent:T.surface,border:"1px solid "+(period===item[0]?T.accent:T.border),color:period===item[0]?"#fff":T.textMid}}>{item[1]}</button>;})}
           </div>
           <Btn accent onClick={buildPDF} style={{marginBottom:16}}>Download PDF</Btn>
-          {exList.length===0&&<div style={{color:T.textMuted,fontSize:13,textAlign:"center",padding:"20px 0"}}>Geen sessies in deze periode.</div>}
+          {exList.length===0&&<div style={{color:T.textMuted,fontSize:13,textAlign:"center",padding:"20px 0"}}>No sessions in this period.</div>}
           {exList.map(function(ex,i){
             var color=PC[ex.pattern]||T.textMuted;
             var bestVal=ex.best?(ex.isBodyweight?(ex.best.maxReps>0?ex.best.maxReps+" reps":"—"):(ex.best.maxWeight>0?fmtW(ex.best.maxWeight)+" kg":"—")):"—";
             return(
             <div key={i} style={{background:T.surface,border:"1px solid "+T.border,borderLeft:"3px solid "+color,marginBottom:8,padding:"12px 16px",borderRadius:4}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                <div><div style={{fontWeight:500,fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</div><div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:1}}>{ex.pattern}</div>{ex.best&&<div style={{fontSize:10,color:T.textMuted,marginTop:2}}>Beste sessie: {fmtDate(ex.best.date)}</div>}</div>
+                <div><div style={{fontWeight:500,fontSize:13}}>{ex.name}{ex.unilateral&&<UniTag/>}</div><div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:1}}>{ex.pattern}</div>{ex.best&&<div style={{fontSize:10,color:T.textMuted,marginTop:2}}>Best session: {fmtDate(ex.best.date)}</div>}</div>
                 <div style={{textAlign:"right"}}><div style={{fontSize:16,fontWeight:600}}>{bestVal}</div>{ex.best&&ex.best.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{ex.best.totalVol.toLocaleString("nl-NL")} vol.</div>}</div>
               </div>
               {ex.best&&<div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:8}}>{ex.best.sets.map(function(s,si){return <span key={si} style={{fontSize:11,padding:"3px 7px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:4,color:T.textMid}}>{si+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}</div>}
