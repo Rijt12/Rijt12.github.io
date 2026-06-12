@@ -1990,7 +1990,7 @@
                   {fmtDate(s.date)}
                   {isDuo(s)&&<span style={{fontSize:9,padding:"1px 5px",background:"#ede9fe",color:"#7c3aed",borderRadius:4,textTransform:"uppercase",letterSpacing:0.3}}>DUO</span>}
                 </div>
-                <div style={{fontSize:11,color:T.textMuted,marginTop:3}}>{s.exercises.filter(function(ex){return exForClient(ex,s,client.id);}).length} oefening{s.exercises.filter(function(ex){return exForClient(ex,s,client.id);}).length!==1?"en":""}{s.notes?" · "+s.notes.slice(0,40):""}</div>
+                <div style={{fontSize:11,color:T.textMuted,marginTop:3}}>{s.exercises.filter(function(ex){return exForClient(ex,s,client.id);}).length} exercise{s.exercises.filter(function(ex){return exForClient(ex,s,client.id);}).length!==1?"s":""}{s.notes?" · "+s.notes.slice(0,40):""}</div>
                 <PatternTags exercises={s.exercises.filter(function(ex){return exForClient(ex,s,client.id);})}/>
               </div>
               <div style={{display:"flex",gap:10,alignItems:"center"}}>
