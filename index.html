@@ -1417,19 +1417,17 @@
           {session.exercises.length===0&&!showAdd&&!showSuperset&&<div style={{padding:"36px 20px",color:T.textMuted,fontSize:13,textAlign:"center"}}>Add an exercise to get started.</div>}
           {renderList.map(function(item){
             if(item.type==="single"){
-              return <SwipeRow key={item.ex.id} rowId={item.ex.id} openId={swipeOpenId} onOpen={setSwipeOpenId} onDelete={function(){deleteEx(item.idx);}}>
-                <ExerciseRow ex={item.ex}
-                  onChange={function(upd){updateEx(item.idx,upd);}}
-                  onDelete={function(){deleteEx(item.idx);}}
-                  onReorder={function(){setShowReorder(true);}}
-                  onPairSuperset={function(otherId){pairSuperset(item.ex.id,otherId);}}
-                  sessionExercises={session.exercises}
-                  prevData={prevByName[(item.ex.name||"").trim().toLowerCase()]}
-                  prevDataB={prevByNameB[(item.ex.name||"").trim().toLowerCase()]}
-                  duoClients={duoClients}
-                  onViewHistory={function(){var k=(item.ex.performedUnilateral&&item.ex.isUnilateralExercise)?item.ex.name+"__uni":item.ex.name;props.onViewExHistory(k);}}
-                />
-              </SwipeRow>;
+              return <ExerciseRow key={item.ex.id} ex={item.ex}
+                onChange={function(upd){updateEx(item.idx,upd);}}
+                onDelete={function(){deleteEx(item.idx);}}
+                onReorder={function(){setShowReorder(true);}}
+                onPairSuperset={function(otherId){pairSuperset(item.ex.id,otherId);}}
+                sessionExercises={session.exercises}
+                prevData={prevByName[(item.ex.name||"").trim().toLowerCase()]}
+                prevDataB={prevByNameB[(item.ex.name||"").trim().toLowerCase()]}
+                duoClients={duoClients}
+                onViewHistory={function(){var k=(item.ex.performedUnilateral&&item.ex.isUnilateralExercise)?item.ex.name+"__uni":item.ex.name;props.onViewExHistory(k);}}
+              />;
             }
             var ssLo=Math.min(item.idxA,item.idxB);var ssHi=Math.max(item.idxA,item.idxB);
             return <SupersetBlock key={item.ssId}
