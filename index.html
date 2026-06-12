@@ -1949,12 +1949,6 @@
                     </div>
                   );})}
                   {ex.notes&&<div style={{marginTop:6,fontSize:12,color:T.textMid,fontStyle:"italic",background:T.surfaceAlt,padding:"6px 10px",borderRadius:4}}>{ex.notes}</div>}
-                  {prevEntry&&(
-                    <div style={{marginTop:8,padding:"8px 10px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:4}}>
-                      <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Previous session · {fmtDate(prevEntry.date)}</div>
-                      <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{prevEntry.sets.map(function(s,i){return <span key={i} style={{fontSize:11,padding:"3px 7px",background:T.surface,border:"1px solid "+T.border,borderRadius:4,color:T.textMid}}>{i+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}</div>
-                    </div>
-                  )}
                 </div>
               </div>
             );
