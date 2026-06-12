@@ -703,7 +703,7 @@
 
           {view==="templates" && !editingTpl && (
             <div key={navKey} className="page-enter">
-              <Header title="Trainingsschema's" back={function(){goView("clients");}} rightAction={{label:"Nieuw schema", fn:function(){ setEditingTpl({id:uid(),name:"",exercises:[]}); }}}/>
+              <Header title="Trainingsschema's" back={function(){goView("clients");}} rightAction={{label:"Schema toevoegen", fn:function(){ setEditingTpl({id:uid(),name:"",exercises:[]}); }}}/>
               <TemplateList data={data}
                 onNew={function(){ setEditingTpl({id:uid(),name:"",exercises:[]}); }}
                 onEdit={function(tpl){ setEditingTpl({...tpl,exercises:(tpl.exercises||[]).map(function(e){return {...e,sets:e.sets||[{weight:"",reps:""}]};})}); }}
@@ -1187,7 +1187,7 @@
       var [openRowId,setOpenRowId]=useState(null);
       return (
         <div className="ai" style={{paddingBottom:32}}>
-          <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}><Btn accent onClick={props.onNew}>Nieuw schema</Btn></div>
+          <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}><Btn accent onClick={props.onNew}>Schema toevoegen</Btn></div>
           {templates.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>Nog geen schema's.<br/>Maak een schema met vaste oefeningen, sets, kg en reps.</div>}
           {templates.map(function(tpl){return(
             <SwipeRow key={tpl.id} rowId={tpl.id} openId={openRowId} onOpen={setOpenRowId} background={T.surface} onDelete={function(){props.onDelete(tpl.id);}}>
