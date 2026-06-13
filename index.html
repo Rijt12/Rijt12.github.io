@@ -1447,7 +1447,7 @@
                 prevData={prevByName[(item.ex.name||"").trim().toLowerCase()]}
                 prevDataB={prevByNameB[(item.ex.name||"").trim().toLowerCase()]}
                 duoClients={duoClients}
-                onViewHistory={function(){var k=(item.ex.performedUnilateral&&item.ex.isUnilateralExercise)?item.ex.name+"__uni":item.ex.name;props.onViewExHistory(k);}}
+                onViewHistory={function(){var k=(item.ex.performedUnilateral&&item.ex.isUnilateralExercise)?exNameKey(item.ex.name)+"__uni":exNameKey(item.ex.name);props.onViewExHistory(k);}}
               />;
             }
             var ssLo=Math.min(item.idxA,item.idxB);var ssHi=Math.max(item.idxA,item.idxB);
