@@ -9,15 +9,18 @@
     input { display: block; width: 100%; padding: 10px; margin-bottom: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
     button { padding: 10px 20px; font-size: 14px; background: #dc4f2a; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
     button:disabled { background: #94a3b8; cursor: not-allowed; }
+    select { display: block; width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; margin-top: 4px; box-sizing: border-box; }
     #log { margin-top: 20px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
     .ok   { color: #059669; }
     .err  { color: #dc2626; }
     .skip { color: #9ca3af; }
-    .session-row { padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 8px; background: #f8fafc; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-    .session-row .info { flex: 1; }
-    .session-row .date { font-size: 14px; font-weight: 500; }
-    .session-row .meta { font-size: 11px; color: #64748b; margin-top: 2px; }
-    .session-row button { padding: 6px 14px; font-size: 12px; flex-shrink: 0; }
+    .session-card { border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 12px; background: #f8fafc; overflow: hidden; }
+    .session-card .header { padding: 12px 14px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .session-card .info .date { font-size: 14px; font-weight: 500; }
+    .session-card .info .meta { font-size: 11px; color: #64748b; margin-top: 2px; }
+    .session-card .reassign { padding: 8px 14px; border-top: 1px solid #e2e8f0; background: #fff7ed; }
+    .session-card .reassign label { font-size: 11px; color: #92400e; text-transform: uppercase; letter-spacing: 0.4px; }
+    .session-card .footer { padding: 10px 14px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; }
     #sessionList { margin-top: 16px; }
   </style>
 </head>
@@ -44,7 +47,9 @@
   var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   var userId = null;
-  var clientMap = {};
+  var clientMap = {};   // id → name
+  var allClients = [];  // [{id, name}]
+  var archivedRows = [];
 
   function log(msg, cls) {
     var el = document.getElementById("log");
@@ -56,8 +61,7 @@
 
   function fmtDate(iso) {
     if (!iso) return "—";
-    var d = new Date(iso);
-    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
   }
 
   async function doLogin() {
@@ -74,50 +78,88 @@
   }
 
   async function loadArchived() {
-    log("Loading archived sessions...", "");
+    log("Loading...", "");
 
-    // Load clients for name lookup
-    var cRes = await sb.from("clients").select("id,name").eq("user_id", userId);
+    var cRes = await sb.from("clients").select("id,name").eq("user_id", userId).order("name");
     if (!cRes.error) {
-      (cRes.data || []).forEach(function(c){ clientMap[c.id] = c.name; });
+      allClients = cRes.data || [];
+      allClients.forEach(function(c){ clientMap[c.id] = c.name; });
     }
 
     var res = await sb.from("archived_sessions").select("*").eq("user_id", userId).order("archived_at", { ascending: false });
     if (res.error) { log("✗ " + res.error.message, "err"); return; }
-    var rows = res.data || [];
+    archivedRows = res.data || [];
 
     document.getElementById("log").innerHTML = "";
 
-    if (rows.length === 0) {
+    if (archivedRows.length === 0) {
       log("No archived sessions found.", "skip");
       return;
     }
 
+    renderList();
+  }
+
+  function renderList() {
     var list = document.getElementById("sessionList");
-    list.innerHTML = "<p style='font-size:13px;color:#444'>" + rows.length + " archived session(s):</p>";
+    list.innerHTML = "<p style='font-size:13px;color:#444'>" + archivedRows.length + " archived session(s):</p>";
 
-    rows.forEach(function(row) {
-      var clientName = clientMap[row.client_id] || row.client_id || "Unknown client";
+    archivedRows.forEach(function(row, idx) {
+      var knownClient = clientMap[row.client_id];
+      var clientName = knownClient || "Unknown client";
       var exCount = Array.isArray(row.exercises) ? row.exercises.length : 0;
-      var archivedDate = fmtDate(row.archived_at);
+      var needsReassign = !knownClient;
 
-      var div = document.createElement("div");
-      div.className = "session-row";
-      div.innerHTML =
-        '<div class="info">' +
-          '<div class="date">' + clientName + ' · ' + fmtDate(row.date) + '</div>' +
-          '<div class="meta">' + exCount + ' exercise(s)' + (row.notes ? ' · ' + row.notes.slice(0, 50) : '') + '</div>' +
-          '<div class="meta" style="color:#94a3b8">Archived: ' + archivedDate + '</div>' +
-        '</div>' +
-        '<button onclick="restoreSession(\'' + row.id + '\')">Restore</button>';
-      list.appendChild(div);
+      var card = document.createElement("div");
+      card.className = "session-card";
+      card.id = "card_" + idx;
+
+      var headerHtml =
+        '<div class="header">' +
+          '<div class="info">' +
+            '<div class="date">' + clientName + ' · ' + fmtDate(row.date) + '</div>' +
+            '<div class="meta">' + exCount + ' exercise(s)' + (row.notes ? ' · ' + row.notes.slice(0,50) : '') + '</div>' +
+            '<div class="meta" style="color:#94a3b8">Archived: ' + fmtDate(row.archived_at) + '</div>' +
+          '</div>' +
+        '</div>';
+
+      var reassignHtml = "";
+      if (needsReassign) {
+        var opts = allClients.map(function(c){ return '<option value="'+c.id+'">'+c.name+'</option>'; }).join("");
+        reassignHtml =
+          '<div class="reassign">' +
+            '<label>Client not found — assign to:</label>' +
+            '<select id="pick_'+idx+'">' +
+              '<option value="">— choose client —</option>' +
+              opts +
+            '</select>' +
+          '</div>';
+      }
+
+      var footerHtml =
+        '<div class="footer">' +
+          '<button onclick="restoreSession(\''+row.id+'\','+idx+')">Restore</button>' +
+        '</div>';
+
+      card.innerHTML = headerHtml + reassignHtml + footerHtml;
+      list.appendChild(card);
     });
   }
 
-  async function restoreSession(id) {
-    var res = await sb.from("archived_sessions").select("*").eq("id", id).eq("user_id", userId).single();
-    if (res.error) { log("✗ " + res.error.message, "err"); return; }
-    var row = res.data;
+  async function restoreSession(id, idx) {
+    var row = archivedRows.find(function(r){ return r.id === id; });
+    if (!row) { log("Session not found.", "err"); return; }
+
+    var targetClientId = row.client_id;
+
+    // If original client no longer exists, use picker
+    if (!clientMap[targetClientId]) {
+      var picker = document.getElementById("pick_" + idx);
+      if (!picker || !picker.value) {
+        log("⚠ Please choose a client to assign this session to.", "skip"); return;
+      }
+      targetClientId = picker.value;
+    }
 
     // Check not already in sessions
     var check = await sb.from("sessions").select("id").eq("id", id).eq("user_id", userId);
@@ -127,8 +169,8 @@
 
     var insert = await sb.from("sessions").insert([{
       id: row.id,
-      client_id: row.client_id,
-      client_ids: row.client_ids || [row.client_id],
+      client_id: targetClientId,
+      client_ids: [targetClientId],
       date: row.date,
       notes: row.notes,
       exercises: row.exercises,
@@ -136,8 +178,12 @@
     }]);
     if (insert.error) { log("✗ " + insert.error.message, "err"); return; }
 
-    var clientName = clientMap[row.client_id] || "session";
-    log("✓ Restored " + clientName + " · " + fmtDate(row.date) + " — refresh the app to see it.", "ok");
+    var clientName = clientMap[targetClientId] || targetClientId;
+    log("✓ Restored to " + clientName + " · " + fmtDate(row.date) + " — refresh the app to see it.", "ok");
+
+    // Grey out the card
+    var card = document.getElementById("card_" + idx);
+    if (card) { card.style.opacity = "0.4"; card.style.pointerEvents = "none"; }
   }
 </script>
 </body>
