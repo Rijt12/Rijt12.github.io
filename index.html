@@ -100,11 +100,13 @@
           if (userRes.error || !userRes.data.user) { console.error('not authenticated'); return null; }
           var user = userRes.data.user;
 
+          var todayStr = new Date().toISOString().slice(0,10);
           var results = await Promise.all([
             sb.from('clients').select('*').eq('user_id', user.id),
             sb.from('sessions').select('*').eq('user_id', user.id),
             sb.from('exercise_library').select('*').eq('user_id', user.id),
-            sb.from('templates').select('*').eq('user_id', user.id)
+            sb.from('templates').select('*').eq('user_id', user.id),
+            sb.from('pinned_today').select('client_ids').eq('user_id', user.id).eq('date', todayStr).maybeSingle()
           ]);
 
           var e1 = results[0].error, e2 = results[1].error,
@@ -118,6 +120,8 @@
           var sessionRows = results[1].data || [];
           var libRows = results[2].data || [];
           var tmplRows = results[3].data || [];
+          var pinnedRow = results[4].data;
+          window._loadedPinnedIds = pinnedRow ? (pinnedRow.client_ids || []) : [];
 
           var data = {
             clients: clientRows.map(function(r) {
@@ -145,6 +149,17 @@
           await _maybeBackup(data, user.id);
           return data;
         } catch(e) { console.error('load error', e); return null; }
+      };
+
+      // ── Pinned today ──────────────────────────────────────────────────────────
+      window._savePinnedToday = async function(ids) {
+        try {
+          var userRes = await sb.auth.getUser();
+          if (userRes.error || !userRes.data.user) { return; }
+          var uid = userRes.data.user.id;
+          var todayStr = new Date().toISOString().slice(0,10);
+          await sb.from('pinned_today').upsert({ user_id: uid, date: todayStr, client_ids: ids }, { onConflict: 'user_id,date' });
+        } catch(e) { console.warn('savePinnedToday error', e); }
       };
 
       // ── Save ──────────────────────────────────────────────────────────────────
@@ -1032,14 +1047,13 @@
       var [editingId,setEditingId] = useState(null);
       var [editName,setEditName] = useState("");
       var [openRowId,setOpenRowId] = useState(null);
-      var todayKey = new Date().toISOString().slice(0,10);
       var [pinnedIds,setPinnedIds] = useState(function(){
-        try{var s=localStorage.getItem("pinnedToday");if(!s){return[];}var p=JSON.parse(s);return p.date===todayKey?(p.ids||[]):[];}catch(e){return[];}
+        return window._loadedPinnedIds||[];
       });
       function togglePin(id){
         setPinnedIds(function(prev){
           var next=prev.includes(id)?prev.filter(function(x){return x!==id;}):prev.concat([id]);
-          try{localStorage.setItem("pinnedToday",JSON.stringify({date:todayKey,ids:next}));}catch(e){}
+          if(window._savePinnedToday){window._savePinnedToday(next);}
           return next;
         });
       }
