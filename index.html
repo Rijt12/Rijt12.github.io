@@ -189,8 +189,8 @@
           var sessionUpserts = (data.sessions || []).map(function(s) {
             return {
               id: s.id,
-              client_id: s.clientId || null,
-              client_ids: s.clientIds || [],
+              client_id: s.clientId || (s.clientIds && s.clientIds[0]) || null,
+              client_ids: s.clientIds || (s.clientId ? [s.clientId] : []),
               date: s.date || null,
               notes: s.notes || null,
               exercises: s.exercises || [],
