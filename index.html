@@ -216,8 +216,15 @@
           }
           if (sessionUpserts.length)
             ops.push(sb.from('sessions').upsert(sessionUpserts));
-          if (removedSessions.length)
+          if (removedSessions.length) {
+            var now2 = new Date().toISOString();
+            var archiveSessionRows = removedSessions.map(function(sid) {
+              var s = (prev.sessions || []).find(function(x){ return x.id === sid; }) || {};
+              return { id: sid, client_id: s.client_id || null, client_ids: s.client_ids || null, date: s.date || null, notes: s.notes || null, exercises: s.exercises || null, archived_at: now2, user_id: uid };
+            });
+            ops.push(sb.from('archived_sessions').upsert(archiveSessionRows));
             ops.push(sb.from('sessions').delete().in('id', removedSessions).eq('user_id', uid));
+          }
           if (libUpserts.length)
             ops.push(sb.from('exercise_library').upsert(libUpserts));
           if (removedLib.length)
