@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Restore Archived Session</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 560px; margin: 60px auto; padding: 20px; }
+    input { display: block; width: 100%; padding: 10px; margin-bottom: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { padding: 10px 20px; font-size: 14px; background: #dc4f2a; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+    button:disabled { background: #94a3b8; cursor: not-allowed; }
+    #log { margin-top: 20px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
+    .ok   { color: #059669; }
+    .err  { color: #dc2626; }
+    .skip { color: #9ca3af; }
+    .session-row { padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 8px; background: #f8fafc; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .session-row .info { flex: 1; }
+    .session-row .date { font-size: 14px; font-weight: 500; }
+    .session-row .meta { font-size: 11px; color: #64748b; margin-top: 2px; }
+    .session-row button { padding: 6px 14px; font-size: 12px; flex-shrink: 0; }
+    #sessionList { margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <h2>Restore Archived Session</h2>
+  <p style="font-size:13px;color:#666">Browse archived (deleted) sessions and restore them to the app.</p>
+
+  <div id="loginForm">
+    <p>Log in with your Supabase account:</p>
+    <input id="email" type="email" placeholder="Email address"/>
+    <input id="password" type="password" placeholder="Password"/>
+    <button onclick="doLogin()">Log in</button>
+  </div>
+
+  <div id="mainSection" style="display:none">
+    <div id="sessionList"></div>
+  </div>
+
+  <div id="log"></div>
+
+<script>
+  var SUPABASE_URL      = 'https://skofblajffjorwprkknz.supabase.co';
+  var SUPABASE_ANON_KEY = 'sb_publishable_QQLElZxZJFOV4IHpbtgQLQ_L3R8SnOh';
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  var userId = null;
+  var clientMap = {};
+
+  function log(msg, cls) {
+    var el = document.getElementById("log");
+    var span = document.createElement("span");
+    span.className = cls || "";
+    span.textContent = msg + "\n";
+    el.appendChild(span);
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return "—";
+    var d = new Date(iso);
+    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  async function doLogin() {
+    var email = document.getElementById("email").value.trim();
+    var pw    = document.getElementById("password").value;
+    if (!email || !pw) { log("Enter email and password.", "err"); return; }
+    var res = await sb.auth.signInWithPassword({ email: email, password: pw });
+    if (res.error) { log("✗ " + res.error.message, "err"); return; }
+    userId = res.data.user.id;
+    document.getElementById("loginForm").style.display = "none";
+    document.getElementById("mainSection").style.display = "block";
+    log("✓ Logged in as " + res.data.user.email, "ok");
+    await loadArchived();
+  }
+
+  async function loadArchived() {
+    log("Loading archived sessions...", "");
+
+    // Load clients for name lookup
+    var cRes = await sb.from("clients").select("id,name").eq("user_id", userId);
+    if (!cRes.error) {
+      (cRes.data || []).forEach(function(c){ clientMap[c.id] = c.name; });
+    }
+
+    var res = await sb.from("archived_sessions").select("*").eq("user_id", userId).order("archived_at", { ascending: false });
+    if (res.error) { log("✗ " + res.error.message, "err"); return; }
+    var rows = res.data || [];
+
+    document.getElementById("log").innerHTML = "";
+
+    if (rows.length === 0) {
+      log("No archived sessions found.", "skip");
+      return;
+    }
+
+    var list = document.getElementById("sessionList");
+    list.innerHTML = "<p style='font-size:13px;color:#444'>" + rows.length + " archived session(s):</p>";
+
+    rows.forEach(function(row) {
+      var clientName = clientMap[row.client_id] || row.client_id || "Unknown client";
+      var exCount = Array.isArray(row.exercises) ? row.exercises.length : 0;
+      var archivedDate = fmtDate(row.archived_at);
+
+      var div = document.createElement("div");
+      div.className = "session-row";
+      div.innerHTML =
+        '<div class="info">' +
+          '<div class="date">' + clientName + ' · ' + fmtDate(row.date) + '</div>' +
+          '<div class="meta">' + exCount + ' exercise(s)' + (row.notes ? ' · ' + row.notes.slice(0, 50) : '') + '</div>' +
+          '<div class="meta" style="color:#94a3b8">Archived: ' + archivedDate + '</div>' +
+        '</div>' +
+        '<button onclick="restoreSession(\'' + row.id + '\')">Restore</button>';
+      list.appendChild(div);
+    });
+  }
+
+  async function restoreSession(id) {
+    var res = await sb.from("archived_sessions").select("*").eq("id", id).eq("user_id", userId).single();
+    if (res.error) { log("✗ " + res.error.message, "err"); return; }
+    var row = res.data;
+
+    // Check not already in sessions
+    var check = await sb.from("sessions").select("id").eq("id", id).eq("user_id", userId);
+    if (!check.error && check.data && check.data.length > 0) {
+      log("⚠ Session already exists in app.", "skip"); return;
+    }
+
+    var insert = await sb.from("sessions").insert([{
+      id: row.id,
+      client_id: row.client_id,
+      client_ids: row.client_ids || [row.client_id],
+      date: row.date,
+      notes: row.notes,
+      exercises: row.exercises,
+      user_id: userId
+    }]);
+    if (insert.error) { log("✗ " + insert.error.message, "err"); return; }
+
+    var clientName = clientMap[row.client_id] || "session";
+    log("✓ Restored " + clientName + " · " + fmtDate(row.date) + " — refresh the app to see it.", "ok");
+  }
+</script>
+</body>
+</html>
