@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Fix Session Client ID</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 560px; margin: 60px auto; padding: 20px; }
+    input { display: block; width: 100%; padding: 10px; margin-bottom: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { padding: 10px 20px; font-size: 14px; background: #dc4f2a; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+    button:disabled { background: #94a3b8; cursor: not-allowed; }
+    select { display: block; width: 100%; padding: 9px 10px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; margin-bottom: 10px; box-sizing: border-box; }
+    #log { margin-top: 20px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
+    .ok   { color: #059669; }
+    .err  { color: #dc2626; }
+    .skip { color: #9ca3af; }
+    .card { border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; background: #f8fafc; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .card .info { flex: 1; font-size: 13px; }
+    .card .info .name { font-weight: 500; }
+    .card .info .meta { font-size: 11px; color: #64748b; margin-top: 2px; }
+    label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; display: block; margin-bottom: 4px; margin-top: 12px; }
+    #mainSection { display: none; }
+  </style>
+</head>
+<body>
+  <h2>Fix Session → Client</h2>
+  <p style="font-size:13px;color:#666">Reassign sessions that show up under the wrong client (or no client).</p>
+
+  <div id="loginForm">
+    <p>Log in with your Supabase account:</p>
+    <input id="email" type="email" placeholder="Email address"/>
+    <input id="password" type="password" placeholder="Password"/>
+    <button onclick="doLogin()">Log in</button>
+  </div>
+
+  <div id="mainSection">
+    <label>Select client to reassign sessions to:</label>
+    <select id="targetClient" onchange="loadSessions()">
+      <option value="">— choose client —</option>
+    </select>
+
+    <div id="sessionList"></div>
+  </div>
+
+  <div id="log"></div>
+
+<script>
+  var SUPABASE_URL      = 'https://skofblajffjorwprkknz.supabase.co';
+  var SUPABASE_ANON_KEY = 'sb_publishable_QQLElZxZJFOV4IHpbtgQLQ_L3R8SnOh';
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  var userId = null;
+  var allClients = [];
+  var clientMap = {};
+  var allSessions = [];
+
+  function log(msg, cls) {
+    var el = document.getElementById("log");
+    var span = document.createElement("span");
+    span.className = cls || "";
+    span.textContent = msg + "\n";
+    el.appendChild(span);
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  async function doLogin() {
+    var email = document.getElementById("email").value.trim();
+    var pw    = document.getElementById("password").value;
+    if (!email || !pw) { log("Enter email and password.", "err"); return; }
+    var res = await sb.auth.signInWithPassword({ email: email, password: pw });
+    if (res.error) { log("✗ " + res.error.message, "err"); return; }
+    userId = res.data.user.id;
+    document.getElementById("loginForm").style.display = "none";
+    document.getElementById("mainSection").style.display = "block";
+    log("✓ Logged in as " + res.data.user.email, "ok");
+    await loadClients();
+  }
+
+  async function loadClients() {
+    var res = await sb.from("clients").select("id,name").eq("user_id", userId).order("name");
+    if (res.error) { log("✗ " + res.error.message, "err"); return; }
+    allClients = res.data || [];
+    allClients.forEach(function(c){ clientMap[c.id] = c.name; });
+
+    var sel = document.getElementById("targetClient");
+    allClients.forEach(function(c){
+      var opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.name;
+      sel.appendChild(opt);
+    });
+
+    // Load all sessions
+    var sRes = await sb.from("sessions").select("id,client_id,client_ids,date,notes,exercises").eq("user_id", userId);
+    if (sRes.error) { log("✗ " + sRes.error.message, "err"); return; }
+    allSessions = sRes.data || [];
+    log("✓ Loaded " + allClients.length + " clients, " + allSessions.length + " sessions", "ok");
+  }
+
+  function loadSessions() {
+    var targetId = document.getElementById("targetClient").value;
+    var list = document.getElementById("sessionList");
+    list.innerHTML = "";
+    document.getElementById("log").innerHTML = "";
+    if (!targetId) return;
+
+    var targetName = clientMap[targetId];
+
+    // Show all sessions NOT belonging to this client
+    var others = allSessions.filter(function(s){
+      return s.client_id !== targetId && !(s.client_ids && s.client_ids.includes(targetId));
+    });
+
+    if (others.length === 0) {
+      list.innerHTML = "<p style='font-size:13px;color:#9ca3af'>No other sessions found.</p>";
+      return;
+    }
+
+    list.innerHTML = "<p style='font-size:13px;color:#444;margin-top:12px'>Sessions <strong>not</strong> linked to " + targetName + " — click Reassign to fix:</p>";
+
+    others.forEach(function(s) {
+      var currentClientName = clientMap[s.client_id] || "Unknown (" + (s.client_id||"—") + ")";
+      var exCount = Array.isArray(s.exercises) ? s.exercises.length : 0;
+
+      var card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML =
+        '<div class="info">' +
+          '<div class="name">' + fmtDate(s.date) + (s.notes ? ' · ' + s.notes.slice(0,40) : '') + '</div>' +
+          '<div class="meta">' + exCount + ' exercise(s) · currently: ' + currentClientName + '</div>' +
+        '</div>' +
+        '<button onclick="reassign(\''+s.id+'\')">Reassign</button>';
+      list.appendChild(card);
+    });
+  }
+
+  async function reassign(sessionId) {
+    var targetId = document.getElementById("targetClient").value;
+    if (!targetId) { log("Choose a client first.", "skip"); return; }
+
+    var res = await sb.from("sessions").update({ client_id: targetId, client_ids: [targetId] }).eq("id", sessionId).eq("user_id", userId);
+    if (res.error) { log("✗ " + res.error.message, "err"); return; }
+
+    // Update local copy
+    allSessions = allSessions.map(function(s){
+      return s.id === sessionId ? {...s, client_id: targetId, client_ids: [targetId]} : s;
+    });
+
+    log("✓ Session reassigned to " + clientMap[targetId] + " — refresh the app to see it.", "ok");
+    loadSessions(); // re-render
+  }
+</script>
+</body>
+</html>
