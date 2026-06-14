@@ -17,7 +17,7 @@
 </head>
 <body>
   <h2>Import: Mark van der Rijt</h2>
-  <p style="font-size:13px;color:#666">Adds Mark van der Rijt met 52 sessies (W8 2025 – W22 2026) uit trainingsoverzicht.</p>
+  <p style="font-size:13px;color:#666">Adds Mark van der Rijt met meerdere sessies per week (W8 2025 – W22 2026) uit trainingsoverzicht.</p>
   <div id="loginForm">
     <p>Log in with your Supabase account:</p>
     <input id="email" type="email" placeholder="Email address"/>
@@ -218,39 +218,77 @@
         ex("Tricep extensions",     "Isolatie", false, s4(15,8)),
       ]),
 
-      // ── W18 2025 — ma 28 apr ──────────────────────────────────────────────────
+      // ── W18 2025 — ma 28 apr (sessie 1) ─────────────────────────────────────
       sess("2025-04-28", "W18", [
         ex("Hip thrust",            "Hinge",    false, s4(60,12)),
-        ex("Leg extension",         "Isolatie", true,  [s(22.5,12),s(22.5,12),s(22.5,12),s(22.5,12),s(20,12),s(20,12),s(20,12),s(20,12)]),
+        ex("Leg extension",         "Isolatie", true,  s4(22.5,12)),
         ex("Leg curl",              "Isolatie", false, s3(45,10)),
         ex("Lat pulldown",          "Pull",     false, s2(60,8), "wide"),
         ex("High to low cable row", "Pull",     false, s4(25,12)),
         ex("Face pull",             "Pull",     false, [s(0,10)], "elastiek oranje"),
         ex("DB bench press",        "Push",     false, s3(26,8)),
-        ex("Horizontal cable fly",  "Push",     false, [s(12.5,6),s(12.5,6),s(12.5,8),s(12.5,8),s(12.5,8)]),
+        ex("Horizontal cable fly",  "Push",     false, s2(12.5,6)),
         ex("Bicep curls",           "Isolatie", false, s3(16.25,8)),
         ex("Tricep extensions",     "Isolatie", false, s4(15,8)),
       ]),
 
-      // ── W19 2025 — ma 5 mei (post ziekte) ────────────────────────────────────
+      // ── W18 2025 — do 1 mei (sessie 2) ──────────────────────────────────────
+      sess("2025-05-01", "W18", [
+        ex("Hip thrust",            "Hinge",    false, s4(60,12)),
+        ex("Leg extension",         "Isolatie", true,  s4(20,12)),
+        ex("Leg curl",              "Isolatie", false, s3(45,10)),
+        ex("Lat pulldown",          "Pull",     false, s2(60,8), "wide"),
+        ex("High to low cable row", "Pull",     false, s4(25,12)),
+        ex("Face pull",             "Pull",     false, [s(0,10)], "elastiek oranje"),
+        ex("DB bench press",        "Push",     false, s3(26,8)),
+        ex("Horizontal cable fly",  "Push",     false, s3(12.5,8)),
+        ex("Bicep curls",           "Isolatie", false, s3(16.25,8)),
+        ex("Tricep extensions",     "Isolatie", false, s4(15,8)),
+      ]),
+
+      // ── W19 2025 — ma 5 mei (post ziekte, sessie 1) ──────────────────────────
       sess("2025-05-05", "W19", [
         ex("Leg curl",              "Isolatie", false, s3(40,10)),
         ex("Lat pulldown",          "Pull",     false, s3(60,6), "neutraal"),
         ex("High to low cable row", "Pull",     false, s4(25,9)),
         ex("DB bench press",        "Push",     false, s2(24,6)),
         ex("Face pull",             "Pull",     false, [s(0,10)], "elastiek"),
-        ex("Seated bicep curls",    "Isolatie", false, [s(10,10),s(10,10),s(10,10),s(10,10),s(10,12),s(10,12),s(10,12),s(10,12)]),
+        ex("Seated bicep curls",    "Isolatie", false, s4(10,10)),
       ]),
 
-      // ── W20 2025 — ma 12 mei ──────────────────────────────────────────────────
+      // ── W19 2025 — do 8 mei (post ziekte, sessie 2) ──────────────────────────
+      sess("2025-05-08", "W19", [
+        ex("Leg curl",              "Isolatie", false, s3(40,10)),
+        ex("Lat pulldown",          "Pull",     false, s3(60,6), "neutraal"),
+        ex("High to low cable row", "Pull",     false, s4(25,9)),
+        ex("DB bench press",        "Push",     false, s2(24,6)),
+        ex("Face pull",             "Pull",     false, [s(0,10)], "elastiek"),
+        ex("Seated bicep curls",    "Isolatie", false, s4(10,12)),
+      ]),
+
+      // ── W20 2025 — ma 12 mei (sessie 1) ──────────────────────────────────────
       sess("2025-05-12", "W20", [
-        ex("Leg extension",         "Isolatie", true,  [s(27.5,10),s(27.5,10),s(30,10),s(30,10),s(30,10)]),
-        ex("Leg curl",              "Isolatie", false, [s(45,8),s(45,8),s(45,8),s(45,10),s(45,10),s(45,10)]),
+        ex("Leg extension",         "Isolatie", true,  s2(27.5,10)),
+        ex("Leg curl",              "Isolatie", false, s3(45,8)),
         ex("Lat pulldown",          "Pull",     false, [s(60,8)], "wide"),
         ex("High to low cable row", "Pull",     false, s3(25,10)),
         ex("Bent over row",         "Pull",     false, s2(28,10)),
         ex("DB bench press",        "Push",     false, s2(26,8)),
-        ex("Horizontal cable fly",  "Push",     false, [s(12.5,6),s(12.5,6),s(12.5,6),s(12.5,8),s(12.5,8),s(12.5,8)]),
+        ex("Horizontal cable fly",  "Push",     false, s3(12.5,6)),
+        ex("Landmine press",        "Push",     false, s3(27.5,8)),
+        ex("Lateral raise",         "Isolatie", false, s4(5,8)),
+        ex("Seated bicep curls",    "Isolatie", false, s4(10,8)),
+      ]),
+
+      // ── W20 2025 — do 15 mei (sessie 2) ──────────────────────────────────────
+      sess("2025-05-15", "W20", [
+        ex("Leg extension",         "Isolatie", true,  s3(30,10)),
+        ex("Leg curl",              "Isolatie", false, s3(45,10)),
+        ex("Lat pulldown",          "Pull",     false, [s(60,8)], "wide"),
+        ex("High to low cable row", "Pull",     false, s3(25,10)),
+        ex("Bent over row",         "Pull",     false, s2(28,10)),
+        ex("DB bench press",        "Push",     false, s2(26,8)),
+        ex("Horizontal cable fly",  "Push",     false, s3(12.5,8)),
         ex("Landmine press",        "Push",     false, s3(27.5,8)),
         ex("Lateral raise",         "Isolatie", false, s4(5,8)),
         ex("Seated bicep curls",    "Isolatie", false, s4(10,8)),
@@ -267,49 +305,77 @@
         ex("Tricep extensions",     "Isolatie", false, s4(15,6)),
       ]),
 
-      // ── W22 2025 — ma 26 mei ──────────────────────────────────────────────────
+      // ── W22 2025 — ma 26 mei (sessie 1) ──────────────────────────────────────
       sess("2025-05-26", "W22", [
-        ex("Hip thrust",            "Hinge",    false, [s(60,12),s(60,12),s(60,12),s(70,10),s(70,10),s(70,10)]),
-        ex("Leg extension",         "Isolatie", true,  [s(32.5,10),s(35,8),s(35,8)]),
-        ex("Leg curl",              "Isolatie", false, [s(45,8),s(45,8),s(45,8),s(47.5,8),s(47.5,8)]),
-        ex("Leg curl prone",        "Isolatie", true,  [s(17.5,10),s(17.5,10),s(17.5,10),s(17.5,8),s(17.5,8),s(17.5,8),s(17.5,8)]),
-        ex("Lat pulldown",          "Pull",     false, [s(65,10),s(65,8),s(65,8),s(65,8)], "wide"),
+        ex("Hip thrust",            "Hinge",    false, s3(60,12)),
+        ex("Leg extension",         "Isolatie", true,  [s(32.5,10)]),
+        ex("Leg curl",              "Isolatie", false, s3(45,8)),
+        ex("Leg curl prone",        "Isolatie", true,  s3(17.5,10)),
+        ex("Lat pulldown",          "Pull",     false, [s(65,10)], "wide"),
         ex("High to low cable row", "Pull",     false, s4(27.5,10)),
-        ex("DB bench press",        "Push",     false, [s(28,6),s(28,6),s(28,6),s(30,8),s(30,8)]),
+        ex("DB bench press",        "Push",     false, s3(28,6)),
         ex("Horizontal cable fly",  "Push",     false, s4(12.5,10)),
       ]),
 
-      // ── W23 2025 — ma 2 jun ───────────────────────────────────────────────────
+      // ── W22 2025 — do 29 mei (sessie 2) ──────────────────────────────────────
+      sess("2025-05-29", "W22", [
+        ex("Hip thrust",            "Hinge",    false, s3(70,10)),
+        ex("Leg extension",         "Isolatie", true,  s2(35,8)),
+        ex("Leg curl",              "Isolatie", false, s2(47.5,8)),
+        ex("Leg curl prone",        "Isolatie", true,  s4(17.5,8)),
+        ex("Lat pulldown",          "Pull",     false, s3(65,8), "wide"),
+        ex("High to low cable row", "Pull",     false, s4(27.5,10)),
+        ex("DB bench press",        "Push",     false, s2(30,8)),
+        ex("Horizontal cable fly",  "Push",     false, s4(12.5,10)),
+      ]),
+
+      // ── W23 2025 — ma 2 jun (sessie 1) ───────────────────────────────────────
       sess("2025-06-02", "W23", [
         ex("Hip thrust",            "Hinge",    false, s3(70,10)),
-        ex("Leg extension",         "Isolatie", true,  [s(35,8),s(35,8),s(35,8),s(35,8),s(35,8),s(35,8)]),
-        ex("Leg curl",              "Isolatie", false, [s(45,10),s(45,10),s(45,10),s(47.5,8),s(47.5,8),s(47.5,8)]),
-        ex("Lat pulldown",          "Pull",     false, [s(65,8),s(65,8),s(65,8),s(65,8),s(65,8),s(65,8)], "neutraal/wide"),
+        ex("Leg extension",         "Isolatie", true,  s3(35,8)),
+        ex("Leg curl",              "Isolatie", false, s3(45,10)),
+        ex("Lat pulldown",          "Pull",     false, s3(65,8), "neutraal"),
         ex("High to low cable row", "Pull",     false, s2(30,8)),
         ex("Bent over row",         "Pull",     false, s3(28,10)),
-        ex("DB bench press",        "Push",     false, [s(28,6),s(28,6),s(28,6),s(30,8),s(30,8),s(30,8)]),
+        ex("DB bench press",        "Push",     false, s3(28,6)),
         ex("Horizontal cable fly",  "Push",     false, s4(12.5,10)),
         ex("Landmine press",        "Push",     false, s2(30,8)),
         ex("Lateral raise",         "Isolatie", false, s4(5,10)),
         ex("Tricep extensions",     "Isolatie", false, s4(15,6)),
       ]),
 
-      // ── W24 2025 — ma 9 jun ───────────────────────────────────────────────────
-      sess("2025-06-09", "W24", [
-        ex("Leg extension",         "Isolatie", true,  [s(35,8),s(35,8),s(35,8),s(37.5,8),s(37.5,8)]),
+      // ── W23 2025 — do 5 jun (sessie 2) ───────────────────────────────────────
+      sess("2025-06-05", "W23", [
+        ex("Leg extension",         "Isolatie", true,  s3(35,8)),
         ex("Leg curl",              "Isolatie", false, s3(47.5,8)),
-        ex("Lat pulldown",          "Pull",     false, [s(65,10),s(65,10),s(65,10),s(55,10),s(55,10),s(55,10)], "wide/sup"),
-        ex("High to low cable row", "Pull",     false, [s(30,6),s(30,6),s(30,6),s(30,8),s(30,8)]),
-        ex("DB bench press",        "Push",     false, [s(28,6),s(28,6),s(28,6),s(28,8),s(28,8),s(28,8)]),
+        ex("Lat pulldown",          "Pull",     false, s3(65,8), "wide"),
+        ex("DB bench press",        "Push",     false, s3(30,8)),
+      ]),
+
+      // ── W24 2025 — ma 9 jun (sessie 1) ───────────────────────────────────────
+      sess("2025-06-09", "W24", [
+        ex("Leg extension",         "Isolatie", true,  s3(35,8)),
+        ex("Leg curl",              "Isolatie", false, s3(47.5,8)),
+        ex("Lat pulldown",          "Pull",     false, s3(65,10), "wide"),
+        ex("High to low cable row", "Pull",     false, s3(30,6)),
+        ex("DB bench press",        "Push",     false, s3(28,6)),
         ex("Horizontal cable fly",  "Push",     false, s3(12.5,10)),
         ex("Tricep extensions",     "Isolatie", false, s4(15,6)),
       ]),
 
-      // ── W25 2025 — ma 16 jun ──────────────────────────────────────────────────
+      // ── W24 2025 — do 12 jun (sessie 2) ──────────────────────────────────────
+      sess("2025-06-12", "W24", [
+        ex("Leg extension",         "Isolatie", true,  s2(37.5,8)),
+        ex("Lat pulldown",          "Pull",     false, s3(55,10), "sup"),
+        ex("High to low cable row", "Pull",     false, s2(30,8)),
+        ex("DB bench press",        "Push",     false, s3(28,8)),
+      ]),
+
+      // ── W25 2025 — ma 16 jun (sessie 1) ──────────────────────────────────────
       sess("2025-06-16", "W25", [
         ex("Hip thrust",            "Hinge",    false, s3(70,10)),
-        ex("Leg extension",         "Isolatie", true,  [s(37.5,8),s(37.5,8),s(37.5,8),s(37.5,8),s(37.5,8),s(37.5,8),s(37.5,8)]),
-        ex("Leg curl",              "Isolatie", false, [s(50,8),s(50,8),s(50,8),s(50,8),s(50,8),s(50,8),s(50,8)]),
+        ex("Leg extension",         "Isolatie", true,  s3(37.5,8)),
+        ex("Leg curl",              "Isolatie", false, s3(50,8)),
         ex("Lat pulldown",          "Pull",     false, s4(60,10), "sup"),
         ex("High to low cable row", "Pull",     false, s4(30,8)),
         ex("DB bench press",        "Push",     false, s2(30,8)),
@@ -319,29 +385,65 @@
         ex("Tricep extensions",     "Isolatie", false, s4(15,9)),
       ]),
 
-      // ── W26 2025 — ma 23 jun ──────────────────────────────────────────────────
+      // ── W25 2025 — do 19 jun (sessie 2) ──────────────────────────────────────
+      sess("2025-06-19", "W25", [
+        ex("Leg extension",         "Isolatie", true,  s4(37.5,8)),
+        ex("Leg curl",              "Isolatie", false, s4(50,8)),
+        ex("Lat pulldown",          "Pull",     false, s4(60,10), "sup"),
+        ex("High to low cable row", "Pull",     false, s4(30,8)),
+        ex("DB bench press",        "Push",     false, s2(30,8)),
+        ex("Horizontal cable fly",  "Push",     false, s4(12.5,8)),
+        ex("Lateral raise",         "Isolatie", false, s4(5,12)),
+        ex("Seated bicep curls",    "Isolatie", false, s3(12,10)),
+        ex("Tricep extensions",     "Isolatie", false, s4(15,9)),
+      ]),
+
+      // ── W26 2025 — ma 23 jun (sessie 1) ──────────────────────────────────────
       sess("2025-06-23", "W26", [
         ex("Leg extension",         "Isolatie", true,  s3(37.5,8)),
-        ex("Leg curl",              "Isolatie", false, [s(50,8),s(50,8),s(50,8),s(50,8),s(50,8),s(50,8)]),
-        ex("Lat pulldown",          "Pull",     false, [s(70,6),s(70,6),s(65,10),s(65,10),s(65,10),s(65,10)], "wide/sup"),
+        ex("Leg curl",              "Isolatie", false, s4(50,8)),
+        ex("Lat pulldown",          "Pull",     false, s2(70,6), "sup"),
         ex("High to low cable row", "Pull",     false, s4(30,10)),
-        ex("DB bench press",        "Push",     false, [s(30,6),s(30,6),s(30,6),s(30,8),s(30,8)]),
+        ex("DB bench press",        "Push",     false, s3(30,6)),
         ex("Horizontal cable fly",  "Push",     false, s4(12.5,12)),
         ex("Lateral raise",         "Isolatie", false, s4(5,12)),
         ex("Seated bicep curls",    "Isolatie", false, s4(12,10)),
         ex("Tricep extensions",     "Isolatie", false, s4(15,8)),
       ]),
 
-      // ── W27 2025 — ma 30 jun ──────────────────────────────────────────────────
+      // ── W26 2025 — do 26 jun (sessie 2) ──────────────────────────────────────
+      sess("2025-06-26", "W26", [
+        ex("Leg curl",              "Isolatie", false, s2(50,8)),
+        ex("Lat pulldown",          "Pull",     false, s4(65,10), "wide"),
+        ex("DB bench press",        "Push",     false, s2(30,8)),
+        ex("Horizontal cable fly",  "Push",     false, s4(12.5,12)),
+        ex("Lateral raise",         "Isolatie", false, s4(5,12)),
+        ex("Seated bicep curls",    "Isolatie", false, s4(12,10)),
+        ex("Tricep extensions",     "Isolatie", false, s4(15,8)),
+      ]),
+
+      // ── W27 2025 — ma 30 jun (sessie 1) ──────────────────────────────────────
       sess("2025-06-30", "W27", [
-        ex("Hip thrust",            "Hinge",    false, [s(70,10),s(70,10),s(70,10),s(70,10),s(70,10),s(70,10),s(70,10)]),
-        ex("Leg extension",         "Isolatie", true,  [s(37.5,8),s(37.5,8),s(37.5,8),s(37.5,8),s(37.5,8),s(37.5,8),s(37.5,8)]),
-        ex("Leg curl",              "Isolatie", false, [s(50,8),s(50,8),s(50,8),s(50,8),s(50,8),s(50,8)]),
+        ex("Hip thrust",            "Hinge",    false, s3(70,10)),
+        ex("Leg extension",         "Isolatie", true,  s4(37.5,8)),
+        ex("Leg curl",              "Isolatie", false, s4(50,8)),
         ex("Lat pulldown",          "Pull",     false, s4(70,8), "wide"),
         ex("High to low cable row", "Pull",     false, s4(30,10)),
-        ex("DB bench press",        "Push",     false, [s(30,8),s(30,8),s(30,8),s(30,8),s(30,8)]),
+        ex("DB bench press",        "Push",     false, s3(30,8)),
         ex("Horizontal cable fly",  "Push",     false, s2(13.75,8)),
         ex("Lateral raise",         "Isolatie", false, s2(6,12)),
+        ex("Seated bicep curls",    "Isolatie", false, s4(12,10)),
+        ex("Tricep extensions",     "Isolatie", false, s4(15,8)),
+      ]),
+
+      // ── W27 2025 — do 3 jul (sessie 2) ───────────────────────────────────────
+      sess("2025-07-03", "W27", [
+        ex("Hip thrust",            "Hinge",    false, s4(70,10)),
+        ex("Leg extension",         "Isolatie", true,  s3(37.5,8)),
+        ex("Leg curl",              "Isolatie", false, s2(50,8)),
+        ex("Lat pulldown",          "Pull",     false, s4(70,8), "wide"),
+        ex("High to low cable row", "Pull",     false, s4(30,10)),
+        ex("DB bench press",        "Push",     false, s3(30,8)),
         ex("Seated bicep curls",    "Isolatie", false, s4(12,10)),
         ex("Tricep extensions",     "Isolatie", false, s4(15,8)),
       ]),
@@ -380,75 +482,137 @@
         ex("Leg curl",              "Isolatie", false, s4(45,10)),
       ]),
 
-      // ── W32 2025 — ma 4 aug (post vakantie) ──────────────────────────────────
+      // ── W32 2025 — ma 4 aug (post vakantie, sessie 1) ────────────────────────
       sess("2025-08-04", "W32", [
         ex("Split squat",           "Squat",    true,  s4(0,20)),
         ex("Hip thrust",            "Hinge",    false, s4(80,8)),
         ex("Leg extension",         "Isolatie", false, s4(32.5,8)),
         ex("Leg curl",              "Isolatie", false, s4(45,8)),
-        ex("Lat pulldown",          "Pull",     false, [s(60,8),s(60,8),s(60,8),s(60,10),s(60,10),s(60,10)], "sup/wide"),
+        ex("Lat pulldown",          "Pull",     false, s3(60,8), "sup"),
         ex("Cable row",             "Pull",     false, s4(25,10)),
         ex("DB bench press",        "Push",     false, s3(24,8)),
         ex("Horizontal cable fly",  "Push",     false, s4(7.5,12)),
       ]),
 
-      // ── W33 2025 — ma 11 aug ──────────────────────────────────────────────────
+      // ── W32 2025 — do 7 aug (sessie 2) ───────────────────────────────────────
+      sess("2025-08-07", "W32", [
+        ex("Split squat",           "Squat",    true,  s4(0,20)),
+        ex("Hip thrust",            "Hinge",    false, s4(80,8)),
+        ex("Leg extension",         "Isolatie", false, s4(32.5,8)),
+        ex("Leg curl",              "Isolatie", false, s4(45,8)),
+        ex("Lat pulldown",          "Pull",     false, s3(60,10), "wide"),
+        ex("Cable row",             "Pull",     false, s4(25,10)),
+        ex("DB bench press",        "Push",     false, s3(24,8)),
+        ex("Horizontal cable fly",  "Push",     false, s4(7.5,12)),
+      ]),
+
+      // ── W33 2025 — ma 11 aug (sessie 1) ──────────────────────────────────────
       sess("2025-08-11", "W33", [
         ex("Split squat",           "Squat",    true,  s3(0,20)),
         ex("Hip thrust",            "Hinge",    false, s3(80,10)),
-        ex("Leg extension",         "Isolatie", true,  [s(40,8),s(40,8),s(40,8),s(40,8),s(40,8),s(40,8),s(40,8)]),
+        ex("Leg extension",         "Isolatie", true,  s3(40,8)),
         ex("Leg curl",              "Isolatie", false, s3(47.5,8)),
         ex("Lat pulldown",          "Pull",     false, s4(60,10), "sup"),
         ex("High to low cable row", "Pull",     false, s3(30,8)),
-        ex("DB bench press",        "Push",     false, [s(26,10),s(26,10),s(26,10),s(30,6),s(30,6)]),
+        ex("DB bench press",        "Push",     false, s3(26,10)),
         ex("Horizontal cable fly",  "Push",     false, s3(12.5,8)),
         ex("Lateral raise",         "Isolatie", false, s4(5,12)),
         ex("Tricep extensions",     "Isolatie", false, s3(15,7)),
       ]),
 
-      // ── W34 2025 — ma 18 aug ──────────────────────────────────────────────────
+      // ── W33 2025 — do 14 aug (sessie 2) ──────────────────────────────────────
+      sess("2025-08-14", "W33", [
+        ex("Split squat",           "Squat",    true,  s3(0,20)),
+        ex("Hip thrust",            "Hinge",    false, s3(80,10)),
+        ex("Leg extension",         "Isolatie", true,  s4(40,8)),
+        ex("Leg curl",              "Isolatie", false, s3(47.5,8)),
+        ex("Lat pulldown",          "Pull",     false, s4(60,10), "sup"),
+        ex("High to low cable row", "Pull",     false, s3(30,8)),
+        ex("DB bench press",        "Push",     false, s2(30,6)),
+        ex("Horizontal cable fly",  "Push",     false, s3(12.5,8)),
+        ex("Lateral raise",         "Isolatie", false, s4(5,12)),
+        ex("Tricep extensions",     "Isolatie", false, s3(15,7)),
+      ]),
+
+      // ── W34 2025 — ma 18 aug (sessie 1) ──────────────────────────────────────
       sess("2025-08-18", "W34", [
         ex("Hip thrust",            "Hinge",    false, s3(70,10)),
-        ex("Leg extension",         "Isolatie", true,  [s(35,8),s(35,8),s(35,8),s(35,8),s(35,8),s(35,8),s(35,8)]),
+        ex("Leg extension",         "Isolatie", true,  s3(35,8)),
         ex("Leg curl",              "Isolatie", false, s3(50,8)),
-        ex("Lat pulldown",          "Pull",     false, [s(70,8),s(70,8),s(70,8),s(70,8),s(70,8),s(70,8)], "sup/wide"),
+        ex("Lat pulldown",          "Pull",     false, s3(70,8), "sup"),
         ex("High to low cable row", "Pull",     false, s4(30,8)),
         ex("DB bench press",        "Push",     false, s3(30,6)),
         ex("Horizontal cable fly",  "Push",     false, s2(13.75,8)),
       ]),
 
-      // ── W35 2025 — ma 25 aug ──────────────────────────────────────────────────
+      // ── W34 2025 — do 21 aug (sessie 2) ──────────────────────────────────────
+      sess("2025-08-21", "W34", [
+        ex("Hip thrust",            "Hinge",    false, s3(70,10)),
+        ex("Leg extension",         "Isolatie", true,  s4(35,8)),
+        ex("Leg curl",              "Isolatie", false, s3(50,8)),
+        ex("Lat pulldown",          "Pull",     false, s3(70,8), "wide"),
+        ex("High to low cable row", "Pull",     false, s4(30,8)),
+        ex("DB bench press",        "Push",     false, s3(30,6)),
+        ex("Horizontal cable fly",  "Push",     false, s2(13.75,8)),
+      ]),
+
+      // ── W35 2025 — ma 25 aug (sessie 1) ──────────────────────────────────────
       sess("2025-08-25", "W35", [
         ex("Split squat",           "Squat",    true,  s3(0,20)),
-        ex("Leg extension",         "Isolatie", true,  [s(35,8),s(35,8),s(35,8),s(35,8),s(35,8),s(35,8),s(35,8),s(35,8)]),
-        ex("Leg curl",              "Isolatie", false, [s(50,8),s(50,8),s(50,8),s(50,8),s(50,8),s(50,8),s(50,8)]),
-        ex("Lat pulldown",          "Pull",     false, [s(70,8),s(70,8),s(70,8),s(70,8),s(70,8),s(70,8)], "sup/wide"),
-        ex("High to low cable row", "Pull",     false, [s(31.25,5),s(31.25,5),s(31.25,10),s(31.25,10)]),
+        ex("Leg extension",         "Isolatie", true,  s4(35,8)),
+        ex("Leg curl",              "Isolatie", false, s3(50,8)),
+        ex("Lat pulldown",          "Pull",     false, s3(70,8), "sup"),
+        ex("High to low cable row", "Pull",     false, s2(31.25,5)),
         ex("Cable row",             "Pull",     false, s3(50,10)),
         ex("DB bench press",        "Push",     false, s3(30,6)),
         ex("Horizontal cable fly",  "Push",     false, s3(13.75,8)),
         ex("Landmine press",        "Push",     false, s4(30,8)),
       ]),
 
-      // ── W36 2025 — ma 1 sep ───────────────────────────────────────────────────
+      // ── W35 2025 — do 28 aug (sessie 2) ──────────────────────────────────────
+      sess("2025-08-28", "W35", [
+        ex("Split squat",           "Squat",    true,  s3(0,20)),
+        ex("Leg extension",         "Isolatie", true,  s4(35,8)),
+        ex("Leg curl",              "Isolatie", false, s4(50,8)),
+        ex("Lat pulldown",          "Pull",     false, s3(70,8), "wide"),
+        ex("High to low cable row", "Pull",     false, s2(31.25,10)),
+        ex("Cable row",             "Pull",     false, s3(50,10)),
+        ex("DB bench press",        "Push",     false, s3(30,6)),
+        ex("Horizontal cable fly",  "Push",     false, s3(13.75,8)),
+        ex("Landmine press",        "Push",     false, s4(30,8)),
+      ]),
+
+      // ── W36 2025 — ma 1 sep (sessie 1) ───────────────────────────────────────
       sess("2025-09-01", "W36", [
         ex("Split squat",           "Squat",    true,  s3(0,20)),
         ex("Hip thrust",            "Hinge",    false, s3(70,10)),
         ex("Leg extension",         "Isolatie", true,  s3(37.5,8)),
         ex("Leg curl",              "Isolatie", false, s3(50,10)),
-        ex("Lat pulldown",          "Pull",     false, [s(70,8),s(70,8),s(70,8),s(70,10),s(70,10),s(70,10)], "sup/wide"),
-        ex("DB bench press",        "Push",     false, [s(30,5),s(30,5),s(30,5),s(30,8),s(30,8),s(30,8)]),
+        ex("Lat pulldown",          "Pull",     false, s3(70,8), "sup"),
+        ex("DB bench press",        "Push",     false, s3(30,5)),
         ex("Lateral raise",         "Isolatie", false, s3(6.25,10)),
-        ex("Tricep extensions",     "Isolatie", false, [s(15,8),s(15,8),s(15,8),s(15,8),s(15,10),s(15,10),s(15,10)]),
+        ex("Tricep extensions",     "Isolatie", false, s4(15,8)),
       ]),
 
-      // ── W37 2025 — ma 8 sep ───────────────────────────────────────────────────
+      // ── W36 2025 — do 4 sep (sessie 2) ───────────────────────────────────────
+      sess("2025-09-04", "W36", [
+        ex("Split squat",           "Squat",    true,  s3(0,20)),
+        ex("Hip thrust",            "Hinge",    false, s3(70,10)),
+        ex("Leg extension",         "Isolatie", true,  s3(37.5,8)),
+        ex("Leg curl",              "Isolatie", false, s3(50,10)),
+        ex("Lat pulldown",          "Pull",     false, s3(70,10), "wide"),
+        ex("DB bench press",        "Push",     false, s3(30,8)),
+        ex("Lateral raise",         "Isolatie", false, s3(6.25,10)),
+        ex("Tricep extensions",     "Isolatie", false, s3(15,10)),
+      ]),
+
+      // ── W37 2025 — ma 8 sep (sessie 1) ───────────────────────────────────────
       sess("2025-09-08", "W37", [
         ex("Split squat",           "Squat",    true,  s3(0,20)),
-        ex("Hip thrust",            "Hinge",    false, [s(70,10),s(70,10),s(70,10),s(75,10),s(75,10),s(75,10)]),
-        ex("Leg extension",         "Isolatie", true,  [s(37.5,8),s(37.5,8),s(37.5,8),s(37.5,8),s(37.5,8),s(37.5,8),s(37.5,8)]),
+        ex("Hip thrust",            "Hinge",    false, s3(70,10)),
+        ex("Leg extension",         "Isolatie", true,  s3(37.5,8)),
         ex("Leg curl",              "Isolatie", false, s4(50,8)),
-        ex("Lat pulldown",          "Pull",     false, [s(70,8),s(70,8),s(70,8),s(70,8),s(75,10),s(75,10),s(75,10)], "sup/wide"),
+        ex("Lat pulldown",          "Pull",     false, s4(70,8), "sup"),
         ex("High to low cable row", "Pull",     false, s3(32.5,8)),
         ex("Cable row",             "Pull",     false, [s(55,10)]),
         ex("DB bench press",        "Push",     false, s3(30,8)),
@@ -458,74 +622,167 @@
         ex("Tricep extensions",     "Isolatie", false, s3(17.5,6)),
       ]),
 
-      // ── W38 2025 — ma 15 sep ──────────────────────────────────────────────────
+      // ── W37 2025 — do 11 sep (sessie 2) ──────────────────────────────────────
+      sess("2025-09-11", "W37", [
+        ex("Split squat",           "Squat",    true,  s3(0,20)),
+        ex("Hip thrust",            "Hinge",    false, s3(75,10)),
+        ex("Leg extension",         "Isolatie", true,  s4(37.5,8)),
+        ex("Leg curl",              "Isolatie", false, s4(50,8)),
+        ex("Lat pulldown",          "Pull",     false, [s(75,10),s(75,10),s(75,10),s(75,12),s(75,12),s(75,12)], "wide"),
+        ex("High to low cable row", "Pull",     false, s3(32.5,8)),
+        ex("DB bench press",        "Push",     false, s3(30,8)),
+        ex("Horizontal cable fly",  "Push",     false, s3(13.75,10)),
+        ex("Landmine press",        "Push",     false, s4(32.5,8)),
+        ex("Tricep extensions",     "Isolatie", false, s3(17.5,6)),
+      ]),
+
+      // ── W38 2025 — ma 15 sep (sessie 1) ──────────────────────────────────────
       sess("2025-09-15", "W38", [
         ex("Split squat",           "Squat",    true,  s3(0,20)),
-        ex("Hip thrust",            "Hinge",    false, [s(80,10),s(80,10),s(80,10),s(80,10),s(80,10)]),
-        ex("Leg extension",         "Isolatie", true,  [s(37.5,8),s(37.5,8),s(37.5,8),s(37.5,8),s(40,8),s(40,8),s(40,8)]),
+        ex("Hip thrust",            "Hinge",    false, s2(80,10)),
+        ex("Leg extension",         "Isolatie", true,  s4(37.5,8)),
         ex("Leg curl",              "Isolatie", false, s4(50,8)),
-        ex("Lat pulldown",          "Pull",     false, [s(70,8),s(70,8),s(70,8),s(70,8),s(75,8),s(75,8),s(75,8)], "sup/wide"),
+        ex("Lat pulldown",          "Pull",     false, s4(70,8), "sup"),
         ex("High to low cable row", "Pull",     false, s2(35,7)),
-        ex("DB bench press",        "Push",     false, [s(30,8),s(30,8),s(30,8),s(32,6),s(32,6),s(32,6)]),
+        ex("DB bench press",        "Push",     false, s3(30,8)),
         ex("Horizontal cable fly",  "Push",     false, s4(12.5,10)),
         ex("Barbell bench press",   "Push",     false, [s(80,5),s(80,5),s(80,5),s(80,5),s(80,5)]),
         ex("Seated bicep curls",    "Isolatie", false, s3(14,8)),
       ]),
 
-      // ── W39 2025 — ma 22 sep ──────────────────────────────────────────────────
+      // ── W38 2025 — do 18 sep (sessie 2) ──────────────────────────────────────
+      sess("2025-09-18", "W38", [
+        ex("Split squat",           "Squat",    true,  s3(0,20)),
+        ex("Hip thrust",            "Hinge",    false, s3(80,10)),
+        ex("Leg extension",         "Isolatie", true,  s3(40,8)),
+        ex("Leg curl",              "Isolatie", false, s4(50,8)),
+        ex("Lat pulldown",          "Pull",     false, s3(75,8), "wide"),
+        ex("High to low cable row", "Pull",     false, s2(35,7)),
+        ex("DB bench press",        "Push",     false, s3(32,6)),
+        ex("Horizontal cable fly",  "Push",     false, s4(12.5,10)),
+        ex("Seated bicep curls",    "Isolatie", false, s3(14,8)),
+      ]),
+
+      // ── W39 2025 — ma 22 sep (sessie 1) ──────────────────────────────────────
       sess("2025-09-22", "W39", [
         ex("Split squat",           "Squat",    true,  s3(0,20)),
         ex("Hip thrust",            "Hinge",    false, s3(80,10)),
-        ex("Leg extension",         "Isolatie", true,  [s(40,8),s(40,8),s(40,8),s(40,8),s(40,8),s(40,8),s(40,8)]),
-        ex("Leg curl",              "Isolatie", false, [s(50,10),s(50,10),s(50,10),s(50,8),s(50,8),s(50,8),s(50,8)]),
+        ex("Leg extension",         "Isolatie", true,  s3(40,8)),
+        ex("Leg curl",              "Isolatie", false, s3(50,10)),
         ex("Chin up",               "Pull",     false, s4(0,8), "yellow band"),
-        ex("Lat pulldown",          "Pull",     false, [s(70,8),s(70,8),s(70,8),s(70,8),s(70,8),s(70,8),s(70,8),s(70,8),s(75,8),s(75,8),s(75,8)], "wide/sup"),
+        ex("Lat pulldown",          "Pull",     false, s4(70,8), "wide"),
         ex("Adductor",              "Isolatie", false, [s(45,10)]),
-        ex("DB bench press",        "Push",     false, [s(30,8),s(30,8),s(30,8),s(30,8),s(32,6),s(32,6),s(32,6)]),
+        ex("DB bench press",        "Push",     false, s4(30,8)),
       ]),
 
-      // ── W40 2025 — ma 29 sep ──────────────────────────────────────────────────
+      // ── W39 2025 — wo 24 sep (sessie 2) ──────────────────────────────────────
+      sess("2025-09-24", "W39", [
+        ex("Split squat",           "Squat",    true,  s3(0,20)),
+        ex("Hip thrust",            "Hinge",    false, s3(80,10)),
+        ex("Leg extension",         "Isolatie", true,  s4(40,8)),
+        ex("Leg curl",              "Isolatie", false, s4(50,8)),
+        ex("Lat pulldown",          "Pull",     false, s4(70,8), "sup"),
+        ex("DB bench press",        "Push",     false, s3(32,6)),
+      ]),
+
+      // ── W39 2025 — vr 26 sep (sessie 3) ──────────────────────────────────────
+      sess("2025-09-26", "W39", [
+        ex("Split squat",           "Squat",    true,  s3(0,20)),
+        ex("Hip thrust",            "Hinge",    false, s3(80,10)),
+        ex("Leg extension",         "Isolatie", true,  s4(40,8)),
+        ex("Leg curl",              "Isolatie", false, s4(50,8)),
+        ex("Lat pulldown",          "Pull",     false, s3(75,8), "wide"),
+        ex("DB bench press",        "Push",     false, s3(32,6)),
+      ]),
+
+      // ── W40 2025 — ma 29 sep (sessie 1) ──────────────────────────────────────
       sess("2025-09-29", "W40", [
         ex("Split squat",           "Squat",    true,  s3(0,20)),
-        ex("Hip thrust",            "Hinge",    false, [s(80,10),s(80,10),s(80,10),s(82.5,10),s(82.5,10)]),
-        ex("Leg extension",         "Isolatie", true,  [s(40,8),s(40,8),s(40,8),s(40,8),s(40,8),s(40,8),s(40,8),s(40,8)]),
+        ex("Hip thrust",            "Hinge",    false, s3(80,10)),
+        ex("Leg extension",         "Isolatie", true,  s4(40,8)),
         ex("Leg curl",              "Isolatie", false, s4(50,10)),
-        ex("Lat pulldown",          "Pull",     false, [s(75,6),s(75,6),s(75,6),s(75,8),s(75,8),s(75,8),s(75,8)], "wide/sup"),
+        ex("Lat pulldown",          "Pull",     false, s3(75,6), "wide"),
         ex("High to low cable row", "Pull",     false, s3(35,5)),
-        ex("DB bench press",        "Push",     false, [s(32,5),s(32,5),s(32,5),s(32,8),s(32,8),s(32,8),s(32,8)]),
+        ex("DB bench press",        "Push",     false, s3(32,5)),
         ex("Bicep curls",           "Isolatie", false, s3(17.5,10)),
         ex("Seated bicep curls",    "Isolatie", false, s3(14,7)),
         ex("Tricep extensions",     "Isolatie", false, s3(17.5,10)),
       ]),
 
-      // ── W42 2025 — ma 13 okt (post vakantie) ────────────────────────────────
+      // ── W40 2025 — do 2 okt (sessie 2) ───────────────────────────────────────
+      sess("2025-10-02", "W40", [
+        ex("Split squat",           "Squat",    true,  s3(0,20)),
+        ex("Hip thrust",            "Hinge",    false, s2(82.5,10)),
+        ex("Leg extension",         "Isolatie", true,  s4(40,8)),
+        ex("Leg curl",              "Isolatie", false, s4(50,10)),
+        ex("Lat pulldown",          "Pull",     false, s4(75,8), "wide"),
+        ex("High to low cable row", "Pull",     false, s3(35,5)),
+        ex("DB bench press",        "Push",     false, s4(32,8)),
+        ex("Bicep curls",           "Isolatie", false, s3(17.5,10)),
+        ex("Seated bicep curls",    "Isolatie", false, s3(14,7)),
+        ex("Tricep extensions",     "Isolatie", false, s3(17.5,10)),
+      ]),
+
+      // ── W42 2025 — ma 13 okt (post vakantie, sessie 1) ───────────────────────
       sess("2025-10-13", "W42", [
         ex("Split squat",           "Squat",    true,  s3(0,20)),
         ex("Hip thrust",            "Hinge",    false, s4(80,8)),
-        ex("Leg extension",         "Isolatie", true,  [s(37.5,8),s(37.5,8),s(37.5,8),s(37.5,8),s(40,8),s(40,8),s(40,8),s(40,8)]),
-        ex("Leg curl",              "Isolatie", false, [s(45,10),s(45,10),s(45,10),s(50,10),s(50,10),s(50,10)]),
-        ex("Lat pulldown",          "Pull",     false, [s(70,10),s(70,10),s(70,10),s(75,8),s(75,8),s(75,8)], "sup"),
+        ex("Leg extension",         "Isolatie", true,  s4(37.5,8)),
+        ex("Leg curl",              "Isolatie", false, s3(45,10)),
+        ex("Lat pulldown",          "Pull",     false, s3(70,10), "sup"),
         ex("High to low cable row", "Pull",     false, s4(32.5,8)),
-        ex("DB bench press",        "Push",     false, [s(30,6),s(30,6),s(30,6),s(30,6),s(32,6),s(32,6),s(32,6)]),
+        ex("DB bench press",        "Push",     false, s4(30,6)),
         ex("Horizontal cable fly",  "Push",     false, s3(13.75,10)),
         ex("Seated bicep curls",    "Isolatie", false, s4(14,8)),
         ex("Tricep extensions",     "Isolatie", false, s3(17.5,10)),
       ]),
 
-      // ── W43 2025 — ma 20 okt ─────────────────────────────────────────────────
+      // ── W42 2025 — do 16 okt (sessie 2) ──────────────────────────────────────
+      sess("2025-10-16", "W42", [
+        ex("Split squat",           "Squat",    true,  s3(0,20)),
+        ex("Hip thrust",            "Hinge",    false, s4(80,8)),
+        ex("Leg extension",         "Isolatie", true,  s4(40,8)),
+        ex("Leg curl",              "Isolatie", false, s3(50,10)),
+        ex("Lat pulldown",          "Pull",     false, s3(75,8), "sup"),
+        ex("High to low cable row", "Pull",     false, s4(32.5,8)),
+        ex("DB bench press",        "Push",     false, s3(32,6)),
+        ex("Horizontal cable fly",  "Push",     false, s3(13.75,10)),
+        ex("Seated bicep curls",    "Isolatie", false, s4(14,8)),
+        ex("Tricep extensions",     "Isolatie", false, s3(17.5,10)),
+      ]),
+
+      // ── W43 2025 — ma 20 okt (sessie 1) ─────────────────────────────────────
       sess("2025-10-20", "W43", [
         ex("Split squat",           "Squat",    true,  s3(0,20)),
         ex("Hip thrust",            "Hinge",    false, s3(80,10)),
         ex("Leg extension",         "Isolatie", true,  s4(40,8)),
         ex("Leg curl",              "Isolatie", false, s3(50,10)),
         ex("Leg curl prone",        "Isolatie", true,  s4(20,10)),
-        ex("Adductor",              "Isolatie", false, [s(35,12),s(35,12),s(35,12),s(40,12),s(40,12),s(40,12)]),
+        ex("Adductor",              "Isolatie", false, s3(35,12)),
         ex("Lat pulldown",          "Pull",     false, s3(75,10), "wide"),
         ex("High to low cable row", "Pull",     false, s3(32.5,10)),
         ex("DB bench press",        "Push",     false, s4(32,8)),
         ex("Horizontal cable fly",  "Push",     false, s3(13.75,12)),
         ex("Landmine press",        "Push",     false, s4(35,6)),
-        ex("Lateral raise",         "Isolatie", false, [s(6.25,8),s(6.25,8),s(6.25,8),s(6.25,8),s(7.5,6),s(7.5,6),s(7.5,6),s(7.5,6)]),
+        ex("Lateral raise",         "Isolatie", false, s4(6.25,8)),
+        ex("Seated bicep curls",    "Isolatie", false, s4(14,6)),
+        ex("Tricep extensions",     "Isolatie", false, s4(17.5,8)),
+      ]),
+
+      // ── W43 2025 — do 23 okt (sessie 2) ─────────────────────────────────────
+      sess("2025-10-23", "W43", [
+        ex("Split squat",           "Squat",    true,  s3(0,20)),
+        ex("Hip thrust",            "Hinge",    false, s3(80,10)),
+        ex("Leg extension",         "Isolatie", true,  s4(40,8)),
+        ex("Leg curl",              "Isolatie", false, s3(50,10)),
+        ex("Leg curl prone",        "Isolatie", true,  s4(20,10)),
+        ex("Adductor",              "Isolatie", false, s3(40,12)),
+        ex("Lat pulldown",          "Pull",     false, s3(75,10), "wide"),
+        ex("High to low cable row", "Pull",     false, s3(32.5,10)),
+        ex("DB bench press",        "Push",     false, s4(32,8)),
+        ex("Horizontal cable fly",  "Push",     false, s3(13.75,12)),
+        ex("Landmine press",        "Push",     false, s4(35,6)),
+        ex("Lateral raise",         "Isolatie", false, s4(7.5,6)),
         ex("Seated bicep curls",    "Isolatie", false, s4(14,6)),
         ex("Tricep extensions",     "Isolatie", false, s4(17.5,8)),
       ]),
