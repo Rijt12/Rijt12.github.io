@@ -73,7 +73,7 @@
     log("Sessies ophalen...");
     var sRes = await sb.from("sessions").select("*")
       .eq("user_id", userId)
-      .or("client_id.eq." + client.id + ",client_ids.cs.[\"" + client.id + "\"]")
+      .eq("client_id", client.id)
       .order("date");
     if (sRes.error) { log("✗ " + sRes.error.message, "err"); document.getElementById("btn").disabled = false; return; }
 
