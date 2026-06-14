@@ -47,7 +47,7 @@
   function makeEx(name, pattern, unilateral, sets, notes) {
     return { id: uid(), name: name, pattern: pattern,
              unilateral: !!unilateral, isUnilateralExercise: !!unilateral,
-             performedUnilateral: false, sets: sets, notes: notes || "" };
+             performedUnilateral: !!unilateral, sets: sets, notes: notes || "" };
   }
   function s(w, r) { return { weight: String(w), reps: String(r) }; }
   function s3(w, r) { return [s(w,r), s(w,r), s(w,r)]; }
