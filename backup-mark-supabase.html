@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Backup Mark van der Rijt</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 520px; margin: 60px auto; padding: 20px; }
+    input { display: block; width: 100%; padding: 10px; margin-bottom: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { padding: 12px 24px; font-size: 15px; background: #dc4f2a; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+    button:disabled { background: #94a3b8; cursor: not-allowed; }
+    #log { margin-top: 20px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
+    .ok   { color: #059669; }
+    .err  { color: #dc2626; }
+    .skip { color: #9ca3af; }
+  </style>
+</head>
+<body>
+  <h2>Backup: Mark van der Rijt</h2>
+  <p style="font-size:13px;color:#666">Downloadt alle sessies van Mark als JSON bestand.</p>
+
+  <div id="loginForm">
+    <p>Log in met je Supabase account:</p>
+    <input id="email" type="email" placeholder="E-mailadres"/>
+    <input id="password" type="password" placeholder="Wachtwoord"/>
+    <button onclick="doLogin()">Inloggen</button>
+  </div>
+
+  <div id="mainSection" style="display:none">
+    <button id="btn" onclick="runBackup()">Download backup JSON</button>
+  </div>
+
+  <div id="log"></div>
+
+<script>
+  var SUPABASE_URL      = 'https://skofblajffjorwprkknz.supabase.co';
+  var SUPABASE_ANON_KEY = 'sb_publishable_QQLElZxZJFOV4IHpbtgQLQ_L3R8SnOh';
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  var userId = null;
+
+  function log(msg, cls) {
+    var el = document.getElementById("log");
+    var span = document.createElement("span");
+    span.className = cls || "";
+    span.textContent = msg + "\n";
+    el.appendChild(span);
+  }
+
+  async function doLogin() {
+    var email = document.getElementById("email").value.trim();
+    var pw    = document.getElementById("password").value;
+    if (!email || !pw) { log("Vul e-mail en wachtwoord in.", "err"); return; }
+    var res = await sb.auth.signInWithPassword({ email: email, password: pw });
+    if (res.error) { log("✗ " + res.error.message, "err"); return; }
+    userId = res.data.user.id;
+    document.getElementById("loginForm").style.display = "none";
+    document.getElementById("mainSection").style.display = "block";
+    log("✓ Ingelogd als " + res.data.user.email, "ok");
+  }
+
+  async function runBackup() {
+    document.getElementById("btn").disabled = true;
+
+    log("Zoeken naar Mark van der Rijt...");
+    var cRes = await sb.from("clients").select("id,name").eq("user_id", userId);
+    if (cRes.error) { log("✗ " + cRes.error.message, "err"); document.getElementById("btn").disabled = false; return; }
+
+    var client = (cRes.data || []).find(function(c){ return c.name.toLowerCase() === "mark van der rijt"; });
+    if (!client) { log("✗ Klant 'Mark van der Rijt' niet gevonden.", "err"); document.getElementById("btn").disabled = false; return; }
+    log("✓ Klant gevonden: " + client.name + " (" + client.id + ")", "ok");
+
+    log("Sessies ophalen...");
+    var sRes = await sb.from("sessions").select("*")
+      .eq("user_id", userId)
+      .or("client_id.eq." + client.id + ",client_ids.cs.[\"" + client.id + "\"]")
+      .order("date");
+    if (sRes.error) { log("✗ " + sRes.error.message, "err"); document.getElementById("btn").disabled = false; return; }
+
+    var sessions = sRes.data || [];
+    log("✓ " + sessions.length + " sessie(s) gevonden.", "ok");
+
+    if (sessions.length === 0) {
+      log("Geen sessies om te backuppen.", "skip");
+      document.getElementById("btn").disabled = false;
+      return;
+    }
+
+    var backup = { client: client, sessions: sessions, exported_at: new Date().toISOString() };
+    var blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement("a");
+    a.href     = url;
+    a.download = "mark-van-der-rijt-backup-" + new Date().toISOString().slice(0,10) + ".json";
+    a.click();
+    URL.revokeObjectURL(url);
+
+    log("✓ Backup gedownload: " + a.download, "ok");
+    document.getElementById("btn").disabled = false;
+  }
+</script>
+</body>
+</html>
