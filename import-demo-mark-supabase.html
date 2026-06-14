@@ -53,10 +53,49 @@
     log("✓ Ingelogd", "ok");
   }
 
-  function buildSessions() {
-    var clientId = "5b40ig7w";
+  async function runImport() {
+    document.getElementById("btn").disabled = true;
+    var userRes = await sb.auth.getUser();
+    if (userRes.error || !userRes.data.user) { log("Niet ingelogd.", "err"); return; }
+    var userId = userRes.data.user.id;
 
-    function ex(name, pattern, uni, sets, notes) {
+    log("Client opzoeken...");
+    var existing = await sb.from("clients").select("id,name").eq("user_id", userId);
+    if (existing.error) { log("✗ " + existing.error.message, "err"); document.getElementById("btn").disabled = false; return; }
+    var found = (existing.data || []).find(function(c){ return c.name.toLowerCase() === "mark van der rijt"; });
+    if (!found) { log("✗ Client 'Mark van der Rijt' niet gevonden voor dit account.", "err"); document.getElementById("btn").disabled = false; return; }
+    var clientId = found.id;
+    log("✓ Client gevonden: " + found.name + " (id: " + clientId + ")", "ok");
+
+    var sessions = buildSessions(clientId);
+    var ok = 0, fail = 0;
+
+    for (var i = 0; i < sessions.length; i++) {
+      var sess = sessions[i];
+      var row = {
+        id:         sess.id,
+        client_id:  clientId,
+        client_ids: [clientId],
+        date:       sess.date,
+        notes:      sess.notes,
+        exercises:  sess.exercises,
+        user_id:    userId,
+      };
+      var { error } = await sb.from("sessions").insert(row);
+      if (error) {
+        log("✗ " + sess.date.slice(0,10) + " — " + error.message, "err");
+        fail++;
+      } else {
+        log("✓ " + sess.date.slice(0,10), "ok");
+        ok++;
+      }
+    }
+
+    log("\nKlaar: " + ok + " sessies toegevoegd" + (fail ? ", " + fail + " mislukt" : "") + ".", ok > 0 ? "ok" : "err");
+    document.getElementById("btn").disabled = false;
+  }
+
+  function buildSessions(clientId) {
       return { id: uid(), name: name, pattern: pattern,
                unilateral: !!uni, isUnilateralExercise: !!uni,
                performedUnilateral: false, sets: sets, notes: notes || "" };
@@ -115,34 +154,6 @@
     ];
   }
 
-  async function runImport() {
-    document.getElementById("btn").disabled = true;
-    var sessions = buildSessions();
-    var ok = 0, fail = 0;
-
-    for (var i = 0; i < sessions.length; i++) {
-      var sess = sessions[i];
-      var row = {
-        id:         sess.id,
-        client_id:  sess.clientId,
-        client_ids: [sess.clientId],
-        date:       sess.date,
-        notes:      sess.notes,
-        exercises:  sess.exercises,
-      };
-      var { error } = await sb.from("sessions").insert(row);
-      if (error) {
-        log("✗ " + sess.date.slice(0,10) + " — " + error.message, "err");
-        fail++;
-      } else {
-        log("✓ " + sess.date.slice(0,10), "ok");
-        ok++;
-      }
-    }
-
-    log("\nKlaar: " + ok + " sessies toegevoegd" + (fail ? ", " + fail + " mislukt" : "") + ".", ok > 0 ? "ok" : "err");
-    document.getElementById("btn").disabled = false;
-  }
 </script>
 </body>
 </html>
