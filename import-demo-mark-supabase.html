@@ -96,6 +96,7 @@
   }
 
   function buildSessions(clientId) {
+    function ex(name, pattern, uni, sets, notes) {
       return { id: uid(), name: name, pattern: pattern,
                unilateral: !!uni, isUnilateralExercise: !!uni,
                performedUnilateral: false, sets: sets, notes: notes || "" };
