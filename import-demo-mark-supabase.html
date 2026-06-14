@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Import Demo Mark van der Rijt → Supabase</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 520px; margin: 60px auto; padding: 20px; }
+    input { display: block; width: 100%; padding: 10px; margin-bottom: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { padding: 12px 24px; font-size: 15px; background: #dc4f2a; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+    button:disabled { background: #94a3b8; cursor: not-allowed; }
+    #log { margin-top: 20px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
+    .ok   { color: #059669; }
+    .err  { color: #dc2626; }
+    .skip { color: #9ca3af; }
+  </style>
+</head>
+<body>
+  <h2>Import: Demo Mark van der Rijt</h2>
+  <p style="font-size:13px;color:#666">Voegt 5 demo-sessies toe (1 jun – 12 jun 2026) aan client Mark van der Rijt (id: 5b40ig7w).</p>
+  <div id="loginForm">
+    <p>Log in with your Supabase account:</p>
+    <input id="email" type="email" placeholder="Email address"/>
+    <input id="password" type="password" placeholder="Password"/>
+    <button onclick="doLogin()">Log in</button>
+  </div>
+  <div id="importSection" style="display:none">
+    <button id="btn" onclick="runImport()">Import demo sessies</button>
+  </div>
+  <div id="log"></div>
+<script>
+  var SUPABASE_URL      = 'https://skofblajffjorwprkknz.supabase.co';
+  var SUPABASE_ANON_KEY = 'sb_publishable_QQLElZxZJFOV4IHpbtgQLQ_L3R8SnOh';
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  function log(msg, cls) {
+    var el = document.getElementById("log");
+    var span = document.createElement("span");
+    span.className = cls || "";
+    span.textContent = msg + "\n";
+    el.appendChild(span);
+  }
+
+  function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
+
+  async function doLogin() {
+    var email    = document.getElementById("email").value.trim();
+    var password = document.getElementById("password").value;
+    var { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) { log("✗ Login mislukt: " + error.message, "err"); return; }
+    document.getElementById("loginForm").style.display    = "none";
+    document.getElementById("importSection").style.display = "block";
+    log("✓ Ingelogd", "ok");
+  }
+
+  function buildSessions() {
+    var clientId = "5b40ig7w";
+
+    function ex(name, pattern, uni, sets, notes) {
+      return { id: uid(), name: name, pattern: pattern,
+               unilateral: !!uni, isUnilateralExercise: !!uni,
+               performedUnilateral: false, sets: sets, notes: notes || "" };
+    }
+    function s(w, r) { return { weight: String(w), reps: String(r) }; }
+    function sess(date, notes, exercises) {
+      return { id: uid(), clientId: clientId, date: new Date(date).toISOString(),
+               notes: notes || null, exercises: exercises };
+    }
+
+    return [
+      // ── 1 jun 2026 ───────────────────────────────────────────────────────────
+      sess("2026-06-01T13:37:46.359Z", null, [
+        ex("Chin up",              "Pull",     false, [s("","")],                                          "E(0:30)MOM 3 reps/10 rounds"),
+        ex("DB bench press",       "Push",     false, [s(26,10),s(26,10),s(26,10),s(26,6)]),
+        ex("Lat pulldown (neutral)","Pull",    true,  [s(70,8),s(70,6),s(70,6),s(70,6)],                  "Neutral grip"),
+        ex("Pectoralis",           "Isolatie", false, [s(55,10),s(55,10),s(55,8),s(55,8)]),
+      ]),
+
+      // ── 3 jun 2026 ───────────────────────────────────────────────────────────
+      sess("2026-06-03T13:40:08.462Z", null, [
+        ex("High to low cable row","Pull",     false, [s(27.5,12),s(30,8),s(30,8),s(30,8)]),
+        ex("Incline push up",      "Push",     false, [s("",20),s("",20),s("",20),s("",20)],              "Level 3"),
+        ex("Hip thrust",           "Hinge",    true,  [s(40,10),s(40,10),s(40,10),s(40,10)],              "RPE 3"),
+        ex("Pectoralis",           "Isolatie", false, [s(57.5,12),s(57.5,12),s(57.5,12),s(57.5,10)]),
+        ex("Tricep extension cable","Isolatie",true,  [s(17.5,11),s(17.5,10),s(17.5,8),s(17.5,7)]),
+      ]),
+
+      // ── 8 jun 2026 ───────────────────────────────────────────────────────────
+      sess("2026-06-08T13:41:53.718Z", null, [
+        ex("Chin up",              "Pull",     false, [s("","")],                                          "E(0:30)MOM 3 reps/11 rounds"),
+        ex("DB bench press",       "Push",     false, [s(26,12),s(28,10),s(28,10),s(28,8)]),
+        ex("High to low cable row","Pull",     false, [s(27.5,12),s(30,8),s(30,7),s(30,6)]),
+        ex("Hip thrust",           "Hinge",    true,  [s(40,12),s(60,10),s(60,10),s(60,10)]),
+        ex("Leg extension",        "Isolatie", true,  [s(20,10),s(20,10),s(20,10),s(20,10)]),
+        ex("Pectoralis",           "Isolatie", false, [s(57.5,12),s(60,10),s(60,10),s(60,10)]),
+      ]),
+
+      // ── 10 jun 2026 ──────────────────────────────────────────────────────────
+      sess("2026-06-10T11:16:19.505Z", null, [
+        ex("Chin up",              "Pull",     false, [s(16,3),s(18,3),s(18,3),s(18,3),s(18,3)]),
+        ex("Hip thrust",           "Hinge",    true,  [s(60,10),s(60,10),s(60,10),s(60,10)]),
+        ex("Chest press",          "Push",     false, [s(55,12),s(55,10),s(55,6),s(55,6)]),
+        ex("Low row",              "Pull",     true,  [s(70,10),s(72.5,10),s(72.5,10),s(72.5,10)]),
+        ex("Pectoralis",           "Isolatie", false, [s(60,12),s(60,10),s(60,10),s(60,10)]),
+      ]),
+
+      // ── 12 jun 2026 ──────────────────────────────────────────────────────────
+      sess("2026-06-12T20:31:32.300Z", null, [
+        ex("Lat pulldown (supinated)","Pull",  false, [s(65,10),s(70,8),s(70,8),s(70,8)]),
+        ex("DB bench press",       "Push",     false, [s(30,8),s(30,8),s(30,6),s(30,6)]),
+        ex("Half kneeling face pull","Pull",   false, [s(15,12),s(15,12),s(15,12),s(15,12)]),
+        ex("Pectoralis",           "Isolatie", false, [s(60,12),s(60,12),s(60,10),s(60,10)]),
+        ex("Leg extension",        "Isolatie", true,  [s(20,10),s(20,10),s(20,10),s(20,10)]),
+      ]),
+    ];
+  }
+
+  async function runImport() {
+    document.getElementById("btn").disabled = true;
+    var sessions = buildSessions();
+    var ok = 0, fail = 0;
+
+    for (var i = 0; i < sessions.length; i++) {
+      var sess = sessions[i];
+      var row = {
+        id:         sess.id,
+        client_id:  sess.clientId,
+        client_ids: [sess.clientId],
+        date:       sess.date,
+        notes:      sess.notes,
+        exercises:  sess.exercises,
+      };
+      var { error } = await sb.from("sessions").insert(row);
+      if (error) {
+        log("✗ " + sess.date.slice(0,10) + " — " + error.message, "err");
+        fail++;
+      } else {
+        log("✓ " + sess.date.slice(0,10), "ok");
+        ok++;
+      }
+    }
+
+    log("\nKlaar: " + ok + " sessies toegevoegd" + (fail ? ", " + fail + " mislukt" : "") + ".", ok > 0 ? "ok" : "err");
+    document.getElementById("btn").disabled = false;
+  }
+</script>
+</body>
+</html>
