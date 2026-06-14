@@ -25,6 +25,8 @@
     <button onclick="doLogin()">Log in</button>
   </div>
   <div id="importSection" style="display:none">
+    <button id="btnDelete" onclick="runDelete()" style="background:#0f172a;margin-bottom:10px;">⚠ Verwijder alle sessies van Mark</button>
+    <br/>
     <button id="btn" onclick="runImport()">Import Mark van der Rijt</button>
   </div>
   <div id="log"></div>
@@ -59,6 +61,25 @@
     document.getElementById("loginForm").style.display = "none";
     document.getElementById("importSection").style.display = "block";
     log("✓ Logged in as " + res.data.user.email, "ok");
+  }
+
+  async function runDelete() {
+    if (!confirm("Weet je zeker dat je ALLE sessies van Mark van der Rijt wilt verwijderen?")) return;
+    document.getElementById("btnDelete").disabled = true;
+    var userRes = await sb.auth.getUser();
+    if (userRes.error || !userRes.data.user) { log("Not logged in.", "err"); return; }
+    var userId = userRes.data.user.id;
+
+    var existing = await sb.from("clients").select("id,name").eq("user_id", userId);
+    if (existing.error) { log("✗ " + existing.error.message, "err"); document.getElementById("btnDelete").disabled = false; return; }
+    var client = (existing.data || []).find(function(c){ return c.name.toLowerCase() === "mark van der rijt"; });
+    if (!client) { log("✗ Client niet gevonden.", "err"); document.getElementById("btnDelete").disabled = false; return; }
+
+    log("Sessies verwijderen voor " + client.name + " (id: " + client.id + ")...");
+    var delRes = await sb.from("sessions").delete().eq("client_id", client.id).eq("user_id", userId);
+    if (delRes.error) { log("✗ " + delRes.error.message, "err"); document.getElementById("btnDelete").disabled = false; return; }
+    log("✓ Alle sessies verwijderd.", "ok");
+    document.getElementById("btnDelete").disabled = false;
   }
 
   async function runImport() {
