@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Fix Leg extension (uni) → Leg extension</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 560px; margin: 60px auto; padding: 20px; }
+    input { display: block; width: 100%; padding: 10px; margin-bottom: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { padding: 12px 24px; font-size: 15px; background: #dc4f2a; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+    button:disabled { background: #94a3b8; cursor: not-allowed; }
+    #log { margin-top: 20px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
+    .ok   { color: #059669; }
+    .err  { color: #dc2626; }
+    .skip { color: #9ca3af; }
+  </style>
+</head>
+<body>
+  <h2>Fix: Leg extension (uni) → Leg extension</h2>
+  <p style="font-size:13px;color:#666">Hernoemt alle "Leg extension (uni)" oefeningen in sessies naar "Leg extension" met performedUnilateral: true. Verwijdert daarna "Leg extension (uni)" uit de bibliotheek.</p>
+  <div id="loginForm">
+    <p>Log in met je Supabase account:</p>
+    <input id="email" type="email" placeholder="E-mailadres"/>
+    <input id="password" type="password" placeholder="Wachtwoord"/>
+    <button onclick="doLogin()">Inloggen</button>
+  </div>
+  <div id="importSection" style="display:none">
+    <button id="btn" onclick="runFix()">Fix uitvoeren</button>
+  </div>
+  <div id="log"></div>
+<script>
+  var SUPABASE_URL      = 'https://skofblajffjorwprkknz.supabase.co';
+  var SUPABASE_ANON_KEY = 'sb_publishable_QQLElZxZJFOV4IHpbtgQLQ_L3R8SnOh';
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  function log(msg, cls) {
+    var el = document.getElementById("log");
+    var span = document.createElement("span");
+    span.className = cls || "";
+    span.textContent = msg + "\n";
+    el.appendChild(span);
+  }
+
+  async function doLogin() {
+    var email    = document.getElementById("email").value.trim();
+    var password = document.getElementById("password").value;
+    var { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) { log("✗ Login mislukt: " + error.message, "err"); return; }
+    document.getElementById("loginForm").style.display    = "none";
+    document.getElementById("importSection").style.display = "block";
+    log("✓ Ingelogd", "ok");
+  }
+
+  async function runFix() {
+    document.getElementById("btn").disabled = true;
+    var userRes = await sb.auth.getUser();
+    if (userRes.error || !userRes.data.user) { log("Niet ingelogd.", "err"); return; }
+    var userId = userRes.data.user.id;
+
+    // Fetch all sessions for this user
+    log("Sessies ophalen...");
+    var { data: sessions, error: sessErr } = await sb.from("sessions").select("id,exercises").eq("user_id", userId);
+    if (sessErr) { log("✗ " + sessErr.message, "err"); document.getElementById("btn").disabled = false; return; }
+    log("✓ " + sessions.length + " sessies gevonden", "ok");
+
+    var toUpdate = sessions.filter(function(s) {
+      return (s.exercises || []).some(function(e) { return e.name === "Leg extension (uni)"; });
+    });
+    log(toUpdate.length + " sessies bevatten 'Leg extension (uni)'");
+
+    var ok = 0, fail = 0;
+    for (var i = 0; i < toUpdate.length; i++) {
+      var sess = toUpdate[i];
+      var updatedExercises = sess.exercises.map(function(e) {
+        if (e.name !== "Leg extension (uni)") return e;
+        return Object.assign({}, e, {
+          name: "Leg extension",
+          performedUnilateral: true,
+          unilateral: true,
+          isUnilateralExercise: true
+        });
+      });
+      var { error } = await sb.from("sessions").update({ exercises: updatedExercises }).eq("id", sess.id).eq("user_id", userId);
+      if (error) { log("✗ sessie " + sess.id + ": " + error.message, "err"); fail++; }
+      else { ok++; }
+    }
+    log("✓ " + ok + " sessies bijgewerkt" + (fail ? ", " + fail + " mislukt" : ""), ok > 0 ? "ok" : "skip");
+
+    // Remove "Leg extension (uni)" from exercise library
+    log("Bibliotheek opruimen...");
+    var { data: libRows, error: libErr } = await sb.from("exercise_library").select("id,name").eq("user_id", userId);
+    if (libErr) { log("✗ " + libErr.message, "err"); }
+    else {
+      var uniEntry = (libRows || []).find(function(r) { return r.name === "Leg extension (uni)"; });
+      if (uniEntry) {
+        var { error: delErr } = await sb.from("exercise_library").delete().eq("id", uniEntry.id).eq("user_id", userId);
+        if (delErr) { log("✗ Kon bibliotheekitem niet verwijderen: " + delErr.message, "err"); }
+        else { log("✓ 'Leg extension (uni)' verwijderd uit bibliotheek", "ok"); }
+      } else {
+        log("— 'Leg extension (uni)' niet gevonden in bibliotheek (niets te verwijderen)", "skip");
+      }
+    }
+
+    log("\nKlaar!", "ok");
+    document.getElementById("btn").disabled = false;
+  }
+</script>
+</body>
+</html>
