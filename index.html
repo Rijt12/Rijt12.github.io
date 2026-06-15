@@ -141,7 +141,13 @@
               return { id: r.id, name: r.name, pattern: r.pattern, unilateral: r.unilateral };
             }),
             templates: tmplRows.map(function(r) {
-              return { id: r.id, name: r.name, exercises: r.exercises || [], client_id: r.client_id || null };
+              var exs = r.exercises || [];
+              var client_id = r.client_id || null;
+              if (exs.length > 0 && exs[0] && exs[0].__client_id !== undefined) {
+                client_id = exs[0].__client_id;
+                exs = exs.slice(1);
+              }
+              return { id: r.id, name: r.name, exercises: exs, client_id: client_id };
             })
           };
 
@@ -211,7 +217,7 @@
 
           // --- templates ---
           var tmplUpserts = (data.templates || []).map(function(t) {
-            return { id: t.id, name: t.name, exercises: t.exercises || [], user_id: uid, client_id: t.client_id || null };
+            return { id: t.id, name: t.name, exercises: [{__client_id: t.client_id||null}].concat(t.exercises || []), user_id: uid };
           });
           var removedTmpl = (prev.templates || [])
             .filter(function(t) { return !idSet(data.templates).has(t.id); })
