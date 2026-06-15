@@ -975,7 +975,7 @@
       }
       function close(){setOffset(0);if(props.onOpen){props.onOpen(null);}}
       return (
-        <div style={{position:"relative",overflow:"hidden",borderBottom:"1px solid "+T.border}}>
+        <div style={{position:"relative",overflow:"hidden",borderBottom:"1px solid "+T.border,transform:"translateZ(0)"}}>
           <div style={{position:"absolute",top:0,right:0,bottom:0,display:"flex",alignItems:"stretch"}}>
             {props.onEdit&&<button onClick={function(){close();props.onEdit();}} style={{width:72,background:"#2563eb",border:"none",color:"#fff",fontSize:13,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer",fontFamily:"inherit"}}>✎</button>}
             <button onClick={function(){close();props.onDelete();}} style={{width:72,background:"#dc2626",border:"none",color:"#fff",fontSize:22,cursor:"pointer"}}>×</button>
