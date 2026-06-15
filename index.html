@@ -2198,12 +2198,24 @@
           return '<line x1="'+PAD.l+'" y1="'+y+'" x2="'+(PAD.l+iW)+'" y2="'+y+'" stroke="#e5e7eb" stroke-width="1"/>'
                 +'<text x="'+(PAD.l-4)+'" y="'+(y+4)+'" text-anchor="end" font-size="8" fill="#9ca3af">'+Math.round(v)+'</text>';
         }).join("");
+        // decide label granularity based on point density
+        var minPxPerLabel=32;
+        var pxPerPt=entries.length<2?iW:iW/(entries.length-1);
+        var labelMode=pxPerPt>=minPxPerLabel?"day":pxPerPt>=(minPxPerLabel/3)?"month":"year";
+        var seenLabel={};
         var dotsHTML=pts.map(function(p){
           var isBest=bestDate&&p.e.date===bestDate;
           var lbl=isBodyweight?(p.v>0?p.v+" reps":""):(p.v>0?fmtW(p.v):"");
+          var d=new Date(p.e.date);
+          var labelKey=labelMode==="day"?d.toISOString().slice(0,10):labelMode==="month"?(d.getFullYear()+"-"+d.getMonth()):String(d.getFullYear());
+          var dateLbl="";
+          if(!seenLabel[labelKey]){
+            seenLabel[labelKey]=true;
+            dateLbl=labelMode==="day"?d.toLocaleDateString("en-GB",{day:"2-digit",month:"short"}):labelMode==="month"?d.toLocaleDateString("en-GB",{month:"short",year:"2-digit"}):String(d.getFullYear());
+          }
           return '<circle cx="'+p.x+'" cy="'+p.y+'" r="'+(isBest?5:3)+'" fill="'+(isBest?"#f59e0b":color)+'" stroke="white" stroke-width="1.5"/>'
-                +(lbl?'<text x="'+p.x+'" y="'+(p.y-8)+'" text-anchor="middle" font-size="8" fill="'+(isBest?"#d97706":"#6b7280")+'" font-weight="'+(isBest?"600":"400")+'">'+lbl+'</text>':"")
-                +'<text x="'+p.x+'" y="'+(H-3)+'" text-anchor="middle" font-size="7" fill="#9ca3af">'+new Date(p.e.date).toLocaleDateString("en-GB",{day:"2-digit",month:"short"})+'</text>';
+                +(lbl&&pxPerPt>=20?'<text x="'+p.x+'" y="'+(p.y-8)+'" text-anchor="middle" font-size="8" fill="'+(isBest?"#d97706":"#6b7280")+'" font-weight="'+(isBest?"600":"400")+'">'+lbl+'</text>':"")
+                +(dateLbl?'<text x="'+p.x+'" y="'+(H-3)+'" text-anchor="middle" font-size="7" fill="#9ca3af">'+dateLbl+'</text>':"");
         }).join("");
         return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" style="display:block;overflow:visible">'
               +ticksHTML
