@@ -250,14 +250,16 @@
             ops.push(sb.from('templates').delete().in('id', removedTmpl).eq('user_id', uid));
 
           if (ops.length === 0) return;
-          console.log('sync: removedClients=', removedClients, 'ops=', ops.length);
           var results = await Promise.all(ops);
-          results.forEach(function(r,i){ if(r&&r.error){console.error('op['+i+'] error:', r.error);} else {console.log('op['+i+'] ok');} });
           var errs = results.filter(function(r) { return r && r.error; });
-          if (errs.length) { console.error('save errors', errs.map(function(r){ return r.error; })); return; }
+          if (errs.length) {
+            var msgs = errs.map(function(r){ return r.error.message; }).join('; ');
+            console.error('save errors', msgs);
+            throw new Error(msgs);
+          }
 
           _prevData = JSON.parse(JSON.stringify(data));
-        } catch(e) { console.error('save error', e); }
+        } catch(e) { console.error('save error', e); throw e; }
       };
     })();
   </script>
@@ -279,10 +281,10 @@
       } catch(e) { return { data: EMPTY, ok: false }; }
     }
 
-    async function saveData(d) {
+    async function saveData(d, onError) {
       if (!window._fbSave) { return; }
       try { await window._fbSave(d); }
-      catch(e) { console.error(e); }
+      catch(e) { console.error(e); if(onError){ onError(e.message||String(e)); } }
     }
 
     // Parses weight strings like "37,5" or "2x16" → numeric value
@@ -479,7 +481,7 @@
       function persist(d) {
         setData(d);
         setSaving(true);
-        saveData(d).then(function(){ setSaving(false); });
+        saveData(d, function(msg){ showToast("⚠ Opslaan mislukt: "+msg); }).then(function(){ setSaving(false); });
       }
 
       // Sla sessie stil op (bij terugknop), voegt ook nieuwe oefeningen toe aan bibliotheek
