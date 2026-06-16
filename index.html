@@ -978,9 +978,10 @@
         if(snap===-REVEAL&&props.onOpen){props.onOpen(props.rowId);}
         if(snap===0&&props.onOpen&&props.openId===props.rowId){props.onOpen(null);}
       }
+      function onTouchCancel(){dragging.current=false;setOffset(offset<-REVEAL/2?-REVEAL:0);}
       function close(){setOffset(0);if(props.onOpen){props.onOpen(null);}}
       return (
-        <div style={{position:"relative",overflow:"hidden",borderBottom:"1px solid "+T.border,transform:"translateZ(0)"}}>
+        <div style={{position:"relative",overflow:"hidden",borderBottom:"1px solid "+T.border,WebkitBackfaceVisibility:"hidden",backfaceVisibility:"hidden"}}>
           <div style={{position:"absolute",top:0,right:0,bottom:0,display:"flex",alignItems:"stretch"}}>
             {props.onEdit&&<button onClick={function(){close();props.onEdit();}} style={{width:72,background:"#2563eb",border:"none",color:"#fff",fontSize:13,textTransform:"uppercase",letterSpacing:0.5,cursor:"pointer",fontFamily:"inherit"}}>✎</button>}
             <button onClick={function(){close();props.onDelete();}} style={{width:72,background:"#dc2626",border:"none",color:"#fff",fontSize:22,cursor:"pointer"}}>×</button>
@@ -989,6 +990,7 @@
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
+            onTouchCancel={onTouchCancel}
             style={{transform:"translateX("+offset+"px)",transition:dragging.current?"none":"transform 0.28s cubic-bezier(0.25,0.46,0.45,0.94)",background:props.background||T.surface,willChange:"transform",touchAction:"pan-y"}}
           >{props.children}</div>
         </div>
