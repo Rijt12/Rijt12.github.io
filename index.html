@@ -447,9 +447,8 @@
       goBackRef.current = function() {
         if (view === "clients")                              { return; }
         if (view === "library")                              { goView("clients"); return; }
-        if (view === "templates" && editingTpl)              { setEditingTpl(null); if(tplClientId){goView("client");}return; }
+        if (view === "templates" && editingTpl)              { setEditingTpl(null); return; }
         if (view === "templates")                            { if(tplClientId){goView("client");}else{goView("clients");}return; }
-        if (view === "loadTemplate")                         { goView("client"); return; }
         if (view === "client")                               { goView("clients"); return; }
         if (view === "session" || view === "editSession")    { goView("client"); return; }
         if (view === "viewSession")                          { goView("client"); return; }
@@ -597,7 +596,7 @@
         persist({...data, templates:newTemplates});
         setEditingTpl(null);
         showToast('"'+tpl.name+'" saved ✓');
-        if(tplClientId){goView("client");}
+        goView("templates");
       }
 
       async function deleteClient(id) {
@@ -735,10 +734,15 @@
 
           {view==="templates" && !editingTpl && (
             <div key={navKey} className="page-enter">
-              <Header title="Templates" back={function(){tplClientId?goView("client"):goView("clients");}} rightAction={{label:"Add template", fn:function(){ setEditingTpl({id:uid(),name:"",exercises:[],client_id:tplClientId}); }}}/>
+              <Header title="Schema's" back={function(){tplClientId?goView("client"):goView("clients");}}/>
               <TemplateList data={data} clientId={tplClientId}
                 onNew={function(){ setEditingTpl({id:uid(),name:"",exercises:[],client_id:tplClientId}); }}
                 onEdit={function(tpl){ setEditingTpl({...tpl,exercises:(tpl.exercises||[]).map(function(e){return {...e,sets:e.sets||[{weight:"",reps:""}]};})}); }}
+                onLoad={function(tpl){
+                  var exercises=tpl.exercises.map(function(e){return {id:uid(),name:e.name,pattern:e.pattern,unilateral:e.unilateral||false,isUnilateralExercise:e.unilateral||false,performedUnilateral:false,sets:(e.sets||[{weight:"",reps:""}]).map(function(s){return {weight:s.weight||"",reps:s.reps||""};}) ,notes:""};});
+                  setActiveSession({id:uid(),clientId:tplClientId,clientIds:[tplClientId],date:new Date().toISOString(),exercises:exercises,notes:""});
+                  goView("session");
+                }}
                 onDelete={deleteTemplate}
               />
             </div>
@@ -760,8 +764,7 @@
                 onStartSession={function(s){setActiveSession(s);goView("session");}}
                 onViewSession={function(id){setViewSessionId(id);goView("viewSession");}}
                 onExport={function(){goView("export");}}
-                onNewTemplate={function(){setTplClientId(activeClientId);setEditingTpl({id:uid(),name:"",exercises:[],client_id:activeClientId});goView("templates");}}
-                onLoadTemplate={function(){goView("loadTemplate");}}
+                onTemplates={function(){setTplClientId(activeClientId);goView("templates");}}
                 onDeleteSession={deleteSession}
                 onExHistory={function(name){setExHistoryName(name);setClientTab("Progress");setPrevView("client");goView("exHistory");}}
                 initialTab={clientTab}
@@ -770,30 +773,6 @@
             </div>
           )}
 
-          {view==="loadTemplate" && (
-            <div key={navKey} className="page-enter">
-              <Header title="Choose a template" back={function(){goView("client");}}/>
-              <div className="ai" style={{paddingBottom:32}}>
-                {(function(){
-                  var clientTemplates=(data.templates||[]).filter(function(t){return t.client_id===activeClientId;});
-                  if(clientTemplates.length===0) return <div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>No templates for this client yet.</div>;
-                  return clientTemplates.map(function(tpl){
-                    return <div key={tpl.id} className="rh" onClick={function(){
-                      var exercises=tpl.exercises.map(function(e){return {id:uid(),name:e.name,pattern:e.pattern,unilateral:e.unilateral||false,isUnilateralExercise:e.unilateral||false,performedUnilateral:false,sets:(e.sets||[{weight:"",reps:""}]).map(function(s){return {weight:s.weight||"",reps:s.reps||""};}) ,notes:""};});
-                      setActiveSession({id:uid(),clientId:activeClientId,clientIds:[activeClientId],date:new Date().toISOString(),exercises:exercises,notes:""});
-                      goView("session");
-                    }} style={{padding:"16px 20px",borderBottom:"1px solid "+T.border,background:T.surface,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                      <div>
-                        <div style={{fontWeight:600,fontSize:15}}>{tpl.name}</div>
-                        <div style={{fontSize:11,color:T.textMuted,marginTop:4}}>{(tpl.exercises||[]).map(function(e){return e.name;}).join(", ")}</div>
-                      </div>
-                      <span style={{color:T.accent,fontSize:13,fontWeight:500}}>→</span>
-                    </div>;
-                  });
-                })()}
-              </div>
-            </div>
-          )}
 
           {(view==="session"||view==="editSession") && activeSession && (
             <div key={navKey} className="page-enter">
@@ -1233,17 +1212,17 @@
     }
 
     function TemplateList(props) {
-      var templates=props.data.templates||[];
+      var allTemplates=props.data.templates||[];
+      var templates=allTemplates.filter(function(t){return t.client_id===props.clientId;});
       var [openRowId,setOpenRowId]=useState(null);
       return (
-        <div className="ai" style={{paddingBottom:32}}>
-          <div style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surfaceAlt}}><Btn accent onClick={props.onNew}>+ New template</Btn></div>
-          {templates.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>No templates yet.<br/>Create a template with fixed exercises, sets, kg and reps.</div>}
+        <div className="ai" style={{paddingBottom:100}}>
+          {templates.length===0&&<div style={{color:T.textMuted,fontSize:13,padding:"40px 20px",textAlign:"center"}}>Geen schema's voor deze client.<br/>Tik + om een schema aan te maken.</div>}
           {templates.map(function(tpl){return(
-            <SwipeRow key={tpl.id} rowId={tpl.id} openId={openRowId} onOpen={setOpenRowId} background={T.surface} onDelete={function(){props.onDelete(tpl.id);}}>
-            <div className="rh" onClick={function(){props.onEdit(tpl);}} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,cursor:"pointer"}}>
+            <SwipeRow key={tpl.id} rowId={tpl.id} openId={openRowId} onOpen={setOpenRowId} background={T.surface} onEdit={function(){props.onEdit(tpl);}} onDelete={function(){props.onDelete(tpl.id);}}>
+            <div className="rh" onClick={function(){props.onLoad(tpl);}} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:T.surface,cursor:"pointer"}}>
               <div style={{fontWeight:500,fontSize:14}}>{tpl.name}</div>
-              <div style={{fontSize:11,color:T.textMuted,marginTop:3}}>{tpl.exercises.length} exercise{tpl.exercises.length!==1?"s":""}</div>
+              <div style={{fontSize:11,color:T.textMuted,marginTop:3}}>{tpl.exercises.length} oefening{tpl.exercises.length!==1?"en":""}</div>
               <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>
                 {tpl.exercises.slice(0,5).map(function(e,i){var col=PC[e.pattern]||"#999";return <span key={i} style={{fontSize:9,padding:"2px 7px",background:col+"18",color:col,border:"1px solid "+col+"40",borderRadius:4}}>{e.name}</span>;})}
                 {tpl.exercises.length>5&&<span style={{fontSize:9,padding:"2px 6px",color:T.textMuted}}>+{tpl.exercises.length-5}</span>}
@@ -1251,6 +1230,11 @@
             </div>
             </SwipeRow>
           );})}
+          <div style={{position:"fixed",bottom:58,right:20,zIndex:50}}>
+            <button onClick={props.onNew} style={{background:T.accent,border:"none",color:"#fff",height:64,width:64,borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 16px rgba(220,79,42,0.40)"}}>
+              <svg width="32" height="32" viewBox="0 0 16 16" fill="none"><line x1="8" y1="3" x2="8" y2="13" stroke="#fff" strokeWidth="2" strokeLinecap="round"/><line x1="3" y1="8" x2="13" y2="8" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>
+            </button>
+          </div>
         </div>
       );
     }
@@ -1350,8 +1334,7 @@
                 {showMenu&&<div onClick={function(){setShowMenu(false);}} style={{position:"fixed",inset:0,zIndex:99}}/>}
                 {showMenu&&(
                   <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:T.surface,border:"1px solid "+T.border,borderRadius:6,boxShadow:"0 4px 16px rgba(0,0,0,0.10)",zIndex:100,minWidth:160,overflow:"hidden"}}>
-                    <button onClick={function(){setShowMenu(false);props.onNewTemplate();}} style={{display:"block",width:"100%",padding:"12px 16px",background:"none",border:"none",borderBottom:"1px solid "+T.border,color:T.text,fontSize:13,textAlign:"left",cursor:"pointer"}}>Add template</button>
-                    {templates.length>0&&<button onClick={function(){setShowMenu(false);props.onLoadTemplate();}} style={{display:"block",width:"100%",padding:"12px 16px",background:"none",border:"none",borderBottom:"1px solid "+T.border,color:T.text,fontSize:13,textAlign:"left",cursor:"pointer"}}>Load template</button>}
+                    <button onClick={function(){setShowMenu(false);props.onTemplates();}} style={{display:"block",width:"100%",padding:"12px 16px",background:"none",border:"none",borderBottom:"1px solid "+T.border,color:T.text,fontSize:13,textAlign:"left",cursor:"pointer"}}>Schema's</button>
                     <button onClick={function(){setShowMenu(false);props.onExport();}} style={{display:"block",width:"100%",padding:"12px 16px",background:"none",border:"none",color:T.text,fontSize:13,textAlign:"left",cursor:"pointer"}}>Export</button>
                   </div>
                 )}
