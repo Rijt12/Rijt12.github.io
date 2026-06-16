@@ -1880,6 +1880,9 @@
               var polyline=pts.map(function(p){return p.x+","+p.y;}).join(" ");
               var area=pts.map(function(p,i){return (i===0?"M":"")+p.x+","+p.y;}).join(" ")+" L"+pts[pts.length-1].x+","+(PAD.t+iH)+" L"+pts[0].x+","+(PAD.t+iH)+" Z";
               var yTicks=[yMin,yMin+(yMax-yMin)/2,yMax].map(Math.round).filter(function(v,i,a){return a.indexOf(v)===i;});
+              var pxPerPt=sorted.length<2?iW:iW/(sorted.length-1);
+              var labelMode=pxPerPt>=30?"day":pxPerPt>=10?"month":"year";
+              var seenLbl={};
               return (
                 <svg width={W} height={H} style={{display:"block",overflow:"visible"}}>
                   {yTicks.map(function(v,i){
@@ -1891,11 +1894,15 @@
                   {pts.map(function(p,i){
                     var isBestPt=bestDate&&p.e.date===bestDate;
                     var lbl=isBodyweight?(p.v>0?p.v+" reps":""):(p.v>0?fmtW(p.v):"");
+                    var d=new Date(p.e.date);
+                    var key=labelMode==="day"?d.toISOString().slice(0,10):labelMode==="month"?(d.getFullYear()+"-"+d.getMonth()):String(d.getFullYear());
+                    var dateLbl="";
+                    if(!seenLbl[key]){seenLbl[key]=true;dateLbl=labelMode==="day"?d.toLocaleDateString("en-GB",{day:"2-digit",month:"short"}):labelMode==="month"?d.toLocaleDateString("en-GB",{month:"short",year:"2-digit"}):String(d.getFullYear());}
                     return (
                       <g key={i}>
                         <circle cx={p.x} cy={p.y} r={isBestPt?5:3} fill={isBestPt?"#f59e0b":T.accent} stroke={T.surface} strokeWidth="1.5"/>
                         {(sorted.length<=8||isBestPt)&&lbl&&<text x={p.x} y={p.y-8} textAnchor="middle" fontSize="9" fill={isBestPt?"#d97706":T.textMid} fontWeight={isBestPt?"600":"400"}>{lbl}</text>}
-                        <text x={p.x} y={H-2} textAnchor="middle" fontSize="8" fill={T.textMuted}>{new Date(p.e.date).toLocaleDateString("en-GB",{day:"2-digit",month:"short"})}</text>
+                        {dateLbl&&<text x={p.x} y={H-2} textAnchor="middle" fontSize="8" fill={T.textMuted}>{dateLbl}</text>}
                       </g>
                     );
                   })}
