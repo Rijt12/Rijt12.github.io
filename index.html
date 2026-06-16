@@ -390,6 +390,8 @@
       var [dlg, setDlg]                       = useState(null);
       var [saving, setSaving]                 = useState(false);
       var [navKey, setNavKey]                 = useState(0);
+      var scrollPositions                     = useRef({});
+      var pendingScroll                       = useRef(null);
       var [showSearch, setShowSearch]         = useState(false);
       var [libTriggerAdd, setLibTriggerAdd]   = useState(false);
       function handlePullSearch(){setShowSearch(true);}
@@ -419,6 +421,13 @@
         }catch(e){}
       },[activeSession]);
 
+      // Scroll to top on forward nav, restore position on back nav
+      useEffect(function() {
+        var target = pendingScroll.current || 0;
+        pendingScroll.current = null;
+        requestAnimationFrame(function() { window.scrollTo(0, target); });
+      }, [navKey]);
+
       // Auto-save active session while editing
       var autoSaveRef = useRef(null);
       useEffect(function() {
@@ -446,14 +455,14 @@
       var goBackRef = useRef(null);
       goBackRef.current = function() {
         if (view === "clients")                              { return; }
-        if (view === "library")                              { goView("clients"); return; }
+        if (view === "library")                              { goBack("clients"); return; }
         if (view === "templates" && editingTpl)              { setEditingTpl(null); return; }
-        if (view === "templates")                            { if(tplClientId){goView("client");}else{goView("clients");}return; }
-        if (view === "client")                               { goView("clients"); return; }
-        if (view === "session" || view === "editSession")    { goView("client"); return; }
-        if (view === "viewSession")                          { goView("client"); return; }
-        if (view === "exHistory")                            { goView(prevView); return; }
-        if (view === "export")                               { goView("client"); return; }
+        if (view === "templates")                            { if(tplClientId){goBack("client");}else{goBack("clients");}return; }
+        if (view === "client")                               { goBack("clients"); return; }
+        if (view === "session" || view === "editSession")    { goBack("client"); return; }
+        if (view === "viewSession")                          { goBack("client"); return; }
+        if (view === "exHistory")                            { goBack(prevView); return; }
+        if (view === "export")                               { goBack("client"); return; }
       };
 
       // Swipe left = terug
@@ -555,7 +564,16 @@
       }
       function handleConfirm() { if (dlg) { dlg.resolve(true); } setDlg(null); }
       function handleCancel()  { if (dlg) { dlg.resolve(false); } setDlg(null); }
-      function goView(v) { setView(v); setNavKey(function(k){return k+1;}); }
+      function goView(v) {
+        scrollPositions.current[view] = window.scrollY||document.documentElement.scrollTop||0;
+        pendingScroll.current = 0;
+        setView(v); setNavKey(function(k){return k+1;});
+      }
+      function goBack(v) {
+        scrollPositions.current[view] = window.scrollY||document.documentElement.scrollTop||0;
+        pendingScroll.current = scrollPositions.current[v] || 0;
+        setView(v); setNavKey(function(k){return k+1;});
+      }
 
       var client = null, vSession = null, clientSessions = [];
       for (var ci=0; ci<data.clients.length; ci++) {
@@ -596,7 +614,7 @@
         persist({...data, templates:newTemplates});
         setEditingTpl(null);
         showToast('"'+tpl.name+'" saved ✓');
-        goView("templates");
+        goBack("templates");
       }
 
       async function deleteClient(id) {
@@ -727,14 +745,14 @@
 
           {view==="library" && (
             <div key={navKey} className="page-enter">
-              <Header title="Exercises" back={function(){goView("clients");}} rightAction={{label:"Add exercise", fn:function(){setLibTriggerAdd(true);}}}/>
+              <Header title="Exercises" back={function(){goBack("clients");}} rightAction={{label:"Add exercise", fn:function(){setLibTriggerAdd(true);}}}/>
               <ExerciseLibrary data={data} persist={persist} showToast={showToast} onDelete={deleteExercise} showSearch={showSearch} onHideSearch={function(){setShowSearch(false);}} triggerAdd={libTriggerAdd} onTriggerAddDone={function(){setLibTriggerAdd(false);}}/>
             </div>
           )}
 
           {view==="templates" && !editingTpl && (
             <div key={navKey} className="page-enter">
-              <Header title="Templates" back={function(){tplClientId?goView("client"):goView("clients");}}/>
+              <Header title="Templates" back={function(){tplClientId?goBack("client"):goBack("clients");}}/>
               <TemplateList data={data} clientId={tplClientId}
                 onNew={function(){ setEditingTpl({id:uid(),name:"",exercises:[],client_id:tplClientId}); }}
                 onEdit={function(tpl){ setEditingTpl({...tpl,exercises:(tpl.exercises||[]).map(function(e){return {...e,sets:e.sets||[{weight:"",reps:""}]};})}); }}
@@ -750,7 +768,7 @@
 
           {view==="templates" && editingTpl && (
             <div key={navKey} className="page-enter">
-              <Header title={editingTpl.name||"New template"} back={function(){setEditingTpl(null);if(tplClientId){goView("client");}}}
+              <Header title={editingTpl.name||"New template"} back={function(){setEditingTpl(null);if(tplClientId){goBack("templates");}}}
                 rightAction={{label:"Save", fn:function(){ if(editingTpl.name.trim()){ saveTpl(editingTpl); } }}}
               />
               <TemplateEditor template={editingTpl} onChange={setEditingTpl} library={library}/>
@@ -760,7 +778,7 @@
           {view==="client" && client && (
             <div key={navKey} className="page-enter">
               <ClientDetail client={client} sessions={clientSessions} data={data}
-                onBack={function(){goView("clients");}}
+                onBack={function(){goBack("clients");}}
                 onStartSession={function(s){setActiveSession(s);goView("session");}}
                 onViewSession={function(id){setViewSessionId(id);goView("viewSession");}}
                 onExport={function(){goView("export");}}
@@ -776,7 +794,7 @@
 
           {(view==="session"||view==="editSession") && activeSession && (
             <div key={navKey} className="page-enter">
-              <Header title={view==="session"?"Session in progress":"Edit session"} back={function(){goView("client");}}
+              <Header title={view==="session"?"Session in progress":"Edit session"} back={function(){goBack("client");}}
                 rightAction={{label:"Finish", fn:function(){saveSession(activeSession);}}}
               />
               {(function(){
@@ -806,7 +824,7 @@
 
           {view==="viewSession" && vSession && (
             <div key={navKey} className="page-enter">
-              <Header title={"Session "+fmtDate(vSession.date)} back={function(){goView("client");}}
+              <Header title={"Session "+fmtDate(vSession.date)} back={function(){goBack("client");}}
                 rightAction={{label:"Edit", fn:function(){setActiveSession({...vSession});goView("editSession");}}}
               />
               <SessionView session={vSession} client={client} allEntriesByName={allEntriesByName} data={data}/>
@@ -815,14 +833,14 @@
 
           {view==="exHistory" && exHistoryName && (
             <div key={navKey} className="page-enter">
-              <Header title={(allEntriesByName[exHistoryName]&&allEntriesByName[exHistoryName].canonicalName?allEntriesByName[exHistoryName].canonicalName:exHistoryName).replace("__uni"," (uni)")} back={function(){goView(prevView);}}/>
+              <Header title={(allEntriesByName[exHistoryName]&&allEntriesByName[exHistoryName].canonicalName?allEntriesByName[exHistoryName].canonicalName:exHistoryName).replace("__uni"," (uni)")} back={function(){goBack(prevView);}}/>
               <ExerciseHistoryPage entries={((allEntriesByName[exHistoryName]||{}).entries||[]).sort(function(a,b){return new Date(b.date)-new Date(a.date);})}/>
             </div>
           )}
 
           {view==="export" && client && (
             <div key={navKey} className="page-enter">
-              <Header title="Export" back={function(){goView("client");}}/>
+              <Header title="Export" back={function(){goBack("client");}}/>
               <ExportView client={client} sessions={clientSessions}/>
             </div>
           )}
