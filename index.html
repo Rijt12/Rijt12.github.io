@@ -525,6 +525,7 @@
       function handleConfirm() { if (dlg) { dlg.resolve(true); } setDlg(null); }
       function handleCancel()  { if (dlg) { dlg.resolve(false); } setDlg(null); }
       function goView(v) { setView(v); setNavKey(function(k){return k+1;}); }
+      useEffect(function(){ requestAnimationFrame(function(){ window.scrollTo(0,0); }); }, [navKey]);
 
       var client = null, vSession = null, clientSessions = [];
       for (var ci=0; ci<data.clients.length; ci++) {
