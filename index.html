@@ -1486,12 +1486,15 @@
 
     function ReorderPage(props) {
       var [items,setItems]=useState(props.exercises.slice());
+      var [activeDrag,setActiveDrag]=useState(null);
+      var [activeOver,setActiveOver]=useState(null);
       var dragIdx=useRef(null);
       var dragOverIdx=useRef(null);
-      function onDragStart(i){dragIdx.current=i;}
-      function onDragEnter(i){dragOverIdx.current=i;}
+      function onDragStart(i){dragIdx.current=i;setActiveDrag(i);setActiveOver(i);}
+      function onDragEnter(i){dragOverIdx.current=i;setActiveOver(i);}
       function onDragEnd(){
         var from=dragIdx.current; var to=dragOverIdx.current;
+        setActiveDrag(null);setActiveOver(null);
         if(from===null||to===null||from===to){dragIdx.current=null;dragOverIdx.current=null;return;}
         var arr=items.slice();
         arr.splice(to,0,arr.splice(from,1)[0]);
@@ -1500,17 +1503,18 @@
       }
       // Touch drag support
       var touchStartY=useRef(0); var touchDragIdx=useRef(null);
-      function onTouchStart(i,e){touchDragIdx.current=i;touchStartY.current=e.touches[0].clientY;}
+      function onTouchStart(i,e){touchDragIdx.current=i;dragIdx.current=i;touchStartY.current=e.touches[0].clientY;setActiveDrag(i);setActiveOver(i);}
       function onTouchMove(e){
         e.preventDefault();
         var y=e.touches[0].clientY;
         var els=document.querySelectorAll(".reorder-item");
         var target=null;
         els.forEach(function(el,idx){var r=el.getBoundingClientRect();if(y>=r.top&&y<=r.bottom){target=idx;}});
-        if(target!==null){dragOverIdx.current=target;}
+        if(target!==null){dragOverIdx.current=target;setActiveOver(target);}
       }
       function onTouchEnd(){
         var from=touchDragIdx.current; var to=dragOverIdx.current;
+        setActiveDrag(null);setActiveOver(null);
         if(from!==null&&to!==null&&from!==to){
           var arr=items.slice();
           arr.splice(to,0,arr.splice(from,1)[0]);
@@ -1530,6 +1534,8 @@
           <div style={{padding:"12px 0"}}>
             {items.map(function(ex,i){
               var color=PC[ex.pattern]||T.textMuted;
+              var isDragging=activeDrag===i;
+              var isOver=activeOver===i&&activeDrag!==null&&activeDrag!==i;
               return (
                 <div key={ex.id} className="reorder-item"
                   draggable
@@ -1540,11 +1546,11 @@
                   onTouchStart={function(e){onTouchStart(i,e);}}
                   onTouchMove={onTouchMove}
                   onTouchEnd={onTouchEnd}
-                  style={{margin:"0 16px 8px",padding:"12px 16px",background:T.surface,border:"1px solid "+T.border,borderLeft:"3px solid "+color,borderRadius:4,display:"flex",alignItems:"center",gap:12,cursor:"grab",userSelect:"none",touchAction:"none"}}>
-                  <span style={{color:T.textMuted,fontSize:18,lineHeight:1}}>☰</span>
+                  style={{margin:"0 16px 8px",padding:"12px 16px",background:isDragging?T.accentBg:T.surface,border:"1px solid "+(isOver?T.accent:T.border),borderLeft:"3px solid "+(isDragging?T.accent:color),borderRadius:4,display:"flex",alignItems:"center",gap:12,cursor:"grab",userSelect:"none",touchAction:"none",opacity:isDragging?0.55:1,boxShadow:isDragging?"0 4px 16px rgba(0,0,0,0.18)":isOver?"0 0 0 2px "+T.accent+"60":"none",transform:isDragging?"scale(1.02)":"none",transition:"box-shadow 0.1s,border-color 0.1s,opacity 0.1s,transform 0.1s"}}>
+                  <span style={{color:isDragging?T.accent:T.textMuted,fontSize:18,lineHeight:1}}>☰</span>
                   <div>
                     <div style={{fontSize:13,fontWeight:500}}>{ex.name}</div>
-                    <div style={{fontSize:10,color:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:2}}>{ex.pattern}{ex.supersetId?" · superset":""}</div>
+                    <div style={{fontSize:10,color:isDragging?T.accent:color,textTransform:"uppercase",letterSpacing:0.4,marginTop:2}}>{ex.pattern}{ex.supersetId?" · superset":""}</div>
                   </div>
                 </div>
               );
