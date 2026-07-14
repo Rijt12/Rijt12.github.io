@@ -613,12 +613,17 @@
 
       var activeSessionDate = activeSession ? toLocalISO(activeSession.date) : null;
       var prevByName = {};
+      var prevByNameUni = {};
       clientSessions.forEach(function(s){
         if (activeSessionDate && toLocalISO(s.date) === activeSessionDate) { return; }
         s.exercises.forEach(function(ex){
           if (!exForClient(ex, s, activeClientId)) { return; }
           var sets = setsForClient(ex, s, activeClientId);
-          var pkey=ex.name.trim().toLowerCase(); if (!prevByName[pkey]) { prevByName[pkey]={sets:sets,date:s.date}; }
+          var isClientB = isDuo(s) && s.clientIds[0] !== activeClientId;
+          var wasUni = isClientB ? (ex.performedUnilateralB||false) : (ex.performedUnilateral||false);
+          var pkey=ex.name.trim().toLowerCase();
+          if (wasUni) { if (!prevByNameUni[pkey]) { prevByNameUni[pkey]={sets:sets,date:s.date}; } }
+          else        { if (!prevByName[pkey])    { prevByName[pkey]   ={sets:sets,date:s.date}; } }
         });
       });
 
@@ -628,12 +633,16 @@
         var duoPartnerBSessions = data.sessions.filter(function(s){
           return s.clientId===duoPartnerBId||(s.clientIds&&s.clientIds.indexOf(duoPartnerBId)!==-1);
         }).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+        var prevByNameBUni = {};
         duoPartnerBSessions.forEach(function(s){
           if (activeSessionDate && toLocalISO(s.date) === activeSessionDate) { return; }
           s.exercises.forEach(function(ex){
             if (!exForClient(ex, s, duoPartnerBId)) { return; }
             var sets = setsForClient(ex, s, duoPartnerBId);
-            var pkeyB=ex.name.trim().toLowerCase(); if (!prevByNameB[pkeyB]) { prevByNameB[pkeyB]={sets:sets,date:s.date}; }
+            var wasUniB = ex.performedUnilateralB||false;
+            var pkeyB=ex.name.trim().toLowerCase();
+            if (wasUniB) { if (!prevByNameBUni[pkeyB]) { prevByNameBUni[pkeyB]={sets:sets,date:s.date}; } }
+            else         { if (!prevByNameB[pkeyB])    { prevByNameB[pkeyB]   ={sets:sets,date:s.date}; } }
           });
         });
       }
@@ -751,7 +760,7 @@
                 return (
                   <SessionEditor session={activeSession} onChange={setActiveSession}
                     library={library} templates={templates} showToast={showToast} prevByName={prevByName}
-                    prevByNameB={prevByNameB}
+                    prevByNameUni={prevByNameUni} prevByNameB={prevByNameB} prevByNameBUni={prevByNameBUni||{}}
                     duoClients={duoClients}
                     allClients={data.clients}
                     allEntriesByName={allEntriesByName}
@@ -1329,7 +1338,7 @@
     }
 
     function SessionEditor(props) {
-      var session=props.session; var onChange=props.onChange; var library=props.library||[]; var templates=props.templates||[]; var prevByName=props.prevByName||{}; var prevByNameB=props.prevByNameB||{}; var duoClients=props.duoClients||null;
+      var session=props.session; var onChange=props.onChange; var library=props.library||[]; var templates=props.templates||[]; var prevByName=props.prevByName||{}; var prevByNameUni=props.prevByNameUni||{}; var prevByNameB=props.prevByNameB||{}; var prevByNameBUni=props.prevByNameBUni||{}; var duoClients=props.duoClients||null;
       var allClients=props.allClients||[]; var onDuoPick=props.onDuoPick||null;
       var [showAdd,setShowAdd]=useState(false); var [showTemplates,setShowTemplates]=useState(false);
       var [showSuperset,setShowSuperset]=useState(false); var [showDuoPicker,setShowDuoPicker]=useState(false);
@@ -1402,8 +1411,8 @@
                 onReorder={function(){setShowReorder(true);}}
                 onPairSuperset={function(otherId){pairSuperset(item.ex.id,otherId);}}
                 sessionExercises={session.exercises}
-                prevData={prevByName[(item.ex.name||"").trim().toLowerCase()]}
-                prevDataB={prevByNameB[(item.ex.name||"").trim().toLowerCase()]}
+                prevData={(item.ex.performedUnilateral?prevByNameUni:prevByName)[(item.ex.name||"").trim().toLowerCase()]}
+                prevDataB={(item.ex.performedUnilateralB?prevByNameBUni:prevByNameB)[(item.ex.name||"").trim().toLowerCase()]}
                 duoClients={duoClients}
                 onViewHistory={function(){var k=(item.ex.performedUnilateral&&item.ex.isUnilateralExercise)?item.ex.name+"__uni":item.ex.name;props.onViewExHistory(k);}}
               />;
@@ -1417,7 +1426,7 @@
               onDelete={function(){deleteSuperset(item.ssId);}}
               onMoveUp={ssLo>0?function(){moveSupersetUp(item.idxA,item.idxB);}:null}
               onMoveDown={ssHi<session.exercises.length-1?function(){moveSupersetDown(item.idxA,item.idxB);}:null}
-              prevByName={prevByName}
+              prevByName={prevByName} prevByNameUni={prevByNameUni}
               duoClients={duoClients}
               onViewHistory={props.onViewExHistory}
             />;
@@ -1636,8 +1645,8 @@
           </div>
           {open&&(
             <div>
-              {[{ex:exA,col:colA,label:"A",addSet:addSetA,updateSet:updateSetA,removeSet:removeSetA,onChange:props.onChangeA,prevData:props.prevByName[(exA.name||"").trim().toLowerCase()]},
-                {ex:exB,col:colB,label:"B",addSet:addSetB,updateSet:updateSetB,removeSet:removeSetB,onChange:props.onChangeB,prevData:props.prevByName[(exB.name||"").trim().toLowerCase()]}
+              {[{ex:exA,col:colA,label:"A",addSet:addSetA,updateSet:updateSetA,removeSet:removeSetA,onChange:props.onChangeA,prevData:(exA.performedUnilateral?(props.prevByNameUni||{}):(props.prevByName||{}))[(exA.name||"").trim().toLowerCase()]},
+                {ex:exB,col:colB,label:"B",addSet:addSetB,updateSet:updateSetB,removeSet:removeSetB,onChange:props.onChangeB,prevData:(exB.performedUnilateral?(props.prevByNameUni||{}):(props.prevByName||{}))[(exB.name||"").trim().toLowerCase()]}
 
               ].map(function(item,ri){
                 return (
