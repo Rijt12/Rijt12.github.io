@@ -1783,24 +1783,24 @@
           </div>
           {open&&(
             <div style={{padding:"0 20px 14px"}}>
-              {prevData&&(
-                <div style={{marginBottom:8,padding:"6px 10px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:4}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                    <span style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5}}>Vorige · {fmtDate(prevData.date)}</span>
-                    <button onClick={props.onViewHistory} style={{background:"none",border:"none",color:T.accent,fontSize:10,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",padding:0}}>Volledige historie →</button>
-                  </div>
-                  <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-                    {prevData.sets.map(function(s,i){return <span key={i} style={{fontSize:11,padding:"3px 7px",background:T.surface,border:"1px solid "+T.border,borderRadius:4,color:T.textMid}}>{i+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
-                  </div>
-                </div>
-              )}
+              {prevData&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5}}>Vorige · {fmtDate(prevData.date)}</span><button onClick={props.onViewHistory} style={{background:"none",border:"none",color:T.accent,fontSize:10,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",padding:0}}>Historie →</button></div>}
               <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:5}}><span style={lS}>#</span><span style={lS}>kg</span><span style={lS}>reps</span><span/></div>
-              {activeSets.map(function(s,i){return(
-                <div key={i} style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:6}}>
-                  <span style={{color:T.textMuted,fontSize:12,paddingTop:10,textAlign:"center"}}>{i+1}</span>
-                  <Stepper value={s.weight} step={0.5} placeholder="kg" onChange={function(v){updateSet(i,"weight",v);}}/>
-                  <Stepper value={s.reps} step={1} placeholder="reps" onChange={function(v){updateSet(i,"reps",v);}}/>
-                  <button onClick={function(){removeSet(i);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14}}>×</button>
+              {activeSets.map(function(s,i){
+                var ps=prevData&&prevData.sets[i];
+                return(
+                <div key={i} style={{marginBottom:6}}>
+                  {ps&&<div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:2}}>
+                    <span/>
+                    <span style={{fontSize:10,color:T.textMuted,textAlign:"center",paddingLeft:4}}>{ps.weight?ps.weight+"kg":"—"}</span>
+                    <span style={{fontSize:10,color:T.textMuted,textAlign:"center",paddingLeft:4}}>{ps.reps||"—"}</span>
+                    <span/>
+                  </div>}
+                  <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6}}>
+                    <span style={{color:T.textMuted,fontSize:12,paddingTop:10,textAlign:"center"}}>{i+1}</span>
+                    <Stepper value={s.weight} step={0.5} placeholder={ps&&ps.weight?ps.weight+"":""} onChange={function(v){updateSet(i,"weight",v);}}/>
+                    <Stepper value={s.reps} step={1} placeholder={ps&&ps.reps?ps.reps+"":""} onChange={function(v){updateSet(i,"reps",v);}}/>
+                    <button onClick={function(){removeSet(i);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14}}>×</button>
+                  </div>
                 </div>
               );})}
               <button onClick={addSet} style={{background:"none",border:"1px dashed "+T.borderStrong,color:T.textMuted,padding:"6px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,marginTop:2,cursor:"pointer",width:"100%",borderRadius:4}}>+ Set toevoegen</button>
