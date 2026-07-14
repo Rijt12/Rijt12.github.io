@@ -630,12 +630,12 @@
       });
 
       var prevByNameB = {};
+      var prevByNameBUni = {};
       if (activeSession && isDuo(activeSession)) {
         var duoPartnerBId = activeSession.clientIds[1];
         var duoPartnerBSessions = data.sessions.filter(function(s){
           return s.clientId===duoPartnerBId||(s.clientIds&&s.clientIds.indexOf(duoPartnerBId)!==-1);
         }).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
-        var prevByNameBUni = {};
         duoPartnerBSessions.forEach(function(s){
           if (activeSessionDate && toLocalISO(s.date) === activeSessionDate) { return; }
           s.exercises.forEach(function(ex){
