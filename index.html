@@ -656,8 +656,9 @@
           var performed = isClientB ? (ex.performedUnilateralB||false) : (ex.performedUnilateral||false);
           var key = performed ? exNameKey(ex.name)+"__uni" : exNameKey(ex.name);
           if (!allEntriesByName[key]) { allEntriesByName[key]={entries:[],canonicalName:normalizeName(ex.name),pattern:ex.pattern}; }
+          var exNotes = isClientB ? (ex.notesB||"") : (ex.notes||"");
           allEntriesByName[key].entries.push({
-            date:s.date, sets:sets,
+            date:s.date, sets:sets, notes:exNotes,
             maxWeight:Math.max.apply(null,sets.map(function(st){return parseW(st.weight)||0;})),
             totalVol:sets.reduce(function(sum,st){return sum+(parseW(st.weight)||0)*(parseInt(st.reps)||0);},0),
           });
@@ -1896,6 +1897,7 @@
               <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
                 {e.sets.map(function(s,si){return <span key={si} style={{fontSize:11,padding:"3px 7px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:4,color:T.textMid}}>{si+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
               </div>
+              {e.notes&&<div style={{marginTop:6,fontSize:11,color:T.textMuted,fontStyle:"italic"}}>{e.notes}</div>}
             </div>
           );})}
         </div>
