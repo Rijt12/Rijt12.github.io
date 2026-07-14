@@ -1783,27 +1783,29 @@
           </div>
           {open&&(
             <div style={{padding:"0 20px 14px"}}>
-              {prevData&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5}}>Vorige · {fmtDate(prevData.date)}</span><button onClick={props.onViewHistory} style={{background:"none",border:"none",color:T.accent,fontSize:10,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",padding:0}}>Historie →</button></div>}
-              <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:5}}><span style={lS}>#</span><span style={lS}>kg</span><span style={lS}>reps</span><span/></div>
-              {activeSets.map(function(s,i){
-                var ps=prevData&&prevData.sets[i];
-                return(
-                <div key={i} style={{marginBottom:6}}>
-                  {ps&&<div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:2}}>
-                    <span/>
-                    <span style={{fontSize:10,color:T.textMuted,textAlign:"center",paddingLeft:4}}>{ps.weight?ps.weight+"kg":"—"}</span>
-                    <span style={{fontSize:10,color:T.textMuted,textAlign:"center",paddingLeft:4}}>{ps.reps||"—"}</span>
-                    <span/>
-                  </div>}
-                  <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6}}>
-                    <span style={{color:T.textMuted,fontSize:12,paddingTop:10,textAlign:"center"}}>{i+1}</span>
-                    <Stepper value={s.weight} step={0.5} placeholder={ps&&ps.weight?ps.weight+"":""} onChange={function(v){updateSet(i,"weight",v);}}/>
-                    <Stepper value={s.reps} step={1} placeholder={ps&&ps.reps?ps.reps+"":""} onChange={function(v){updateSet(i,"reps",v);}}/>
-                    <button onClick={function(){removeSet(i);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14}}>×</button>
+              <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                {prevData&&(
+                  <div style={{flexShrink:0}}>
+                    <div style={{fontSize:10,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5,whiteSpace:"nowrap"}}>Vorige</div>
+                    {prevData.sets.map(function(ps,i){return(
+                      <div key={i} style={{fontSize:11,color:T.textMuted,padding:"9px 6px",marginBottom:6,textAlign:"right",lineHeight:1,whiteSpace:"nowrap"}}>{ps.weight?ps.weight+"kg":"—"} × {ps.reps||"—"}</div>
+                    );})}
+                    <button onClick={props.onViewHistory} style={{background:"none",border:"none",color:T.accent,fontSize:9,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",padding:0,display:"block",marginTop:2}}>Historie →</button>
                   </div>
+                )}
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:5}}><span style={lS}>#</span><span style={lS}>kg</span><span style={lS}>reps</span><span/></div>
+                  {activeSets.map(function(s,i){return(
+                    <div key={i} style={{display:"grid",gridTemplateColumns:"24px 1fr 1fr 24px",gap:6,marginBottom:6}}>
+                      <span style={{color:T.textMuted,fontSize:12,paddingTop:10,textAlign:"center"}}>{i+1}</span>
+                      <Stepper value={s.weight} step={0.5} placeholder={prevData&&prevData.sets[i]&&prevData.sets[i].weight?prevData.sets[i].weight+"":""} onChange={function(v){updateSet(i,"weight",v);}}/>
+                      <Stepper value={s.reps} step={1} placeholder={prevData&&prevData.sets[i]&&prevData.sets[i].reps?prevData.sets[i].reps+"":""} onChange={function(v){updateSet(i,"reps",v);}}/>
+                      <button onClick={function(){removeSet(i);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:14}}>×</button>
+                    </div>
+                  );})}
+                  <button onClick={addSet} style={{background:"none",border:"1px dashed "+T.borderStrong,color:T.textMuted,padding:"6px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,marginTop:2,cursor:"pointer",width:"100%",borderRadius:4}}>+ Set toevoegen</button>
                 </div>
-              );})}
-              <button onClick={addSet} style={{background:"none",border:"1px dashed "+T.borderStrong,color:T.textMuted,padding:"6px 12px",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,marginTop:2,cursor:"pointer",width:"100%",borderRadius:4}}>+ Set toevoegen</button>
+              </div>
               <div style={{marginTop:10}}><textarea value={(isB?(ex.notesB!=null?ex.notesB:""):ex.notes)||""} onChange={function(e){if(isB){props.onChange({...ex,notesB:e.target.value});}else{props.onChange({...ex,notes:e.target.value});}}} placeholder="Opmerking bij deze oefening..." rows={2} style={{...iS,resize:"none",fontSize:12,color:T.textMid,background:T.surfaceAlt,marginTop:2}}/></div>
             </div>
           )}
