@@ -1897,11 +1897,37 @@
           {entries.map(function(e,i){
             var isBest=bestDate&&e.date===bestDate;
             var dispVal=isBodyweight?(entryMaxReps(e)>0?entryMaxReps(e)+" reps":"—"):(e.maxWeight>0?fmtW(e.maxWeight)+" kg":"—");
+            var diffBadge=null;
+            if(bestEntry&&!isBest){
+              if(isBodyweight){
+                var dr=entryMaxReps(e)-entryMaxReps(bestEntry);
+                if(dr!==0){diffBadge={txt:(dr>0?"+":"")+dr+" reps",pos:dr>0};}
+              } else {
+                var dw=(parseW(e.maxWeight)||0)-(parseW(bestEntry.maxWeight)||0);
+                if(dw!==0){
+                  diffBadge={txt:(dw>0?"+":"")+fmtW(Math.abs(dw))+" kg",pos:dw>0};
+                } else {
+                  var drr=maxRepsAtW(e)-maxRepsAtW(bestEntry);
+                  if(drr!==0){diffBadge={txt:(drr>0?"+":"")+drr+" reps",pos:drr>0};}
+                  else {
+                    var ds=setsAtMaxW(e)-setsAtMaxW(bestEntry);
+                    if(ds!==0){diffBadge={txt:(ds>0?"+":"")+ds+" sets",pos:ds>0};}
+                  }
+                }
+              }
+            }
             return(
             <div key={i} style={{padding:"14px 20px",borderBottom:"1px solid "+T.border,background:isBest?"#fffbeb":T.surface}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
                 <div style={{fontSize:13,fontWeight:500}}>{fmtDate(e.date)}</div>
-                <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:500,display:"flex",alignItems:"center",justifyContent:"flex-end",gap:4}}>{isBest&&<span style={{fontSize:14}}>⭐</span>}{dispVal}</div>{!isBodyweight&&e.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{e.totalVol.toLocaleString("nl-NL")} vol.</div>}</div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontSize:14,fontWeight:500,display:"flex",alignItems:"center",justifyContent:"flex-end",gap:4}}>
+                    {isBest&&<span style={{fontSize:14}}>⭐</span>}
+                    {dispVal}
+                    {diffBadge&&<span style={{fontSize:11,fontWeight:400,color:diffBadge.pos?"#16a34a":"#9ca3af",marginLeft:2}}>{diffBadge.txt}</span>}
+                  </div>
+                  {!isBodyweight&&e.totalVol>0&&<div style={{fontSize:10,color:T.textMuted}}>{e.totalVol.toLocaleString("nl-NL")} vol.</div>}
+                </div>
               </div>
               <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
                 {e.sets.map(function(s,si){return <span key={si} style={{fontSize:11,padding:"3px 7px",background:T.surfaceAlt,border:"1px solid "+T.border,borderRadius:4,color:T.textMid}}>{si+1}. {s.weight?s.weight+"kg":"—"} × {s.reps||"—"}</span>;})}
