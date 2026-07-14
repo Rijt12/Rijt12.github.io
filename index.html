@@ -1870,17 +1870,26 @@
                   })}
                   <path d={area} fill={T.accent} fillOpacity="0.12"/>
                   <polyline points={polyline} fill="none" stroke={T.accent} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
-                  {pts.map(function(p,i){
-                    var isBestPt=bestDate&&p.e.date===bestDate;
-                    var lbl=isBodyweight?(p.v>0?p.v+" reps":""):(p.v>0?fmtW(p.v):"");
-                    return (
-                      <g key={i}>
-                        <circle cx={p.x} cy={p.y} r={isBestPt?5:3} fill={isBestPt?"#f59e0b":T.accent} stroke={T.surface} strokeWidth="1.5"/>
-                        {(sorted.length<=8||isBestPt)&&lbl&&<text x={p.x} y={p.y-8} textAnchor="middle" fontSize="9" fill={isBestPt?"#d97706":T.textMid} fontWeight={isBestPt?"600":"400"}>{lbl}</text>}
-                        <text x={p.x} y={H-2} textAnchor="middle" fontSize="8" fill={T.textMuted}>{new Date(p.e.date).toLocaleDateString("nl-NL",{day:"2-digit",month:"short"})}</text>
-                      </g>
-                    );
-                  })}
+                  {(function(){
+                    var pxPerPt=sorted.length<2?iW:iW/(sorted.length-1);
+                    var labelMode=pxPerPt>=30?"day":pxPerPt>=12?"month":"year";
+                    var seenLbl={};
+                    return pts.map(function(p,i){
+                      var isBestPt=bestDate&&p.e.date===bestDate;
+                      var lbl=isBodyweight?(p.v>0?p.v+" reps":""):(p.v>0?fmtW(p.v):"");
+                      var d=new Date(p.e.date);
+                      var lblKey=labelMode==="day"?d.toISOString().slice(0,10):labelMode==="month"?(d.getFullYear()+"-"+d.getMonth()):(""+d.getFullYear());
+                      var showLbl=!seenLbl[lblKey]; if(showLbl){seenLbl[lblKey]=true;}
+                      var xLbl=labelMode==="day"?d.toLocaleDateString("nl-NL",{day:"2-digit",month:"short"}):labelMode==="month"?d.toLocaleDateString("nl-NL",{month:"short"}):(""+d.getFullYear());
+                      return (
+                        <g key={i}>
+                          <circle cx={p.x} cy={p.y} r={isBestPt?5:3} fill={isBestPt?"#f59e0b":T.accent} stroke={T.surface} strokeWidth="1.5"/>
+                          {(sorted.length<=8||isBestPt)&&lbl&&<text x={p.x} y={p.y-8} textAnchor="middle" fontSize="9" fill={isBestPt?"#d97706":T.textMid} fontWeight={isBestPt?"600":"400"}>{lbl}</text>}
+                          {showLbl&&<text x={p.x} y={H-2} textAnchor="middle" fontSize="8" fill={T.textMuted}>{xLbl}</text>}
+                        </g>
+                      );
+                    });
+                  })()}
                 </svg>
               );
             })()}
